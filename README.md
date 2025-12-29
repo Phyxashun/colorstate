@@ -1,24 +1,93 @@
-# colorstate
+# ColorState
 
-## Install dependencies
+A TypeScript-based DFA (Deterministic Finite Automaton) tokenizer for parsing text input into semantic tokens. Built with a clean state machine architecture, ColorState efficiently processes characters through state transitions to produce structured token streams.
+
+## Features
+
+- 🔄 **DFA State Machine**: Clean implementation using the State pattern with singleton states
+- 🎯 **Dual Processing Modes**:
+  - Token accumulation (multi-character tokens like "word", "123")
+  - Character-by-character emission
+- 🔗 **Composable Architecture**: Feed character output back into tokenizer for re-processing
+- 📍 **Position Tracking**: Line, column, and index metadata for each token
+- 🌐 **Unicode Support**: Full Unicode normalization (NFC) and character classification
+- ⚡ **Performance Optimized**: Singleton states and efficient buffer management
+- 📝 **Type-Safe**: Written in TypeScript with comprehensive type definitions
+
+## Token Types
+
+- **Literals**: `IDENTIFIER`, `NUMBER`, `HEXVALUE`, `STRING`, `PERCENT`
+- **Operators**: `PLUS`, `MINUS`, `OPERATOR`
+- **Delimiters**: `COMMA`, `SLASH`, `LPAREN`, `RPAREN`
+- **Special**: `WHITESPACE`, `EOF`, `ERROR`
+
+## Installation
+
+### Install dependencies
 
 ```bash
 bun install
 ```
 
-### Running index.ts
+### Add required types
+
+```bash
+bun add -d @types/node @types/bun
+```
+
+## Usage
+
+### Basic Example
+
+```typescript
+import { Tokenizer } from './src/Tokenizer.ts';
+
+const tokenizer = new Tokenizer();
+
+// Tokenize a string into semantic tokens
+const tokens = tokenizer.tokenizeString('rgb(255, 0, 0)');
+// Returns: [IDENTIFIER, LPAREN, NUMBER, COMMA, ...]
+
+// Extract individual characters
+const chars = tokenizer.getCharacters('hello');
+// Returns: [{value: 'h', ...}, {value: 'e', ...}, ...]
+
+// Re-tokenize from characters
+const retokenized = tokenizer.tokenizeCharacters(chars);
+```
+
+### With Logging (Fluent Interface)
+
+```typescript
+const tokenizer = new Tokenizer();
+
+// Enable logging with a custom message
+tokenizer
+    .withLogging('Test: RGB Color')
+    .tokenizeString('#ff0000 50%');
+
+// Output:
+// Test: RGB Color
+// SOURCE: #ff0000 50%
+// RESULT (TOKENS):
+//     { value: '#ff0000', type: 'HEXVALUE' }
+//     { value: ' ', type: 'WHITESPACE' }
+//     { value: '50%', type: 'PERCENT' }
+```
+
+### Running the Demo
 
 ```bash
 bun run index.ts
 ```
 
-### Or, after updating package.json
+Or add to `package.json`:
 
 ```json
 {
-    "scripts": {
-        "start": "bun run ./index.ts"
-    }
+  "scripts": {
+    "start": "bun run ./index.ts"
+  }
 }
 ```
 
@@ -26,203 +95,225 @@ bun run index.ts
 bun start
 ```
 
-## Adding Node and Bun types
+## Architecture
 
-```bash
-bun add -d @types/node @types/bun
-```
+### Core Components
 
-## Adding Vitest and Coverage for testing
+- **Character**: Represents a single character with position metadata
+- **CharacterStream**: Iterator for streaming characters from strings
+- **CharacterArrayStream**: Iterator for streaming from character arrays
+- **State**: Abstract base class for DFA states
+- **Context**: Manages state transitions and token emission
+- **Tokenizer**: High-level API for tokenization
+
+### State Machine
+
+The tokenizer uses a DFA with the following states:
+
+- `InitialState`: Non-accepting routing state
+- `WhitespaceState`: Accumulates whitespace
+- `LetterState`: Accumulates identifiers
+- `NumberState`: Accumulates numbers
+- `HexState`: Handles hex color codes (#RGB)
+- `PercentState`: Handles percentage values
+- `OperatorState`: Processes operators
+- `EndState`: Terminal EOF state
+
+## Testing
+
+### Setup Testing Framework
 
 ```bash
 bun add -d vitest
 ```
 
-Choose coverage:
+Choose coverage provider:
 
-* V8 Coverage
+### **V8 Coverage (recommended)**
 
-    ```bash
-    bun add -d @vitest/coverage-v8
-    ```
+```bash
+bun add -d @vitest/coverage-v8
+```
 
-* Istanbul Coverage
+### **Istanbul Coverage**
 
-    ```bash
-    bun add -d @vitest/coverage-istanbul
-    ```
+```bash
+bun add -d @vitest/coverage-istanbul
+```
 
-## Create vitest.config.ts
+### Configure Vitest
+
+Create `vitest.config.ts`:
 
 ```typescript
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-    test: {
-        coverage: {
-            provider: 'v8',
-            reporter: ['text', 'json', 'html'],
-            include: [
-                'src/**/*.ts',
-                'tests/**/*.test.ts'
-            ]
-        }
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: [
+        'src/**/*.ts',
+        'tests/**/*.test.ts'
+      ]
     }
+  }
 })
 ```
-
-## Running tests
 
 ### Update package.json
 
 ```json
 {
-    "scripts": {
-        "start": "bun run ./index.ts",
-        "test": "vitest",
-        "coverage": "vitest --coverage"
-    }
+  "scripts": {
+    "start": "bun run ./index.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "coverage": "vitest --coverage"
+  }
 }
 ```
 
-### Run test with no watch
+### Running Tests
+
+### **Run once (no watch)**
+
+```bash
+bun test:run
+```
+
+### **Run with watch mode**
 
 ```bash
 bun test
 ```
 
-### Run test with watch
-
-```bash
-bun run test
-```
-
-### Run test with watch and coverage
+### **Run with coverage**
 
 ```bash
 bun coverage
 ```
 
-### Ignoring lines
+### Coverage Exclusions
 
-To ignore coverage in a test, add the comments below, above the line/block that
-should be ignored:
+#### V8 Coverage Pragmas
 
-* V8 Coverage
-  
-    ```typescript
-    /* v8 ignore */
-    ```
+### **Ignore if/else branches**
 
-* Istanbul Coverage
+```typescript
+/* v8 ignore if -- @preserve */
+if (parameter) { 
+  console.log('Ignored') 
+} else {
+  console.log('Included')
+}
+```
 
-    ```typescript
-    /* istanbul ignore */
-    ```
+### **Ignore next statement**
 
-* ### if else
+```typescript
+/* v8 ignore next -- @preserve */
+console.log('Ignored')
+console.log('Included')
+```
 
-    ```typescript
-    /* v8 ignore if -- @preserve */
-    if (parameter) { 
-        console.log('Ignored') 
-    } else {
-        console.log('Included')
-    }
+### **Ignore entire function**
 
-    /* v8 ignore else -- @preserve */
-    if (parameter) {
-        console.log('Included')
-    } else { 
-        console.log('Ignored') 
-    } 
-    ```
+```typescript
+/* v8 ignore next -- @preserve */
+function ignored() { 
+  console.log('All lines ignored')
+}
+```
 
-* ### next node
+### **Ignore class**
 
-    ```typescript
-    /* v8 ignore next -- @preserve */
-    console.log('Ignored') 
-    console.log('Included')
+```typescript
+/* v8 ignore next -- @preserve */
+class Ignored { 
+  ignored() {}
+  alsoIgnored() {}
+}
+```
 
-    /* v8 ignore next -- @preserve */
-    function ignored() { 
-        console.log('all') 
-        console.log('lines') 
-        console.log('are') 
-        console.log('ignored') 
-    } 
+### **Ignore try/catch**
 
-    /* v8 ignore next -- @preserve */
-    class Ignored { 
-        ignored() {} 
-        alsoIgnored() {} 
-    } 
+```typescript
+/* v8 ignore next -- @preserve */
+try { 
+  console.log('Ignored') 
+} catch (error) { 
+  console.log('Ignored') 
+}
+```
 
-    /* v8 ignore next -- @preserve */
-    condition 
-        ? console.log('ignored') 
-        : console.log('also ignored') 
-    ```
+### **Ignore switch cases**
 
-* ### try catch
+```typescript
+switch (type) {
+  case 1:
+    return 'Included'
+  /* v8 ignore next -- @preserve */
+  case 2: 
+    return 'Ignored'
+  /* v8 ignore next -- @preserve */
+  default: 
+    return 'Ignored'
+}
+```
 
-    ```typescript
-    /* v8 ignore next -- @preserve */
-    try { 
-        console.log('Ignored') 
-    } 
-    catch (error) { 
-        console.log('Ignored') 
-    } 
+### **Ignore entire file**
 
-    try {
-        console.log('Included')
-    }
-    catch (error) {
-        /* v8 ignore next -- @preserve */
-        console.log('Ignored') 
-        /* v8 ignore next -- @preserve */
-        console.log('Ignored') 
-    }
+```typescript
+/* v8 ignore file -- @preserve */
+export function ignored() { 
+  return 'Whole file is ignored'
+}
+```
 
-    // Requires rolldown-vite due to esbuild's lack of support.
-    // See https://vite.dev/guide/rolldown.html#how-to-try-rolldown
-    try {
-        console.log('Included')
-    }
-    catch (error) /* v8 ignore next */ { 
-        console.log('Ignored') 
-    } 
-    ```
+#### Istanbul Coverage Pragmas
 
-* ### switch case
+Replace `v8` with `istanbul` in any of the above examples:
 
-    ```typescript
-    switch (type) {
-        case 1:
-            return 'Included'
+```typescript
+/* istanbul ignore next -- @preserve */
+/* istanbul ignore if -- @preserve */
+/* istanbul ignore file -- @preserve */
+```
 
-        /* v8 ignore next -- @preserve */
-        case 2: 
-            return 'Ignored'
+## Project Structure
 
-        case 3:
-            return 'Included'
+```bash
+colorstate/
+├── src/
+│   ├── Character.ts      # Character types and streams
+│   ├── Context.ts        # DFA context and processing logic
+│   ├── States.ts         # State machine implementations
+│   └── Tokenizer.ts      # High-level tokenizer API
+├── tests/
+│   └── *.test.ts         # Test files
+├── index.ts              # Demo/example usage
+├── vitest.config.ts      # Test configuration
+├── package.json
+└── README.md
+```
 
-        /* v8 ignore next -- @preserve */
-        default: 
-            return 'Ignored'
-    }
-    ```
+## Contributing
 
-* ### whole file
+Contributions are welcome! Please ensure:
 
-    ```typescript
-    /* v8 ignore file -- @preserve */
-    export function ignored() { 
-        return 'Whole file is ignored'
-    }
-    ```
+- All tests pass (`bun test:run`)
+- Code coverage remains high (`bun coverage`)
+- TypeScript types are properly defined
+- JSDoc comments are added for public APIs
+
+## License
+
+MIT
+
+## About
 
 This project was created using `bun init` in bun v1.3.4. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+
+Built as an educational project to demonstrate DFA tokenization, state machine design patterns, and TypeScript best practices.

@@ -4,7 +4,12 @@ import { inspect, type InspectOptions } from 'node:util';
 import { Character, CharType } from './Character.ts';
 import { Context } from './Context.ts'
 
+/**
+ * Abstract base class for all DFA states
+ * Each state handles character transitions and determines if it's an accepting state
+ */
 abstract class State {
+    /** Inspect options for debugging and logging */
     private inspectOptions: InspectOptions = {
         showHidden: true,
         depth: null,
@@ -19,28 +24,63 @@ abstract class State {
         getters: false,
         numericSeparator: true,
     };
+
+    /** Reference to the DFA context managing this state */
     public context!: Context;
 
+    /**
+     * Sets the context reference for this state
+     * Called when transitioning to this state
+     * @param context - The DFA context
+     */
     public setContext(context: Context) {
         this.context = context;
     }
 
+    /**
+     * Returns a formatted string representation of this state
+     * @returns Formatted string for debugging
+     */
     public toString(): string {
         return `\n\t${inspect(this, this.inspectOptions)} \n`;
     }
 
+    /**
+     * Processes a character and determines state transitions
+     * Must be implemented by each concrete state
+     * @param char - The character to handle
+     */
     public abstract handle(char: Character): void;
+
+    /**
+     * Indicates whether this state accepts tokens
+     * Accepting states can emit tokens when exited
+     * @returns True if this is an accepting state
+     */
     public abstract isAccepting(): boolean;
-} // End abstract class State
+}
 
 
+/**
+ * Initial non-accepting state
+ * Routes characters to appropriate accepting states
+ * Used as the default state between tokens
+ */
 class Initial_State extends State {
+    /** Singleton instance */
     static #instance: State;
 
+    /**
+     * Private constructor enforces singleton pattern
+     */
     private constructor() {
         super();
     }
 
+    /**
+     * Gets the singleton instance of Initial_State
+     * @returns The singleton Initial_State instance
+     */
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Initial_State();
@@ -48,6 +88,10 @@ class Initial_State extends State {
         return this.#instance;
     }
 
+    /**
+     * Routes characters to appropriate accepting states based on character type
+     * @param char - The character to process
+     */
     public handle(char: Character): void {
         switch (char.type) {
             case CharType.Whitespace:
@@ -75,19 +119,35 @@ class Initial_State extends State {
         }
     }
 
+    /**
+     * Initial state is non-accepting (doesn't emit tokens)
+     * @returns False - this state doesn't accept tokens
+     */
     public isAccepting(): boolean {
         return false;
     }
-} // End class Initial_State
+}
 
 
+/**
+ * Whitespace accepting state
+ * Accumulates consecutive whitespace characters into a single token
+ */
 class Whitespace_State extends State {
+    /** Singleton instance */
     static #instance: State;
 
+    /**
+     * Private constructor enforces singleton pattern
+     */
     private constructor() {
         super();
     }
 
+    /**
+     * Gets the singleton instance of Whitespace_State
+     * @returns The singleton Whitespace_State instance
+     */
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Whitespace_State();
@@ -95,25 +155,46 @@ class Whitespace_State extends State {
         return this.#instance;
     }
 
+    /**
+     * Stays in whitespace state for consecutive whitespace
+     * Transitions to initial state for any non-whitespace character
+     * @param char - The character to process
+     */
     public handle(char: Character): void {
         if (char.type !== CharType.Whitespace) {
             this.context.transitionTo(Initial_State.instance);
         }
     }
 
+    /**
+     * Whitespace state accepts tokens
+     * @returns True - whitespace can be emitted as a token
+     */
     public isAccepting(): boolean {
         return true;
     }
-} // End class Whitespace_State
+}
 
 
+/**
+ * Hexadecimal value accepting state
+ * Handles hex color codes like #ff0000 or #abc
+ */
 class Hex_State extends State {
+    /** Singleton instance */
     static #instance: State;
 
+    /**
+     * Private constructor enforces singleton pattern
+     */
     private constructor() {
         super();
     }
 
+    /**
+     * Gets the singleton instance of Hex_State
+     * @returns The singleton Hex_State instance
+     */
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Hex_State();
@@ -121,11 +202,17 @@ class Hex_State extends State {
         return this.#instance;
     }
 
+    /**
+     * Accumulates hash, letters, and numbers for hex values
+     * Transitions to initial state for any other character
+     * @param char - The character to process
+     */
     public handle(char: Character): void {
         switch (char.type) {
             case CharType.Hash:
             case CharType.Letter:
             case CharType.Number:
+                // Stay in hex state, continue accumulating
                 break;
             default:
                 this.context.transitionTo(Initial_State.instance);
@@ -133,19 +220,35 @@ class Hex_State extends State {
         }
     }
 
+    /**
+     * Hex state accepts tokens
+     * @returns True - hex values can be emitted as tokens
+     */
     public isAccepting(): boolean {
         return true;
     }
-} // End class Operator_State
+}
 
 
+/**
+ * Letter/Identifier accepting state
+ * Accumulates consecutive letter characters into identifiers
+ */
 class Letter_State extends State {
+    /** Singleton instance */
     static #instance: State;
 
+    /**
+     * Private constructor enforces singleton pattern
+     */
     private constructor() {
         super();
     }
 
+    /**
+     * Gets the singleton instance of Letter_State
+     * @returns The singleton Letter_State instance
+     */
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Letter_State();
@@ -153,25 +256,47 @@ class Letter_State extends State {
         return this.#instance;
     }
 
+    /**
+     * Stays in letter state for consecutive letters
+     * Transitions to initial state for non-letter characters
+     * @param char - The character to process
+     */
     public handle(char: Character): void {
         if (char.type !== CharType.Letter) {
             this.context.transitionTo(Initial_State.instance);
         }
     }
 
+    /**
+     * Letter state accepts tokens
+     * @returns True - identifiers can be emitted as tokens
+     */
     public isAccepting(): boolean {
         return true;
     }
-} // End class Letter_State
+}
 
 
+/**
+ * Number accepting state
+ * Accumulates consecutive digit characters into numbers
+ * Can transition to percent state if followed by %
+ */
 class Number_State extends State {
+    /** Singleton instance */
     static #instance: State;
 
+    /**
+     * Private constructor enforces singleton pattern
+     */
     private constructor() {
         super();
     }
 
+    /**
+     * Gets the singleton instance of Number_State
+     * @returns The singleton Number_State instance
+     */
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Number_State();
@@ -179,9 +304,16 @@ class Number_State extends State {
         return this.#instance;
     }
 
+    /**
+     * Stays in number state for consecutive digits
+     * Transitions to percent state if % follows a number
+     * Transitions to initial state for other characters
+     * @param char - The character to process
+     */
     public handle(char: Character): void {
         switch (char.type) {
             case CharType.Number:
+                // Stay in number state, continue accumulating digits
                 break;
             case CharType.Percent:
                 this.context.transitionTo(Percent_State.instance);
@@ -192,19 +324,35 @@ class Number_State extends State {
         }
     }
 
+    /**
+     * Number state accepts tokens
+     * @returns True - numbers can be emitted as tokens
+     */
     public isAccepting(): boolean {
         return true;
     }
-} // End class Number_State
+}
 
 
+/**
+ * Percent accepting state
+ * Handles percentage values (e.g., 50%)
+ */
 class Percent_State extends State {
+    /** Singleton instance */
     static #instance: State;
 
+    /**
+     * Private constructor enforces singleton pattern
+     */
     private constructor() {
         super();
     }
 
+    /**
+     * Gets the singleton instance of Percent_State
+     * @returns The singleton Percent_State instance
+     */
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Percent_State();
@@ -212,6 +360,11 @@ class Percent_State extends State {
         return this.#instance;
     }
 
+    /**
+     * Transitions to initial state for any non-percent character
+     * Percent is typically a single-character suffix
+     * @param char - The character to process
+     */
     public handle(char: Character): void {
         /* istanbul ignore if -- @preserve */
         if (char.type !== CharType.Percent) {
@@ -219,19 +372,35 @@ class Percent_State extends State {
         }
     }
 
+    /**
+     * Percent state accepts tokens
+     * @returns True - percentage values can be emitted as tokens
+     */
     public isAccepting(): boolean {
         return true;
     }
-} // End class Operator_State
+}
 
 
+/**
+ * Operator accepting state
+ * Handles operator characters like +, -, *, /, etc.
+ */
 class Operator_State extends State {
+    /** Singleton instance */
     static #instance: State;
 
+    /**
+     * Private constructor enforces singleton pattern
+     */
     private constructor() {
         super();
     }
 
+    /**
+     * Gets the singleton instance of Operator_State
+     * @returns The singleton Operator_State instance
+     */
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Operator_State();
@@ -239,6 +408,11 @@ class Operator_State extends State {
         return this.#instance;
     }
 
+    /**
+     * Transitions to initial state for any non-operator character
+     * Operators are typically single characters or short sequences
+     * @param char - The character to process
+     */
     public handle(char: Character): void {
         /* istanbul ignore if -- @preserve */
         if (char.type !== CharType.Operator) {
@@ -246,19 +420,35 @@ class Operator_State extends State {
         }
     }
 
+    /**
+     * Operator state accepts tokens
+     * @returns True - operators can be emitted as tokens
+     */
     public isAccepting(): boolean {
         return true;
     }
-} // End class Operator_State
+}
 
 
+/**
+ * End/EOF accepting state
+ * Terminal state when end of file is reached
+ */
 class End_State extends State {
+    /** Singleton instance */
     static #instance: State;
 
+    /**
+     * Private constructor enforces singleton pattern
+     */
     private constructor() {
         super();
     }
 
+    /**
+     * Gets the singleton instance of End_State
+     * @returns The singleton End_State instance
+     */
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new End_State();
@@ -266,6 +456,11 @@ class End_State extends State {
         return this.#instance;
     }
 
+    /**
+     * Transitions to initial state if more input arrives after EOF
+     * Typically EOF is terminal, but this handles edge cases
+     * @param char - The character to process
+     */
     public handle(char: Character): void {
         /* istanbul ignore if -- @preserve */
         if (char.type !== CharType.EOF) {
@@ -273,13 +468,17 @@ class End_State extends State {
         }
     }
 
+    /**
+     * End state accepts tokens
+     * @returns True - EOF can be emitted as a token
+     */
     public isAccepting(): boolean {
         return true;
     }
-} // End class End_State
+}
 
 
-// Export instance aliases
+// Export singleton instance aliases for convenience
 const InitialState = Initial_State.instance;
 const WhitespaceState = Whitespace_State.instance;
 const HexState = Hex_State.instance;

@@ -4,25 +4,48 @@ import { CharType, type Character } from "./Character.ts";
 import { TokenType, type Token } from "./Tokenizer.ts";
 import { State } from "./States.ts";
 
+/**
+ * Context manages the DFA (Deterministic Finite Automaton) state machine
+ * Processes characters through state transitions and emits tokens
+ */
 class Context {
+    /** Current state of the DFA */
     private state: State;
+    /** Previously processed character for lookahead */
     public previousChar: Character | null = null;
+    /** Buffer for accumulating characters into multi-character tokens */
     public buffer: Character[] = [];
 
+    /**
+     * Creates a new Context with an initial state
+     * @param initialState - The starting state for the DFA
+     */
     constructor(initialState: State) {
         this.state = initialState;
         this.state.setContext(this);
     }
 
+    /**
+     * Transitions the DFA to a new state
+     * Sets the context reference in the new state
+     * @param state - The state to transition to
+     */
     public transitionTo(state: State): void {
         this.state = state;
         this.state.setContext(this);
     }
 
+    /**
+     * Processes a character and emits accumulated tokens when appropriate
+     * Handles state transitions and buffer management for multi-character tokens
+     * @param char - The character to process
+     * @returns A Character token if one should be emitted, null otherwise
+     */
     public processTokens(char: Character): Character | null {
         const wasAccepting = this.state.isAccepting();
         const previousState = this.state;
 
+        // Handle EOF: emit buffered token if in accepting state
         if (char.type === CharType.EOF) {
             if (wasAccepting && this.buffer.length > 0) {
                 const token = this.createToken(this.buffer);
@@ -42,6 +65,7 @@ class Context {
         const isAccepting = this.state.isAccepting();
         const changedState = (this.state !== previousState);
 
+        // Transitioning out of accepting state: emit buffered token
         /* istanbul ignore if -- @preserve */
         if (changedState && wasAccepting && !isAccepting) {
             let tokenToEmit = null;
@@ -51,6 +75,7 @@ class Context {
                 this.buffer = [];
             }
 
+            // Re-handle character in new state
             this.state.handle(char);
             const newAccepting = this.state.isAccepting();
 
@@ -61,6 +86,7 @@ class Context {
             return tokenToEmit;
         }
 
+        // Accumulate character if in accepting state
         /* istanbul ignore if -- @preserve */
         if (isAccepting) {
             this.buffer.push(char);
@@ -69,6 +95,12 @@ class Context {
         return null;
     }
 
+    /**
+     * Processes a character and emits individual characters when in accepting states
+     * Used for single-character tokenization mode
+     * @param char - The character to process
+     * @returns The character if it should be emitted, null otherwise
+     */
     public processCharacters(char: Character): Character | null {
         let result: Character | null = null;
 
@@ -87,6 +119,7 @@ class Context {
         const isAccepting = this.state.isAccepting();
         const changedState = (this.state !== previousState);
 
+        // Emit previous character when leaving accepting state
         if (wasAccepting && changedState && !isAccepting) {
             this.state.handle(char);
             result = this.previousChar;
@@ -97,6 +130,7 @@ class Context {
             }
         }
 
+        // Emit current character if in accepting state
         if (isAccepting) {
             result = char;
         }
@@ -104,6 +138,13 @@ class Context {
         return result;
     }
 
+    /**
+     * Creates a token from a buffer of characters
+     * Concatenates character values and uses metadata from first character
+     * @param chars - Array of characters to combine into a token
+     * @returns A Character object representing the complete token
+     * @throws Error if buffer is empty
+     */
     private createToken(chars: Character[]): Character {
         /* istanbul ignore next -- @preserve */
         if (chars.length === 0) throw new Error('Cannot create token from empty buffer');
@@ -122,6 +163,12 @@ class Context {
         };
     }
 
+    /**
+     * Converts a Character token to a semantic Token type
+     * Maps CharType to TokenType with specific operator handling
+     * @param char - The Character to convert
+     * @returns A Token with semantic type information
+     */
     public static toTokenType(char: Character): Token {
         const value = char.value;
 
@@ -168,10 +215,13 @@ class Context {
         }
     }
 
+    /**
+     * Checks if the current state is an accepting state
+     * @returns True if in an accepting state
+     */
     public isAccepted(): boolean {
         return this.state.isAccepting();
     }
-} // End class Context
+}
 
 export { Context };
-
