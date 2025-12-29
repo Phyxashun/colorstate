@@ -45,5 +45,10 @@
             "bold": false,
             "italic": false
         }
+    ],
+    "cSpell.words": [
+        "colorstate",
+        "dotenv",
+        "eslintcache"
     ]
 }
