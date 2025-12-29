@@ -1,7 +1,7 @@
 // ./index.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import { Tokenizer } from "./src/Tokenizer";
+import { Tokenizer } from "./src/Tokenizer.ts";
 
 const inspectOptions: InspectOptions = {
     showHidden: true,

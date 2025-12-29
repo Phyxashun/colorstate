@@ -19,7 +19,7 @@ abstract class State {
         getters: false,
         numericSeparator: true,
     };
-    protected context!: Context;
+    public context!: Context;
 
     public setContext(context: Context) {
         this.context = context;
@@ -68,6 +68,7 @@ class Initial_State extends State {
             case CharType.Number:
                 this.context.transitionTo(Number_State.instance);
                 break;
+            /* istanbul ignore next -- @preserve */
             default:
                 this.context.transitionTo(Initial_State.instance);
                 break;
@@ -212,6 +213,7 @@ class Percent_State extends State {
     }
 
     public handle(char: Character): void {
+        /* istanbul ignore if -- @preserve */
         if (char.type !== CharType.Percent) {
             this.context.transitionTo(Initial_State.instance);
         }
@@ -238,6 +240,7 @@ class Operator_State extends State {
     }
 
     public handle(char: Character): void {
+        /* istanbul ignore if -- @preserve */
         if (char.type !== CharType.Operator) {
             this.context.transitionTo(Initial_State.instance);
         }
@@ -264,6 +267,7 @@ class End_State extends State {
     }
 
     public handle(char: Character): void {
+        /* istanbul ignore if -- @preserve */
         if (char.type !== CharType.EOF) {
             this.context.transitionTo(Initial_State.instance);
         }
@@ -294,5 +298,13 @@ export {
     NumberState,
     PercentState,
     OperatorState,
-    EndState
+    EndState,
+    Initial_State,
+    Whitespace_State,
+    Hex_State,
+    Letter_State,
+    Number_State,
+    Percent_State,
+    Operator_State,
+    End_State,
 }

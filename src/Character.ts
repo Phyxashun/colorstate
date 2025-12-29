@@ -112,8 +112,8 @@ class CharacterStream implements IterableIterator<Character> {
         }
     }
 
-    public peek(): string | null {
-        const cp = this.input.codePointAt(this.index);
+    public peek(offset: number = 0): string | null {
+        const cp = this.input.codePointAt(this.index + offset);
         return cp !== undefined ? String.fromCodePoint(cp) : null;
     }
 

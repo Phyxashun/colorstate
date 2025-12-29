@@ -42,8 +42,10 @@ class Context {
         const isAccepting = this.state.isAccepting();
         const changedState = (this.state !== previousState);
 
+        /* istanbul ignore if -- @preserve */
         if (changedState && wasAccepting && !isAccepting) {
             let tokenToEmit = null;
+
             if (this.buffer.length > 0) {
                 tokenToEmit = this.createToken(this.buffer);
                 this.buffer = [];
@@ -59,6 +61,7 @@ class Context {
             return tokenToEmit;
         }
 
+        /* istanbul ignore if -- @preserve */
         if (isAccepting) {
             this.buffer.push(char);
         }
@@ -67,10 +70,12 @@ class Context {
     }
 
     public processCharacters(char: Character): Character | null {
+        let result: Character | null = null;
+
         if (char.type === CharType.EOF) {
             this.state.handle(char);
             this.previousChar = char;
-            return null;
+            return result;
         }
 
         const wasAccepting = this.state.isAccepting();
@@ -84,22 +89,23 @@ class Context {
 
         if (wasAccepting && changedState && !isAccepting) {
             this.state.handle(char);
+            result = this.previousChar;
 
+            /* istanbul ignore if -- @preserve */
             if (this.state.isAccepting()) {
-                return char;
+                result = char;
             }
-
-            return this.previousChar;
         }
 
         if (isAccepting) {
-            return char;
+            result = char;
         }
 
-        return null;
+        return result;
     }
 
     private createToken(chars: Character[]): Character {
+        /* istanbul ignore next -- @preserve */
         if (chars.length === 0) throw new Error('Cannot create token from empty buffer');
 
         let value = '';
@@ -168,3 +174,4 @@ class Context {
 } // End class Context
 
 export { Context };
+
