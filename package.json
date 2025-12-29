@@ -1,5 +1,8 @@
 {
   "name": "colorstate",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "Dustin Dew, phyxashun@gmail.com",
   "module": "index.ts",
   "devDependencies": {
     "@types/bun": "latest",
