@@ -97,7 +97,7 @@ describe('End-to-End Tokenization Tests from index.ts', () => {
         expect(tokens).toEqual([
             { value: 'rgba', type: TokenType.IDENTIFIER },
             { value: '(', type: TokenType.LPAREN },
-            { value: '100%', type: TokenType.NUMBER },
+            { value: '100%', type: TokenType.PERCENT },
             { value: ' ', type: TokenType.WHITESPACE },
             { value: '360', type: TokenType.NUMBER },
             { value: ' ', type: TokenType.WHITESPACE },
@@ -105,7 +105,7 @@ describe('End-to-End Tokenization Tests from index.ts', () => {
             { value: '  ', type: TokenType.WHITESPACE },
             { value: '/', type: TokenType.SLASH },
             { value: ' ', type: TokenType.WHITESPACE },
-            { value: '50%', type: TokenType.NUMBER },
+            { value: '50%', type: TokenType.PERCENT },
             { value: ')', type: TokenType.RPAREN },
         ]);
     });

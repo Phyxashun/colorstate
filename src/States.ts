@@ -10,7 +10,7 @@ import { Context } from './Context.ts'
  */
 abstract class State {
     /** Inspect options for debugging and logging */
-    private inspectOptions: InspectOptions = {
+    protected inspectOptions: InspectOptions = {
         showHidden: true,
         depth: null,
         colors: true,
@@ -26,7 +26,7 @@ abstract class State {
     };
 
     /** Reference to the DFA context managing this state */
-    public context!: Context;
+    protected context!: Context;
 
     /**
      * Sets the context reference for this state

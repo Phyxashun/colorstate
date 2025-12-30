@@ -172,6 +172,11 @@ class Context {
     public static toTokenType(char: Character): Token {
         const value = char.value;
 
+        // Check if it's a percentage (ends with %)
+        if (value.endsWith('%')) {
+            return { value: value, type: TokenType.PERCENT };
+        }
+
         switch (char.type) {
             case CharType.Hash:
                 return { value, type: TokenType.HEXVALUE };

@@ -91,11 +91,19 @@ const CharSpec: Spec = new Map<CharType, CharTypeFn>([
     [CharType.Operator, (char) => Operators.has(char)],
 ]);
 
+interface ICharacter {
+    value: string;
+    type: CharType;
+    index: number;
+    line: number;
+    column: number;
+}
+
 /**
  * Represents a single character with position metadata
  * Used for tracking characters through the tokenization process
  */
-class Character {
+class Character implements ICharacter {
     /** The actual character value as a string */
     value: string = '';
     /** The classified type of this character */
@@ -127,15 +135,18 @@ class Character {
  * Streaming iterator for processing string input character by character
  * Handles Unicode normalization, position tracking, and EOF emission
  */
-class CharacterStream implements IterableIterator<Character> {
+class CharacterStream implements ICharacter, IterableIterator<ICharacter> {
     /** The normalized input string */
-    private input: string = '';
+    value: string = '';
+    /** The classified type of this character */
+    type: CharType = CharType.Start;
     /** Current byte index in the input */
-    private index = 0;
+    index = 0;
     /** Current line number (1-indexed) */
-    private line = 1;
+    line = 1;
     /** Current column number (1-indexed) */
-    private column = 1;
+    column = 1;
+
     /** Flag to track if EOF has been emitted */
     private eofEmitted = false;
 
@@ -145,7 +156,7 @@ class CharacterStream implements IterableIterator<Character> {
      * @param input - The string to tokenize
      */
     constructor(input: string) {
-        this.input = input.normalize('NFC');
+        this.value = input.normalize('NFC');
     }
 
     /**
@@ -153,6 +164,9 @@ class CharacterStream implements IterableIterator<Character> {
      * Returns the next character in the stream with position metadata
      * @returns IteratorResult containing a Character or done flag
      */
+
+
+
     public next(): IteratorResult<Character> {
         if (this.isEOF()) {
             if (this.eofEmitted) {
@@ -162,7 +176,7 @@ class CharacterStream implements IterableIterator<Character> {
             return { done: false, value: this.atEOF() };
         }
 
-        const codePoint = this.input.codePointAt(this.index) as number;
+        const codePoint = this.value.codePointAt(this.index) as number;
         const char = String.fromCodePoint(codePoint);
 
         const result = {
@@ -207,7 +221,7 @@ class CharacterStream implements IterableIterator<Character> {
      * @returns The character at the peek position, or null if past EOF
      */
     public peek(offset: number = 0): string | null {
-        const cp = this.input.codePointAt(this.index + offset);
+        const cp = this.value.codePointAt(this.index + offset);
         return cp !== undefined ? String.fromCodePoint(cp) : null;
     }
 
@@ -216,7 +230,7 @@ class CharacterStream implements IterableIterator<Character> {
      * @returns True if at or past the end of input
      */
     public isEOF(): boolean {
-        return this.index >= this.input.length;
+        return this.index >= this.value.length;
     }
 
     /**
@@ -252,11 +266,12 @@ class CharacterStream implements IterableIterator<Character> {
  * Streaming iterator for processing an array of Characters
  * Useful for re-tokenizing or processing already-parsed character streams
  */
-class CharacterArrayStream implements IterableIterator<Character> {
+class CharacterArrayStream implements IterableIterator<ICharacter> {
     /** The array of characters to iterate over */
-    private characters: Character[];
+    private characters: ICharacter[];
     /** Current index in the array */
     private index = 0;
+
     /** Flag to track if EOF has been emitted */
     private eofEmitted = false;
 
