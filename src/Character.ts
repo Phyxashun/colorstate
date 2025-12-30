@@ -103,7 +103,7 @@ class Character extends ICharacter {
     /**
     * Set of characters classified as operators
     */
-    public static Operators = new Set([
+    public static Operators: Set<string> = new Set([
         '%', '.', ',', '/', '(', ')', '+', '-', '_', '#', '!',
         '\\', '*', '@', '$', '^', '&', '{', '}', '[', ']', '|',
         ':', ';', '<', '>', '?', '~', '`', '"', "'", '='
@@ -246,6 +246,7 @@ class CharacterStream extends Character implements IterableIterator<ICharacter> 
 /**
  * Streaming iterator for processing an array of Characters
  * Useful for re-tokenizing or processing already-parsed character streams
+ * Implements full Iterator protocol with helper methods
  */
 class CharacterArrayStream implements IterableIterator<ICharacter> {
     /** The array of characters to iterate over */
@@ -290,15 +291,140 @@ class CharacterArrayStream implements IterableIterator<ICharacter> {
 
         const char = this.characters[this.index];
         this.index++;
-        return { done: false, value: char as Character };
+        return { done: false, value: char as ICharacter };
     }
 
     /**
      * Makes this class iterable using for...of loops
      * @returns This stream instance as an iterator
      */
-    public [Symbol.iterator](): IterableIterator<ICharacter> {
+    [Symbol.iterator](): IterableIterator<ICharacter> {
         return this;
+    }
+
+    /**
+     * Creates a new iterator that drops the first count elements
+     * @param count - Number of elements to drop
+     * @returns New iterator starting after the dropped elements
+     */
+    public drop(count: number): IterableIterator<ICharacter> {
+        const newStream = new CharacterArrayStream(this.characters);
+        newStream.skip(count);
+        return newStream;
+    }
+
+    /**
+     * Creates a new iterator that takes at most limit elements
+     * @param limit - Maximum number of elements to take
+     * @returns New iterator with limited elements
+     */
+    public take(limit: number): IterableIterator<ICharacter> {
+        const limitedChars = this.characters.slice(0, limit);
+        return new CharacterArrayStream(limitedChars);
+    }
+
+    /**
+     * Returns the underlying array of characters
+     * @returns Array of characters
+     */
+    public toArray(): ICharacter[] {
+        return [...this.characters];
+    }
+
+    /**
+     * Gets the current position in the stream
+     * @returns Current index
+     */
+    public getPosition(): number {
+        return this.index;
+    }
+
+    /**
+     * Gets the total length of the character array
+     * @returns Length of the array
+     */
+    public getLength(): number {
+        return this.characters.length;
+    }
+
+    /**
+     * Checks if the stream has more characters to read
+     * @returns True if more characters are available
+     */
+    public hasNext(): boolean {
+        return this.index < this.characters.length;
+    }
+
+    /**
+     * Resets the stream to the beginning
+     */
+    public reset(): void {
+        this.index = 0;
+        this.eofEmitted = false;
+    }
+
+    /**
+     * Peeks at the next character without consuming it
+     * @param offset - Number of positions to look ahead (default: 0)
+     * @returns The character at the peek position, or null if out of bounds
+     */
+    public peek(offset: number = 0): ICharacter | null {
+        const peekIndex = this.index + offset;
+        if (peekIndex >= 0 && peekIndex < this.characters.length) {
+            return this.characters[peekIndex] as ICharacter;
+        }
+        return null;
+    }
+
+    /**
+     * Skips the specified number of characters
+     * @param count - Number of characters to skip
+     */
+    public skip(count: number): void {
+        this.index = Math.min(this.index + count, this.characters.length);
+    }
+
+    /**
+     * Gets a slice of characters from the stream
+     * @param start - Starting index (default: current position)
+     * @param end - Ending index (default: end of array)
+     * @returns Array of characters in the specified range
+     */
+    public slice(start?: number, end?: number): ICharacter[] {
+        const startIndex = start ?? this.index;
+        return this.characters.slice(startIndex, end);
+    }
+
+    /**
+     * Filters characters based on a predicate function
+     * @param predicate - Function to test each character
+     * @returns New stream with filtered characters
+     */
+    public filter(predicate: (char: ICharacter) => boolean): CharacterArrayStream {
+        const filtered = this.characters.filter(predicate);
+        return new CharacterArrayStream(filtered);
+    }
+
+    /**
+     * Maps characters using a transformation function
+     * @param mapper - Function to transform each character
+     * @returns New stream with transformed characters
+     */
+    public map(mapper: (char: ICharacter) => ICharacter): CharacterArrayStream {
+        const mapped = this.characters.map(mapper);
+        return new CharacterArrayStream(mapped);
+    }
+
+    /**
+     * Returns the character at the specified index without affecting iteration
+     * @param index - Index of the character to get
+     * @returns The character at the index, or null if out of bounds
+     */
+    public at(index: number): ICharacter | null {
+        if (index >= 0 && index < this.characters.length) {
+            return this.characters[index] as ICharacter;
+        }
+        return null;
     }
 }
 
