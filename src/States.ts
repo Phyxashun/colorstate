@@ -4,6 +4,19 @@ import { inspect, type InspectOptions } from 'node:util';
 import { Character, CharType } from './Character.ts';
 import { Context } from './Context.ts'
 
+export type Transition =
+    | { kind: 'Stay' }
+    | { kind: 'To'; state: State }
+    | { kind: 'EmitAndTo'; state: State }
+    | { kind: 'End' };
+
+export const Transition = {
+    Stay: (): Transition => ({ kind: 'Stay' }),
+    To: (state: State): Transition => ({ kind: 'To', state }),
+    EmitAndTo: (state: State): Transition => ({ kind: 'EmitAndTo', state }),
+    End: (): Transition => ({ kind: 'End' }),
+};
+
 /**
  * Abstract base class for all DFA states
  * Each state handles character transitions and determines if it's an accepting state
@@ -25,18 +38,6 @@ abstract class State {
         numericSeparator: true,
     };
 
-    /** Reference to the DFA context managing this state */
-    protected context!: Context;
-
-    /**
-     * Sets the context reference for this state
-     * Called when transitioning to this state
-     * @param context - The DFA context
-     */
-    public setContext(context: Context) {
-        this.context = context;
-    }
-
     /**
      * Returns a formatted string representation of this state
      * @returns Formatted string for debugging
@@ -50,7 +51,7 @@ abstract class State {
      * Must be implemented by each concrete state
      * @param char - The character to handle
      */
-    public abstract handle(char: Character): void;
+    public abstract handle(char: Character): Transition;
 
     /**
      * Indicates whether this state accepts tokens
@@ -92,30 +93,22 @@ class Initial_State extends State {
      * Routes characters to appropriate accepting states based on character type
      * @param char - The character to process
      */
-    public handle(char: Character): void {
+    public handle(char: Character): Transition {
         switch (char.type) {
             case CharType.Whitespace:
-                this.context.transitionTo(Whitespace_State.instance);
-                break;
+                return Transition.To(Whitespace_State.instance);
             case CharType.EOF:
-                this.context.transitionTo(End_State.instance);
-                break;
+                return Transition.To(End_State.instance);
             case CharType.Hash:
-                this.context.transitionTo(Hex_State.instance);
-                break;
+                return Transition.To(Hex_State.instance);
             case CharType.Operator:
-                this.context.transitionTo(Operator_State.instance);
-                break;
+                return Transition.To(Operator_State.instance);
             case CharType.Letter:
-                this.context.transitionTo(Letter_State.instance);
-                break;
+                return Transition.To(Letter_State.instance);
             case CharType.Number:
-                this.context.transitionTo(Number_State.instance);
-                break;
-            /* istanbul ignore next -- @preserve */
+                return Transition.To(Number_State.instance);
             default:
-                this.context.transitionTo(Initial_State.instance);
-                break;
+                return Transition.Stay();
         }
     }
 
@@ -127,7 +120,6 @@ class Initial_State extends State {
         return false;
     }
 }
-
 
 /**
  * Whitespace accepting state
@@ -160,10 +152,11 @@ class Whitespace_State extends State {
      * Transitions to initial state for any non-whitespace character
      * @param char - The character to process
      */
-    public handle(char: Character): void {
-        if (char.type !== CharType.Whitespace) {
-            this.context.transitionTo(Initial_State.instance);
+    public handle(char: Character): Transition {
+        if (char.type === CharType.Whitespace) {
+            return Transition.Stay();
         }
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 
     /**
@@ -207,16 +200,14 @@ class Hex_State extends State {
      * Transitions to initial state for any other character
      * @param char - The character to process
      */
-    public handle(char: Character): void {
+    public handle(char: Character): Transition {
         switch (char.type) {
             case CharType.Hash:
             case CharType.Letter:
             case CharType.Number:
-                // Stay in hex state, continue accumulating
-                break;
+                return Transition.Stay();
             default:
-                this.context.transitionTo(Initial_State.instance);
-                break;
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 
@@ -261,10 +252,11 @@ class Letter_State extends State {
      * Transitions to initial state for non-letter characters
      * @param char - The character to process
      */
-    public handle(char: Character): void {
-        if (char.type !== CharType.Letter) {
-            this.context.transitionTo(Initial_State.instance);
+    public handle(char: Character): Transition {
+        if (char.type === CharType.Letter) {
+            return Transition.Stay();
         }
+        return Transition.EmitAndTo(Initial_State.instance)
     }
 
     /**
@@ -310,17 +302,14 @@ class Number_State extends State {
      * Transitions to initial state for other characters
      * @param char - The character to process
      */
-    public handle(char: Character): void {
+    public handle(char: Character): Transition {
         switch (char.type) {
             case CharType.Number:
-                // Stay in number state, continue accumulating digits
-                break;
+                return Transition.Stay();
             case CharType.Percent:
-                this.context.transitionTo(Percent_State.instance);
-                break;
+                return Transition.To(Percent_State.instance);
             default:
-                this.context.transitionTo(Initial_State.instance);
-                break;
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 
@@ -365,11 +354,12 @@ class Percent_State extends State {
      * Percent is typically a single-character suffix
      * @param char - The character to process
      */
-    public handle(char: Character): void {
+    public handle(char: Character): Transition {
         /* istanbul ignore if -- @preserve */
-        if (char.type !== CharType.Percent) {
-            this.context.transitionTo(Initial_State.instance);
+        if (char.type === CharType.Percent) {
+            return Transition.EmitAndTo(Initial_State.instance);
         }
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 
     /**
@@ -413,11 +403,12 @@ class Operator_State extends State {
      * Operators are typically single characters or short sequences
      * @param char - The character to process
      */
-    public handle(char: Character): void {
+    public handle(char: Character): Transition {
         /* istanbul ignore if -- @preserve */
-        if (char.type !== CharType.Operator) {
-            this.context.transitionTo(Initial_State.instance);
+        if (char.type === CharType.Operator) {
+            return Transition.Stay();
         }
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 
     /**
@@ -461,11 +452,12 @@ class End_State extends State {
      * Typically EOF is terminal, but this handles edge cases
      * @param char - The character to process
      */
-    public handle(char: Character): void {
+    public handle(char: Character): Transition {
         /* istanbul ignore if -- @preserve */
-        if (char.type !== CharType.EOF) {
-            this.context.transitionTo(Initial_State.instance);
+        if (char.type === CharType.EOF) {
+            return Transition.End();
         }
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 
     /**
