@@ -67,54 +67,24 @@ enum CharType {
     EOF = 'EOF'
 }
 
-/**
- * Set of characters classified as operators
- */
-const Operators = new Set([
-    '%', '.', ',', '/', '(', ')', '+', '-', '_', '#', '!',
-    '\\', '*', '@', '$', '^', '&', '{', '}', '[', ']', '|',
-    ':', ';', '<', '>', '?', '~', '`', '"', "'", '='
-]);
-
-/**
- * Specification map for character type testing functions
- * Tests are performed in order, first match wins
- */
-const CharSpec: Spec = new Map<CharType, CharTypeFn>([
-    [CharType.EOF, (char) => char === 'EOF'],
-    [CharType.Whitespace, (char) => char === ' ' || char === '\t'],
-    [CharType.NewLine, (char) => char === '\n' || char === '\r'],
-    [CharType.Hash, (char: string) => char === '#'],
-    [CharType.Percent, (char: string) => char === '%'],
-    [CharType.Letter, (char) => /\p{L}/u.test(char)],
-    [CharType.Number, (char) => /\d/.test(char)],
-    [CharType.Operator, (char) => Operators.has(char)],
-]);
-
-interface ICharacter {
-    value: string;
-    type: CharType;
-    index: number;
-    line: number;
-    column: number;
+abstract class ICharacter {
+    /** The actual character value as a string */
+    public value: string = '';
+    /** The classified type of this character */
+    public type: CharType = CharType.Start;
+    /** Byte index in the source input */
+    public index: number = 0;
+    /** Line number (1-indexed) */
+    public line: number = 1;
+    /** Column number (1-indexed) */
+    public column: number = 1;
 }
 
 /**
  * Represents a single character with position metadata
  * Used for tracking characters through the tokenization process
  */
-class Character implements ICharacter {
-    /** The actual character value as a string */
-    value: string = '';
-    /** The classified type of this character */
-    type: CharType = CharType.Start;
-    /** Byte index in the source input */
-    index: number = 0;
-    /** Line number (1-indexed) */
-    line: number = 1;
-    /** Column number (1-indexed) */
-    column: number = 1;
-
+class Character extends ICharacter {
     /**
      * Static method to classify a character string into a CharType
      * Iterates through CharSpec map and returns first matching type
@@ -123,30 +93,43 @@ class Character implements ICharacter {
      */
     public static classify: ClassifyFunction = (char: string): CharType => {
         if (char) {
-            for (const [charType, fn] of CharSpec) {
+            for (const [charType, fn] of Character.CharSpec) {
                 if (fn(char)) return charType as CharType;
             }
         }
         return CharType.Other;
     };
+
+    /**
+    * Set of characters classified as operators
+    */
+    public static Operators = new Set([
+        '%', '.', ',', '/', '(', ')', '+', '-', '_', '#', '!',
+        '\\', '*', '@', '$', '^', '&', '{', '}', '[', ']', '|',
+        ':', ';', '<', '>', '?', '~', '`', '"', "'", '='
+    ]);
+
+    /**
+     * Specification map for character type testing functions
+     * Tests are performed in order, first match wins
+     */
+    public static CharSpec: Spec = new Map<CharType, CharTypeFn>([
+        [CharType.EOF, (char) => char === 'EOF'],
+        [CharType.Whitespace, (char) => char === ' ' || char === '\t'],
+        [CharType.NewLine, (char) => char === '\n' || char === '\r'],
+        [CharType.Hash, (char: string) => char === '#'],
+        [CharType.Percent, (char: string) => char === '%'],
+        [CharType.Letter, (char) => /\p{L}/u.test(char)],
+        [CharType.Number, (char) => /\d/.test(char)],
+        [CharType.Operator, (char) => Character.Operators.has(char)],
+    ]);
 }
 
 /**
  * Streaming iterator for processing string input character by character
  * Handles Unicode normalization, position tracking, and EOF emission
  */
-class CharacterStream implements ICharacter, IterableIterator<ICharacter> {
-    /** The normalized input string */
-    value: string = '';
-    /** The classified type of this character */
-    type: CharType = CharType.Start;
-    /** Current byte index in the input */
-    index = 0;
-    /** Current line number (1-indexed) */
-    line = 1;
-    /** Current column number (1-indexed) */
-    column = 1;
-
+class CharacterStream extends Character implements IterableIterator<ICharacter> {
     /** Flag to track if EOF has been emitted */
     private eofEmitted = false;
 
@@ -156,6 +139,7 @@ class CharacterStream implements ICharacter, IterableIterator<ICharacter> {
      * @param input - The string to tokenize
      */
     constructor(input: string) {
+        super();
         this.value = input.normalize('NFC');
     }
 
@@ -164,10 +148,7 @@ class CharacterStream implements ICharacter, IterableIterator<ICharacter> {
      * Returns the next character in the stream with position metadata
      * @returns IteratorResult containing a Character or done flag
      */
-
-
-
-    public next(): IteratorResult<Character> {
+    public next(): IteratorResult<ICharacter> {
         if (this.isEOF()) {
             if (this.eofEmitted) {
                 return { done: true, value: undefined as any };
@@ -195,7 +176,7 @@ class CharacterStream implements ICharacter, IterableIterator<ICharacter> {
      * Makes this class iterable using for...of loops
      * @returns This stream instance as an iterator
      */
-    [Symbol.iterator](): IterableIterator<Character> {
+    public [Symbol.iterator](): IterableIterator<ICharacter> {
         return this;
     }
 
@@ -237,7 +218,7 @@ class CharacterStream implements ICharacter, IterableIterator<ICharacter> {
      * Creates an EOF character marker with current position
      * @returns A Character object representing EOF
      */
-    public atEOF(): Character {
+    public atEOF(): ICharacter {
         return {
             value: 'EOF',
             type: CharType.EOF,
@@ -251,7 +232,7 @@ class CharacterStream implements ICharacter, IterableIterator<ICharacter> {
      * Creates an error character marker
      * @returns A Character object representing an error
      */
-    public atError(): Character {
+    public atError(): ICharacter {
         return {
             value: 'Error',
             type: CharType.Other,
@@ -271,7 +252,6 @@ class CharacterArrayStream implements IterableIterator<ICharacter> {
     private characters: ICharacter[];
     /** Current index in the array */
     private index = 0;
-
     /** Flag to track if EOF has been emitted */
     private eofEmitted = false;
 
@@ -279,7 +259,7 @@ class CharacterArrayStream implements IterableIterator<ICharacter> {
      * Creates a new CharacterArrayStream from an array of Characters
      * @param characters - The character array to iterate over
      */
-    constructor(characters: Character[]) {
+    constructor(characters: ICharacter[]) {
         this.characters = characters;
     }
 
@@ -288,7 +268,7 @@ class CharacterArrayStream implements IterableIterator<ICharacter> {
      * Returns the next character from the array
      * @returns IteratorResult containing a Character or done flag
      */
-    public next(): IteratorResult<Character> {
+    public next(): IteratorResult<ICharacter> {
         if (this.index >= this.characters.length) {
             if (this.eofEmitted) {
                 return { done: true, value: undefined as any };
@@ -317,7 +297,7 @@ class CharacterArrayStream implements IterableIterator<ICharacter> {
      * Makes this class iterable using for...of loops
      * @returns This stream instance as an iterator
      */
-    [Symbol.iterator](): IterableIterator<Character> {
+    public [Symbol.iterator](): IterableIterator<ICharacter> {
         return this;
     }
 }
@@ -327,8 +307,6 @@ export {
     type CharTypeFn,
     type Spec,
     CharType,
-    Operators,
-    CharSpec,
     Character,
     CharacterStream,
     CharacterArrayStream,
