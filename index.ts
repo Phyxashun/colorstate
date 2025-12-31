@@ -4,26 +4,41 @@ import { inspect, type InspectOptions } from 'node:util';
 import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
 
-const inspectOptions: InspectOptions = {
+const OinspectOptions: InspectOptions = {
     showHidden: false,
     depth: null,
     colors: true,
     compact: false,
 };
 
+const inspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
+
 console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
 
 // Test cases
 const testCases = [
-    '1 + 2',
-    '10 - 5 + 3',
-    '2 * 3 + 4',
+    //'1 + 2',
+    //'10 - 5 + 3',
+    //'2 * 3 + 4',
     'rgb(255, 0, 0)',
-    '#ff0000',
-    '50%',
-    '(1 + 2) * 3',
-    '-5 + 10',
-    'rgba(255, 128, 0, 50%)',
+    //'#ff0000',
+    //'50%',
+    //'(1 + 2) * 3',
+    //'-5 + 10',
+    //'rgba(255, 128, 0, 50%)',
 ];
 
 for (const input of testCases) {
@@ -32,12 +47,13 @@ for (const input of testCases) {
 
     // Step 1: Tokenize
     const tokenizer = new Tokenizer();
-    const tokens = tokenizer.tokenizeString(input);
+    const tokens = tokenizer.tokenizeString(input); // <-- BREAKING HERE...note returning all tokens!!!
 
     console.log('\nTOKENS:');
-    tokens.forEach(token => {
-        console.log(`  ${token.type.padEnd(15)} "${token.value}"`);
-    });
+    console.log(inspect(tokens, inspectOptions));
+    //tokens.forEach(token => {
+    //    console.log(`  ${token.type.padEnd(15)} "${token.value}"`);
+    //});
 
     // Step 2: Parse
     const parser = new Parser(tokens);
