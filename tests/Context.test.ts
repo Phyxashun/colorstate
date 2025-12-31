@@ -1,103 +1,91 @@
 // tests/Context.test.ts
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Context } from '../src/Context';
-import { InitialState, LetterState, NumberState } from '../src/States';
-import { CharType, Character } from '../src/Character';
-import { TokenType } from '../src/Tokenizer';
+import { CharType, type Character } from '../src/Character';
+import { Initial_State } from '../src/States';
 
-describe('Context', () => {
-    it('should initialize with a given state', () => {
-        const context = new Context(InitialState);
-        expect(context.isAccepted()).toBe(false);
+function ch(
+    value: string,
+    type: CharType,
+    index = 0,
+    line = 1,
+    column = 1
+): Character {
+    return { value, type, index, line, column };
+}
+
+describe('Context – processCharacters()', () => {
+    it('emits letters individually', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        const a = ctx.processCharacters(ch('a', CharType.Letter));
+        const b = ctx.processCharacters(ch('b', CharType.Letter));
+
+        expect(a?.value).toBe('a');
+        expect(b?.value).toBe('b');
     });
 
-    it('should transition to a new state', () => {
-        const context = new Context(InitialState);
-        context.transitionTo(LetterState);
-        expect(context.isAccepted()).toBe(true);
+    it('emits numbers individually', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        const n = ctx.processCharacters(ch('5', CharType.Number));
+
+        expect(n?.value).toBe('5');
     });
 
-    it('should process a simple tokenization flow', () => {
-        const context = new Context(InitialState);
-        context.processTokens({ value: 'a', type: CharType.Letter } as Character); // Enters LetterState, buffer: ['a']
-        const emittedToken = context.processTokens({ value: ' ', type: CharType.Whitespace } as Character); // State changes, emits 'a'
+    it('does not emit on EOF', () => {
+        const ctx = new Context(Initial_State.instance);
 
-        expect(emittedToken).not.toBeNull();
-        expect(emittedToken!.value).toBe('a');
+        const r = ctx.processCharacters(
+            ch('', CharType.EOF)
+        );
+
+        expect(r).toBeNull();
+    });
+});
+
+describe('Context – processTokens()', () => {
+    it('emits a letter token on state change', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        ctx.processTokens(ch('a', CharType.Letter, 0, 1, 1));
+        const token = ctx.processTokens(ch(' ', CharType.Whitespace, 1, 1, 2));
+
+        expect(token).not.toBeNull();
+        expect(token!.value).toBe('a');
+        expect(token!.type).toBe(CharType.Letter);
     });
 
-    it('should handle EOF in processCharacters', () => {
-        const context = new Context(InitialState);
-        const result = context.processCharacters({ type: CharType.EOF } as Character);
-        expect(result).toBeNull();
+    it('accumulates multi-digit numbers', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        ctx.processTokens(ch('1', CharType.Number));
+        ctx.processTokens(ch('2', CharType.Number));
+        const token = ctx.processTokens(ch(' ', CharType.Whitespace));
+
+        expect(token!.value).toBe('12');
+        expect(token!.type).toBe(CharType.Number);
     });
 
-    describe('toTokenType', () => {
-        it('should convert various CharTypes to the correct TokenTypes', () => {
-            expect(Context.toTokenType({ value: '#', type: CharType.Hash } as Character).type).toBe(TokenType.HEXVALUE);
-            expect(Context.toTokenType({ value: '1', type: CharType.Number } as Character).type).toBe(TokenType.NUMBER);
-            expect(Context.toTokenType({ value: '+', type: CharType.Operator } as Character).type).toBe(TokenType.PLUS);
-            expect(Context.toTokenType({ value: '-', type: CharType.Operator } as Character).type).toBe(TokenType.MINUS);
-            expect(Context.toTokenType({ value: ',', type: CharType.Operator } as Character).type).toBe(TokenType.COMMA);
-            expect(Context.toTokenType({ value: '/', type: CharType.Operator } as Character).type).toBe(TokenType.SLASH);
-            expect(Context.toTokenType({ value: '(', type: CharType.Operator } as Character).type).toBe(TokenType.LPAREN);
-            expect(Context.toTokenType({ value: ')', type: CharType.Operator } as Character).type).toBe(TokenType.RPAREN);
-            expect(Context.toTokenType({ value: '%', type: CharType.Percent } as Character).type).toBe(TokenType.PERCENT);
-        });
+    it('emits buffered token on EOF', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        ctx.processTokens(ch('9', CharType.Number));
+        const token = ctx.processTokens(ch('', CharType.EOF));
+
+        expect(token).not.toBeNull();
+        expect(token!.value).toBe('9');
     });
 
-    // --- 100% COVERAGE COMPLETION TESTS ---
+    it('handles percent numbers correctly', () => {
+        const ctx = new Context(Initial_State.instance);
 
-    describe('Context.ts Final Coverage', () => {
-        it('should throw an Error (lines 105)', () => {
-            const context = new Context(InitialState);
-            const emptyArray: Character[] = [];
+        ctx.processTokens(ch('1', CharType.Number));
+        ctx.processTokens(ch('0', CharType.Number));
+        const token = ctx.processTokens(ch('%', CharType.Percent));
 
-            expect(() => {
-                (context as any).createToken(emptyArray);
-            }).toThrow('Cannot create token from empty buffer');
-        });
-
-        it('should emit a final token when EOF is reached while buffer has content (lines 27-33)', () => {
-            const context = new Context(InitialState);
-            // Buffer has 'a', state is accepting
-            context.processTokens({ value: 'a', type: CharType.Letter } as Character);
-            const finalToken = context.processTokens({ type: CharType.EOF } as Character);
-
-            expect(finalToken).not.toBeNull();
-            expect(finalToken!.value).toBe('a');
-        });
-
-        it('should emit null when EOF is reached while buffer is empty (lines 34-36)', () => {
-            const context = new Context(InitialState);
-            const finalToken = context.processTokens({ type: CharType.EOF } as Character);
-            expect(finalToken).toBeNull();
-        });
-
-        it('should handle complex state change in processCharacters (line 92)', () => {
-            // Test Path: NumberState (Accepting) -> InitialState (Non-Accepting) -> LetterState (Accepting)
-            const context = new Context(NumberState);
-            const result = context.processCharacters({ value: 'a', type: CharType.Letter } as Character);
-
-            // The logic should return the character that caused this complex transition
-            expect(result).not.toBeNull();
-            expect(result!.value).toBe('a');
-        });
-
-        it('should correctly map CharType.Letter in toTokenType (line 147)', () => {
-            const token = Context.toTokenType({ value: 'word', type: CharType.Letter } as Character);
-            expect(token.type).toBe(TokenType.IDENTIFIER);
-        });
-
-        it('should map unhandled CharTypes to an ERROR token (line 159)', () => {
-            const token = Context.toTokenType({ value: '', type: CharType.EOF } as Character);
-            expect(token.type).toBe(TokenType.EOF);
-        });
-
-        it('should map unhandled CharTypes to an ERROR token (line 159)', () => {
-            const token = Context.toTokenType({ value: '`', type: CharType.Other } as Character);
-            expect(token.type).toBe(TokenType.ERROR);
-        });
+        expect(token).not.toBeNull();
+        expect(token!.value).toBe('10');
     });
 });

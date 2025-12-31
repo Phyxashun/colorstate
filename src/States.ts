@@ -2,20 +2,7 @@
 
 import { inspect, type InspectOptions } from 'node:util';
 import { Character, CharType } from './Character.ts';
-import { Context } from './Context.ts'
-
-export type Transition =
-    | { kind: 'Stay' }
-    | { kind: 'To'; state: State }
-    | { kind: 'EmitAndTo'; state: State }
-    | { kind: 'End' };
-
-export const Transition = {
-    Stay: (): Transition => ({ kind: 'Stay' }),
-    To: (state: State): Transition => ({ kind: 'To', state }),
-    EmitAndTo: (state: State): Transition => ({ kind: 'EmitAndTo', state }),
-    End: (): Transition => ({ kind: 'End' }),
-};
+import { Transition } from './Transition';
 
 /**
  * Abstract base class for all DFA states
@@ -355,10 +342,6 @@ class Percent_State extends State {
      * @param char - The character to process
      */
     public handle(char: Character): Transition {
-        /* istanbul ignore if -- @preserve */
-        if (char.type === CharType.Percent) {
-            return Transition.EmitAndTo(Initial_State.instance);
-        }
         return Transition.EmitAndTo(Initial_State.instance);
     }
 
@@ -453,11 +436,7 @@ class End_State extends State {
      * @param char - The character to process
      */
     public handle(char: Character): Transition {
-        /* istanbul ignore if -- @preserve */
-        if (char.type === CharType.EOF) {
-            return Transition.End();
-        }
-        return Transition.EmitAndTo(Initial_State.instance);
+        return Transition.End();
     }
 
     /**

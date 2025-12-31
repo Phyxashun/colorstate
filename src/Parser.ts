@@ -254,6 +254,10 @@ export class Parser {
             } as GroupExpression;
         }
 
+        if (this.check(TokenType.EOF)) {
+            throw this.error(this.peek(), 'Unexpected EOF');
+        }
+
         throw this.error(this.peek(), 'Expected expression');
     }
 

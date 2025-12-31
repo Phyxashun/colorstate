@@ -1,290 +1,255 @@
-// tests/States.test.ts
+import { describe, it, expect } from 'vitest';
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     Initial_State,
-    Whitespace_State,
-    Hex_State,
     Letter_State,
     Number_State,
-    Percent_State,
     Operator_State,
+    Whitespace_State,
+    Hex_State,
+    Percent_State,
     End_State,
-    State
 } from '../src/States';
-import { Context } from '../src/Context';
-import { CharType, Character, CharacterStream } from '../src/Character';
-import { Tokenizer } from '../src/Tokenizer';
 
-// Note: The aliased exports (e.g., InitialState) are instances.
-// We use the class directly (e.g., Initial_State) to access the static .instance property
-// for consistency and clarity in the tests.
+import { CharType, type Character } from '../src/Character';
+import type { Transition } from '../src/Transition';
+import type { State } from '../src/States';
 
-describe('States1', () => {
+/* -------------------------------------------------- */
+/* Helpers                                            */
+/* -------------------------------------------------- */
 
-    describe('InitialState Transitions', () => {
-        let context: Context;
-        let transitionToSpy: any;
+function char(
+    value: string,
+    type: CharType
+): Character {
+    return {
+        value,
+        type,
+        index: 0,
+        line: 1,
+        column: 1,
+    };
+}
 
-        // This runs before each `it` block in this `describe` block
-        beforeEach(() => {
-            context = new Context(Initial_State.instance);
-            transitionToSpy = vi.spyOn(context, 'transitionTo');
-        });
+function expectTo(
+    t: Transition,
+    state: State
+) {
+    expect(t.kind).toBe('To');
+    if (t.kind === 'To') {
+        expect(t.state).toBe(state);
+    }
+}
 
-        it('should transition to Whitespace_State on whitespace', () => {
-            context.processCharacters({ type: CharType.Whitespace } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Whitespace_State.instance);
-        });
+function expectEmitAndTo(
+    t: Transition,
+    state: State
+) {
+    expect(t.kind).toBe('EmitAndTo');
+    if (t.kind === 'EmitAndTo') {
+        expect(t.state).toBe(state);
+    }
+}
 
-        it('should transition to Hex_State on hash', () => {
-            context.processCharacters({ type: CharType.Hash } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Hex_State.instance);
-        });
+function expectStay(t: Transition) {
+    expect(t.kind).toBe('Stay');
+}
 
-        it('should transition to Letter_State on a letter', () => {
-            context.processCharacters({ type: CharType.Letter } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Letter_State.instance);
-        });
+function expectEnd(t: Transition) {
+    expect(t.kind).toBe('End');
+}
 
-        it('should transition to Number_State on a number', () => {
-            context.processCharacters({ type: CharType.Number } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Number_State.instance);
-        });
+/* -------------------------------------------------- */
+/* Initial State                                      */
+/* -------------------------------------------------- */
 
-        it('should transition to Operator_State on an operator', () => {
-            context.processCharacters({ type: CharType.Operator } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Operator_State.instance);
-        });
+describe('Initial_State', () => {
+    it('routes letters to Letter_State', () => {
+        const t = Initial_State.instance.handle(
+            char('a', CharType.Letter)
+        );
 
-        it('should transition to End_State on EOF', () => {
-            context.processCharacters({ type: CharType.EOF } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(End_State.instance);
-        });
+        expectTo(t, Letter_State.instance);
     });
 
-    it('should return correct accepting status for each state', () => {
-        expect(Initial_State.instance.isAccepting()).toBe(false);
-        expect(Whitespace_State.instance.isAccepting()).toBe(true);
-        expect(Hex_State.instance.isAccepting()).toBe(true);
-        expect(Letter_State.instance.isAccepting()).toBe(true);
-        expect(Number_State.instance.isAccepting()).toBe(true);
-        expect(Percent_State.instance.isAccepting()).toBe(true);
-        expect(Operator_State.instance.isAccepting()).toBe(true);
-        expect(End_State.instance.isAccepting()).toBe(true);
+    it('routes numbers to Number_State', () => {
+        const t = Initial_State.instance.handle(
+            char('1', CharType.Number)
+        );
+
+        expectTo(t, Number_State.instance);
     });
 
-    it('NumberState should transition to PercentState', () => {
-        const context = new Context(Number_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        // Directly call the state's handle method for a unit test
-        Number_State.instance.setContext(context);
-        Number_State.instance.handle({ type: CharType.Percent } as Character);
-        expect(transitionToSpy).toHaveBeenCalledWith(Percent_State.instance);
+    it('routes operators to Operator_State', () => {
+        const t = Initial_State.instance.handle(
+            char('+', CharType.Operator)
+        );
+
+        expectTo(t, Operator_State.instance);
     });
 
-    it('should have singleton instances for states', () => {
-        const instance1 = Whitespace_State.instance;
-        const instance2 = Whitespace_State.instance;
-        expect(instance1).toBe(instance2);
+    it('routes whitespace to Whitespace_State', () => {
+        const t = Initial_State.instance.handle(
+            char(' ', CharType.Whitespace)
+        );
+
+        expectTo(t, Whitespace_State.instance);
     });
 
-    it('should have a toString method', () => {
-        expect(Initial_State.instance.toString()).toBeTypeOf('string');
+    it('routes # to Hex_State', () => {
+        const t = Initial_State.instance.handle(
+            char('#', CharType.Hash)
+        );
+
+        expectTo(t, Hex_State.instance);
     });
 
-    it('should transition through Hex_State', () => {
-        const context = new Context(Hex_State.instance);
-        const transitionToSpy = vi.spyOn(Hex_State.instance, 'handle');
+    it('routes EOF to End_State', () => {
+        const t = Initial_State.instance.handle(
+            char('', CharType.EOF)
+        );
 
-        Hex_State.instance.setContext(context);
-
-        const tokenizer = new Tokenizer();
-        const input = '#ff00ff00';
-        const chars = tokenizer.getCharacters(input);
-
-        for (const ch of chars) {
-            Hex_State.instance.handle(ch);
-            expect(transitionToSpy).toHaveBeenCalledWith(ch);
-        }
-    });
-
-    it('should transition out of Percent_State to Initial_State (lines 215-217)', () => {
-        const ch = { value: '0', type: CharType.Number, index: 0, line: 1, column: 1 };
-        const context = new Context(Percent_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const handleSpy = vi.spyOn(Percent_State.instance, 'handle');
-        Percent_State.instance.setContext(context);
-        Percent_State.instance.handle(ch);
-
-        expect(handleSpy).toHaveBeenCalledWith(ch);
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('should transition out of Letter_State to Initial_State', () => {
-        const ch = { value: '#', type: CharType.Number, index: 0, line: 1, column: 1 };
-        const context = new Context(Letter_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        Letter_State.instance.setContext(context);
-        Letter_State.instance.handle(ch);
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
+        expectTo(t, End_State.instance);
     });
 });
 
-describe('States2', () => {
-    describe('Initial_State Transitions', () => {
-        let context: Context;
-        let transitionToSpy: any;
+/* -------------------------------------------------- */
+/* Letter State                                       */
+/* -------------------------------------------------- */
 
-        // A fresh context and spy are created before each test in this block
-        beforeEach(() => {
-            context = new Context(Initial_State.instance);
-            transitionToSpy = vi.spyOn(context, 'transitionTo');
-        });
+describe('Letter_State', () => {
+    it('stays on letters', () => {
+        const t = Letter_State.instance.handle(
+            char('b', CharType.Letter)
+        );
 
-        it('should transition to Whitespace_State on a whitespace character', () => {
-            // We are testing the handle method of Initial_State
-            const state = Initial_State.instance;
-            state.setContext(context); // The state needs the context to transition
-            state.handle({ type: CharType.Whitespace } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Whitespace_State.instance);
-        });
-
-        it('should transition to Hex_State on a hash character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.Hash } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Hex_State.instance);
-        });
-
-        it('should transition to Letter_State on a letter character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.Letter } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Letter_State.instance);
-        });
-
-        it('should transition to Number_State on a number character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.Number } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Number_State.instance);
-        });
-
-        it('should transition to Operator_State on an operator character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.Operator } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Operator_State.instance);
-        });
-
-        it('should transition to End_State on an EOF character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.EOF } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(End_State.instance);
-        });
+        expectStay(t);
     });
 
-    it('should return the correct accepting status for each state', () => {
-        expect(Initial_State.instance.isAccepting()).toBe(false);
-        expect(Whitespace_State.instance.isAccepting()).toBe(true);
-        expect(Hex_State.instance.isAccepting()).toBe(true);
-        expect(Letter_State.instance.isAccepting()).toBe(true);
-        expect(Number_State.instance.isAccepting()).toBe(true);
-        expect(Percent_State.instance.isAccepting()).toBe(true);
-        expect(Operator_State.instance.isAccepting()).toBe(true);
-        expect(End_State.instance.isAccepting()).toBe(true);
+    it('emits and returns to Initial on non-letter', () => {
+        const t = Letter_State.instance.handle(
+            char('1', CharType.Number)
+        );
+
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
+
+/* -------------------------------------------------- */
+/* Number State                                       */
+/* -------------------------------------------------- */
+
+describe('Number_State', () => {
+    it('stays on digits', () => {
+        const t = Number_State.instance.handle(
+            char('2', CharType.Number)
+        );
+
+        expectStay(t);
     });
 
-    it('Number_State should transition to Percent_State on a percent character', () => {
-        const context = new Context(Number_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Number_State.instance;
-        state.setContext(context);
-        state.handle({ type: CharType.Percent } as Character);
-        expect(transitionToSpy).toHaveBeenCalledWith(Percent_State.instance);
+    it('transitions to Percent_State on %', () => {
+        const t = Number_State.instance.handle(
+            char('%', CharType.Percent)
+        );
+
+        expectTo(t, Percent_State.instance);
     });
 
-    it('should maintain singleton instances for states', () => {
-        const instance1 = Whitespace_State.instance;
-        const instance2 = Whitespace_State.instance;
-        expect(instance1).toBe(instance2);
+    it('emits and returns to Initial on non-digit', () => {
+        const t = Number_State.instance.handle(
+            char('+', CharType.Operator)
+        );
+
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
+
+/* -------------------------------------------------- */
+/* Percent State                                      */
+/* -------------------------------------------------- */
+
+describe('Percent_State', () => {
+    it('stays on %', () => {
+        const t = Percent_State.instance.handle(
+            char('%', CharType.Percent)
+        );
+
+        expectStay(t);
     });
 
-    it('should have a working toString method', () => {
-        expect(Initial_State.instance.toString()).toBeTypeOf('string');
+    it('emits and returns to Initial on other input', () => {
+        const t = Percent_State.instance.handle(
+            char(' ', CharType.Whitespace)
+        );
+
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
+
+/* -------------------------------------------------- */
+/* Operator State                                     */
+/* -------------------------------------------------- */
+
+describe('Operator_State', () => {
+    it('stays on operator', () => {
+        const t = Operator_State.instance.handle(
+            char('+', CharType.Operator)
+        );
+
+        expectStay(t);
     });
 
-    it('Whitespace_State should transition to Initial_State on a non-whitespace char', () => {
-        const context = new Context(Whitespace_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Whitespace_State.instance;
-        state.setContext(context);
+    it('emits and returns to Initial on non-operator', () => {
+        const t = Operator_State.instance.handle(
+            char('a', CharType.Letter)
+        );
 
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Letter } as Character);
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
 
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
+/* -------------------------------------------------- */
+/* Whitespace State                                   */
+/* -------------------------------------------------- */
+
+describe('Whitespace_State', () => {
+    it('stays on whitespace', () => {
+        const t = Whitespace_State.instance.handle(
+            char(' ', CharType.Whitespace)
+        );
+
+        expectStay(t);
     });
 
-    it('Hex_State should transition to Initial_State on a non-hex char', () => {
-        const context = new Context(Hex_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Hex_State.instance;
-        state.setContext(context);
+    it('emits and returns to Initial on non-whitespace', () => {
+        const t = Whitespace_State.instance.handle(
+            char('a', CharType.Letter)
+        );
 
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Whitespace } as Character);
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
 
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
+/* -------------------------------------------------- */
+/* End State                                          */
+/* -------------------------------------------------- */
+
+describe('End_State', () => {
+    it('ends on EOF', () => {
+        const t = End_State.instance.handle(
+            char('', CharType.EOF)
+        );
+
+        expectEnd(t);
     });
 
-    it('Operator_State should transition to Initial_State on a non-operator char (line 242)', () => {
-        const context = new Context(Operator_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Operator_State.instance;
-        state.setContext(context);
+    it('emits and returns to Initial if input appears after EOF', () => {
+        const t = End_State.instance.handle(
+            char('a', CharType.Letter)
+        );
 
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Whitespace } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('Letter_State should transition to Initial_State on a non-letter char', () => {
-        const context = new Context(Letter_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Letter_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Whitespace } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('Number_State should transition to Initial_State on a non-numeric char', () => {
-        const context = new Context(Number_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Number_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Whitespace } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('End_State should transition to Initial_State on a non-EOF char (line 268)', () => {
-        const context = new Context(End_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = End_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Letter } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
+        expectEmitAndTo(t, Initial_State.instance);
     });
 });

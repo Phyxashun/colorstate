@@ -3,7 +3,6 @@
 import { CharType, type Character } from "./Character.ts";
 import { TokenType, type Token } from "./Tokenizer.ts";
 import { State } from "./States.ts";
-import { type Transition } from "./States.ts";
 
 /**
  * Context manages the DFA (Deterministic Finite Automaton) state machine
@@ -36,7 +35,7 @@ class Context {
     public processTokens(char: Character): Character | null {
         this.previousChar = char;
 
-        const transition: Transition = this.state.handle(char);
+        const transition = this.state.handle(char);
 
         switch (transition.kind) {
             case "Stay": {
@@ -62,52 +61,52 @@ class Context {
                         : null;
 
                 this.buffer = [];
+
                 this.transitionTo(transition.state);
-
-                if (this.state.isAccepting() && char.type !== CharType.EOF) {
-                    this.buffer.push(char);
-                }
-
                 return token;
             }
 
             case "End": {
-                if (this.buffer.length === 0) return null;
-
-                const token = this.createToken(this.buffer);
-                this.buffer = [];
-                return token;
+                if (this.buffer.length > 0) {
+                    const token = this.createToken(this.buffer);
+                    this.buffer = [];
+                    return token;
+                }
+                return null;
             }
         }
     }
 
+
     /**
-     * Character-oriented processing (single-character tokens)
-     */
+ * Character-oriented processing (single-character tokens)
+ */
     public processCharacters(char: Character): Character | null {
+        const wasAccepting = this.state.isAccepting();
+        const prevChar = this.previousChar;
         this.previousChar = char;
 
-        const transition: Transition = this.state.handle(char);
+        const transition = this.state.handle(char);
+
+        if (char.type === CharType.EOF) {
+            return null;
+        }
 
         switch (transition.kind) {
-            case "Stay": {
-                return this.state.isAccepting() ? char : null;
-            }
+            case "Stay":
+                return wasAccepting ? char : null;
 
-            case "To": {
+            case "To":
                 this.transitionTo(transition.state);
                 return this.state.isAccepting() ? char : null;
-            }
 
             case "EmitAndTo": {
-                const emitted = this.state.isAccepting() ? char : null;
                 this.transitionTo(transition.state);
-                return emitted;
+                return prevChar;
             }
 
-            case "End": {
+            case "End":
                 return null;
-            }
         }
     }
 
@@ -173,6 +172,7 @@ class Context {
                         return { value, type: TokenType.LPAREN };
                     case ")":
                         return { value, type: TokenType.RPAREN };
+                    case "*":
                     default:
                         return { value, type: TokenType.OPERATOR };
                 }
