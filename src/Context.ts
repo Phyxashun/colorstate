@@ -1,5 +1,6 @@
 // src/Context.ts
 
+import { inspect, type InspectOptions } from 'node:util';
 import { CharType, type Character } from "./Character.ts";
 import { TokenType, type Token } from "./Tokenizer.ts";
 import { State } from "./States.ts";
@@ -9,8 +10,21 @@ import { State } from "./States.ts";
  * Processes characters through state transitions and emits tokens
  */
 class Context {
+    private inspectOptions: InspectOptions = {
+        showHidden: true,
+        depth: null,
+        colors: true,
+        customInspect: false,
+        showProxy: false,
+        maxArrayLength: null,
+        maxStringLength: null,
+        breakLength: 100,
+        compact: true,
+        sorted: false,
+        getters: false,
+        numericSeparator: true,
+    };
     private state: State;
-    public previousChar?: Character;
 
     /** Buffer for accumulating characters into multi-character tokens */
     public buffer: Character[] = [];
@@ -23,14 +37,15 @@ class Context {
         this.state = state;
     }
 
-    public processTokens(char: Character): Character | undefined {
+    public processTokens(char: Character): [boolean, Token?] {
         const transition = this.state.handle(char);
 
         switch (transition.kind) {
             case "Stay": {
                 if (this.state.isAccepting)
                     this.buffer.push(char);
-                break;
+                console.log(`1. Stay.\t${this.state.name}: ${inspect(char, this.inspectOptions)}`);
+                return [false];
             }
 
             case "To": {
@@ -38,7 +53,8 @@ class Context {
 
                 if (this.state.isAccepting)
                     this.buffer.push(char);
-                break;
+                console.log(`2. To.\t\t${this.state.name}: ${inspect(char, this.inspectOptions)}`);
+                return [false];
             }
 
             case "EmitAndTo": {
@@ -48,7 +64,8 @@ class Context {
                         : undefined;
                 this.buffer = [];
                 this.transitionTo(transition.state);
-                return token;
+                console.log(`3. EmitAndTo.\t${this.state.name}: ${inspect(token, this.inspectOptions)}`);
+                return [true, token];
             }
 
             case "End": {
@@ -57,35 +74,30 @@ class Context {
                         ? this.createToken(this.buffer)
                         : undefined;
                 this.buffer = [];
-                return token;
+                console.log(`4. End.\t${this.state.name}: ${inspect(token, this.inspectOptions)}`);
+                return [true, token];
             }
         }
     }
 
     public processCharacters(char: Character): Character | undefined {
-        const wasAccepting = this.state.isAccepting;
-        const prevChar = this.previousChar;
-        this.previousChar = char;
-
         const transition = this.state.handle(char);
-
-        if (char.type === CharType.EOF) return;
 
         switch (transition.kind) {
             case "Stay":
-                if (wasAccepting)
+                if (this.isAccepted())
                     return char;
                 break;
 
             case "To":
                 this.transitionTo(transition.state);
-                if (this.state.isAccepting)
+                if (this.isAccepted())
                     return char;
                 break;
 
             case "EmitAndTo": {
                 this.transitionTo(transition.state);
-                return prevChar;
+                return char;
             }
 
             case "End":
@@ -93,7 +105,7 @@ class Context {
         }
     }
 
-    private createToken(chars: Character[]): Character {
+    private createToken(chars: Character[]): Token {
         if (chars.length === 0) throw new Error('Cannot create token from empty buffer');
 
         let value = '';
@@ -101,13 +113,16 @@ class Context {
             value += ch.value;
         }
 
-        return {
+        const ch = {
             value,
             type: chars[0]!.type,
             index: chars[0]!.index,
             line: chars[0]!.line,
             column: chars[0]!.column
         };
+
+        const token = Context.toTokenType(ch);
+        return token;
     }
 
     public static toTokenType(char: Character): Token {

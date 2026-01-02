@@ -42,25 +42,19 @@ const testCases = [
 ];
 
 for (const input of testCases) {
+
     // Step 1: Tokenize
     const tokenizer = new Tokenizer();
     const tokens = tokenizer
         .withLogging()
         .tokenizeString(input);
 
-    //console.log('\nTOKENS:');
-    //console.log(inspect(tokens, inspectOptions));
-
-    //tokens.forEach(token => {
-    //    console.log(`  ${token.type.padEnd(15)} "${token.value}"`);
-    //});
-
     // Step 2: Parse
     const parser = new Parser(tokens);
     const ast = parser.parse();
 
     console.log('\nAST:');
-    console.log(inspect(ast, inspectOptions));
+    console.log('\t', inspect(ast, inspectOptions));
 }
 
 const old_test = () => {

@@ -1,12 +1,10 @@
 // src/Tokenizer.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import { State, InitialState } from './States.ts';
+import { State, Initial_State } from './States.ts';
 import { Context } from './Context.ts';
 import { Character, CharType, CharacterStream, CharacterArrayStream } from './Character.ts';
 import type { Mode } from 'node:fs';
-
-const __DEBUG__ = true;
 
 enum TokenType {
     IDENTIFIER = 'IDENTIFIER',
@@ -65,7 +63,7 @@ class Tokenizer {
     private shouldLog: boolean = false;
     private message: string | undefined = undefined;
 
-    constructor(initialState = InitialState) {
+    constructor(initialState = new Initial_State()) {
         this.initialState = initialState;
     }
 
@@ -151,33 +149,26 @@ class Tokenizer {
                 : new CharacterArrayStream(input);
 
         const dfa: Context = new Context(this.initialState);
-        const result: TokenizerReturnMap[T] = [];
-        let emitted: Character | undefined = undefined;
+        const result: any[] = [];
 
         this.logHeader();
         this.logSource(input);
 
-        if (__DEBUG__) console.log(`CHARACTER (${mode.toUpperCase()}):\n`);
-
         // Process each character through the DFA
         for (const char of stream) {
-            if (__DEBUG__) console.log(`\t${inspect(char, this.inspectOptions)}`);
-
             switch (mode) {
                 case ModeType.Token:
-                    emitted = dfa.processTokens(char);
-                    if (emitted) (result as Token[]).push(Context.toTokenType(emitted));
+                    const [tokenEmitted, token] = dfa.processTokens(char);
+                    if (tokenEmitted) result.push(token);
                     break;
 
                 case ModeType.Character:
-                    emitted = dfa.processCharacters(char);
+                    const emitted = dfa.processCharacters(char);
                     if (emitted) (result as Character[]).push(emitted);
                     break;
             }
             if (char.type === CharType.EOF) break;
         }
-
-        if (__DEBUG__) { console.log(`\n`); this.line(); }
 
         this.logResults(result, mode);
         return result;
