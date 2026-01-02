@@ -9,11 +9,8 @@ import { State } from "./States.ts";
  * Processes characters through state transitions and emits tokens
  */
 class Context {
-    /** Current state of the DFA */
     private state: State;
-
-    /** Previously processed character */
-    public previousChar: Character | null = null;
+    public previousChar?: Character;
 
     /** Buffer for accumulating characters into multi-character tokens */
     public buffer: Character[] = [];
@@ -22,83 +19,69 @@ class Context {
         this.state = initialState;
     }
 
-    /**
-     * Transitions the DFA to a new state
-     */
     public transitionTo(state: State): void {
         this.state = state;
     }
 
-    /**
-     * Token-oriented processing (multi-character tokens)
-     */
-    public processTokens(char: Character): Character | null {
-        this.previousChar = char;
-
+    public processTokens(char: Character): Character | undefined {
         const transition = this.state.handle(char);
 
         switch (transition.kind) {
             case "Stay": {
-                if (this.state.isAccepting() && char.type !== CharType.EOF) {
+                if (this.state.isAccepting)
                     this.buffer.push(char);
-                }
-                return null;
+                break;
             }
 
             case "To": {
                 this.transitionTo(transition.state);
 
-                if (this.state.isAccepting() && char.type !== CharType.EOF) {
+                if (this.state.isAccepting)
                     this.buffer.push(char);
-                }
-                return null;
+                break;
             }
 
             case "EmitAndTo": {
                 const token =
                     this.buffer.length > 0
                         ? this.createToken(this.buffer)
-                        : null;
-
+                        : undefined;
                 this.buffer = [];
-
                 this.transitionTo(transition.state);
                 return token;
             }
 
             case "End": {
-                if (this.buffer.length > 0) {
-                    const token = this.createToken(this.buffer);
-                    this.buffer = [];
-                    return token;
-                }
-                return null;
+                const token =
+                    this.buffer.length > 0
+                        ? this.createToken(this.buffer)
+                        : undefined;
+                this.buffer = [];
+                return token;
             }
         }
     }
 
-
-    /**
- * Character-oriented processing (single-character tokens)
- */
-    public processCharacters(char: Character): Character | null {
-        const wasAccepting = this.state.isAccepting();
+    public processCharacters(char: Character): Character | undefined {
+        const wasAccepting = this.state.isAccepting;
         const prevChar = this.previousChar;
         this.previousChar = char;
 
         const transition = this.state.handle(char);
 
-        if (char.type === CharType.EOF) {
-            return null;
-        }
+        if (char.type === CharType.EOF) return;
 
         switch (transition.kind) {
             case "Stay":
-                return wasAccepting ? char : null;
+                if (wasAccepting)
+                    return char;
+                break;
 
             case "To":
                 this.transitionTo(transition.state);
-                return this.state.isAccepting() ? char : null;
+                if (this.state.isAccepting)
+                    return char;
+                break;
 
             case "EmitAndTo": {
                 this.transitionTo(transition.state);
@@ -106,21 +89,16 @@ class Context {
             }
 
             case "End":
-                return null;
+                break;
         }
     }
 
-    /**
-     * Creates a token from a buffer of characters
-     */
     private createToken(chars: Character[]): Character {
-        if (chars.length === 0) {
-            throw new Error("Cannot create token from empty buffer");
-        }
+        if (chars.length === 0) throw new Error('Cannot create token from empty buffer');
 
-        let value = "";
-        for (let i = 0; i < chars.length; i++) {
-            value += chars[i]!.value;
+        let value = '';
+        for (const ch of chars) {
+            value += ch.value;
         }
 
         return {
@@ -132,9 +110,6 @@ class Context {
         };
     }
 
-    /**
-     * Converts a Character token to a semantic Token type
-     */
     public static toTokenType(char: Character): Token {
         const value = char.value;
 
@@ -143,20 +118,14 @@ class Context {
         }
 
         switch (char.type) {
+            case CharType.Whitespace:
+                return { value, type: TokenType.WHITESPACE };
+
             case CharType.Hash:
                 return { value, type: TokenType.HEXVALUE };
 
             case CharType.Percent:
                 return { value, type: TokenType.PERCENT };
-
-            case CharType.Letter:
-                return { value, type: TokenType.IDENTIFIER };
-
-            case CharType.Number:
-                return { value, type: TokenType.NUMBER };
-
-            case CharType.Whitespace:
-                return { value, type: TokenType.WHITESPACE };
 
             case CharType.Operator:
                 switch (value) {
@@ -176,6 +145,11 @@ class Context {
                     default:
                         return { value, type: TokenType.OPERATOR };
                 }
+            case CharType.Letter:
+                return { value, type: TokenType.IDENTIFIER };
+
+            case CharType.Number:
+                return { value, type: TokenType.NUMBER };
 
             case CharType.EOF:
                 return { value, type: TokenType.EOF };
@@ -185,11 +159,8 @@ class Context {
         }
     }
 
-    /**
-     * Checks if the current state is accepting
-     */
     public isAccepted(): boolean {
-        return this.state.isAccepting();
+        return this.state.isAccepting;
     }
 }
 

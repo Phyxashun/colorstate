@@ -36,10 +36,10 @@ export class Parser {
 
     constructor(tokens: Token[]) {
         // Filter out WHITESPACE TOKENS
-        tokens = tokens.filter(t => t.type !== TokenType.WHITESPACE);
+        //tokens = tokens.filter(t => t.type !== TokenType.WHITESPACE);
 
         // Filter out COMMA tokens
-        tokens = tokens.filter(t => t.type !== TokenType.COMMA);
+        //tokens = tokens.filter(t => t.type !== TokenType.COMMA);
 
         this.tokens = tokens;
     }
@@ -167,63 +167,75 @@ export class Parser {
     }
 
     private primary(): Expression | null {
-
         if (this.isAtEnd()) return null;
 
-        if (this.match(TokenType.WHITESPACE)) {
-            return null;
-        }
+        // Peek at the current token type to use in the switch statement.
+        const currentType = this.peek().type;
 
-        if (this.match(TokenType.COMMA)) {
-            return null;
-        }
+        switch (currentType) {
+            case TokenType.WHITESPACE:
+                this.advance();
+                return null;
 
-        if (this.match(TokenType.NUMBER)) {
-            const token = this.previous();
-            return {
-                type: NodeType.NumericLiteral,
-                value: parseFloat(token.value),
-                raw: token.value
-            } as NumericLiteral;
-        }
+            case TokenType.COMMA:
+                this.advance();
+                return null;
 
-        if (this.match(TokenType.PERCENT)) {
-            const token = this.previous();
-            const numStr = token.value.replace('%', '');
-            return {
-                type: NodeType.PercentLiteral,
-                value: parseFloat(numStr),
-                raw: token.value
-            } as PercentLiteral;
-        }
+            case TokenType.NUMBER: {
+                this.advance(); // Consume the token
+                const token = this.previous();
+                return {
+                    type: NodeType.NumericLiteral,
+                    value: parseFloat(token.value),
+                    raw: token.value
+                } as NumericLiteral;
+            }
 
-        if (this.match(TokenType.HEXVALUE)) {
-            const token = this.previous();
-            return {
-                type: NodeType.HexLiteral,
-                value: token.value,
-                raw: token.value
-            } as HexLiteral;
-        }
+            case TokenType.PERCENT: {
+                this.advance(); // Consume the token
+                const token = this.previous();
+                const numStr = token.value.replace('%', '');
+                return {
+                    type: NodeType.PercentLiteral,
+                    value: parseFloat(numStr),
+                    raw: token.value
+                } as PercentLiteral;
+            }
 
-        if (this.match(TokenType.IDENTIFIER)) {
-            const token = this.previous();
-            return {
-                type: NodeType.Identifier,
-                name: token.value
-            } as Identifier;
-        }
+            case TokenType.HEXVALUE: {
+                this.advance(); // Consume the token
+                const token = this.previous();
+                return {
+                    type: NodeType.HexLiteral,
+                    value: token.value,
+                    raw: token.value
+                } as HexLiteral;
+            }
 
-        if (this.match(TokenType.LPAREN)) {
-            const expr = this.expression();
-            this.consume(TokenType.RPAREN, "Expected ')' after expression");
-            return {
-                type: NodeType.GroupExpression,
-                expression: expr
-            } as GroupExpression;
-        }
+            case TokenType.IDENTIFIER: {
+                this.advance(); // Consume the token
+                const token = this.previous();
+                return {
+                    type: NodeType.Identifier,
+                    name: token.value
+                } as Identifier;
+            }
 
-        throw this.error(this.peek(), 'Expected expression');
+            case TokenType.LPAREN: {
+                this.advance(); // Consume the '('
+                const expr = this.expression();
+                // Use this.consume() to ensure the closing ')' is present
+                this.consume(TokenType.RPAREN, "Expected ')' after expression");
+                return {
+                    type: NodeType.GroupExpression,
+                    expression: expr
+                } as GroupExpression;
+            }
+
+            default:
+                // If none of the above match, throw an error
+                throw this.error(this.peek(), 'Expected expression');
+        }
     }
 
     // ===== Helper Methods =====

@@ -42,15 +42,15 @@ const testCases = [
 ];
 
 for (const input of testCases) {
-    console.log(`\nINPUT: ${input}`);
-    console.log('─'.repeat(50));
-
     // Step 1: Tokenize
     const tokenizer = new Tokenizer();
-    const tokens = tokenizer.tokenizeString(input); // <-- BREAKING HERE...note returning all tokens!!!
+    const tokens = tokenizer
+        .withLogging()
+        .tokenizeString(input);
 
-    console.log('\nTOKENS:');
-    console.log(inspect(tokens, inspectOptions));
+    //console.log('\nTOKENS:');
+    //console.log(inspect(tokens, inspectOptions));
+
     //tokens.forEach(token => {
     //    console.log(`  ${token.type.padEnd(15)} "${token.value}"`);
     //});
