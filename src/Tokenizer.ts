@@ -3,7 +3,7 @@
 import { inspect, type InspectOptions } from 'node:util';
 import { State, Initial_State } from './States.ts';
 import { Context } from './Context.ts';
-import { Character, CharType, CharacterStream, CharacterArrayStream } from './Character.ts';
+import { Character, CharType, CharacterStream } from './Character.ts';
 import type { Mode } from 'node:fs';
 
 enum TokenType {
@@ -22,6 +22,7 @@ enum TokenType {
     RPAREN = 'RPAREN',
     DELIMITER = 'DELIMITER',
     OPERATOR = 'OPERATOR',
+    NEWLINE = 'NEWLINE',
     WHITESPACE = 'WHITESPACE',
     EOF = '<end>',
     ERROR = '<error>',
@@ -37,7 +38,7 @@ enum ModeType {
     Character = 'CHARACTER',
 }
 
-type TokenizerInput = string | Character[];
+type TokenizerInput = string;
 
 type TokenizerReturnMap = {
     [ModeType.Token]: Token[],
@@ -99,11 +100,7 @@ class Tokenizer {
 
     private logSource(input: TokenizerInput): void {
         if (!this.shouldLog) return;
-
-        const sourceInfo = typeof input === 'string'
-            ? input
-            : `${input.length} characters`;
-        console.log(`SOURCE:\t${sourceInfo}\n`);
+        console.log(`SOURCE:\t${input}\n`);
         this.line();
     }
 
@@ -134,19 +131,12 @@ class Tokenizer {
         return this.tokenize(input, ModeType.Token);
     }
 
-    public tokenizeCharacters(input: Character[]): Token[] {
-        return this.tokenize(input, ModeType.Token);
-    }
-
     public getCharacters(input: string): Character[] {
         return this.tokenize(input, ModeType.Character);
     }
 
     private tokenize<T extends ModeType>(input: TokenizerInput, mode: T): TokenizerReturnMap[T] {
-        const stream =
-            (typeof input === 'string')
-                ? new CharacterStream(input)
-                : new CharacterArrayStream(input);
+        const stream = new CharacterStream(input);
 
         const dfa: Context = new Context(this.initialState);
         const result: any[] = [];

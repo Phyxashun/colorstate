@@ -116,9 +116,7 @@ class Context {
         const ch = {
             value,
             type: chars[0]!.type,
-            index: chars[0]!.index,
-            line: chars[0]!.line,
-            column: chars[0]!.column
+            position: chars[0]!.position
         };
 
         const token = Context.toTokenType(ch);
@@ -133,15 +131,15 @@ class Context {
         }
 
         switch (char.type) {
+            case CharType.EOF:
+                return { value, type: TokenType.EOF };
+
             case CharType.Whitespace:
                 return { value, type: TokenType.WHITESPACE };
 
-            case CharType.Hash:
-                return { value, type: TokenType.HEXVALUE };
-
-            case CharType.Percent:
-                return { value, type: TokenType.PERCENT };
-
+            case CharType.NewLine:
+                return {value, type: TokenType.NEWLINE }
+                
             case CharType.Operator:
                 switch (value) {
                     case "+":
@@ -166,8 +164,7 @@ class Context {
             case CharType.Number:
                 return { value, type: TokenType.NUMBER };
 
-            case CharType.EOF:
-                return { value, type: TokenType.EOF };
+            
 
             default:
                 return { value, type: TokenType.ERROR };

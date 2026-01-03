@@ -44,10 +44,10 @@ class Initial_State extends State {
         switch (char.type) {
             case CharType.Whitespace:
                 return Transition.To(new Whitespace_State());
+            case CharType.NewLine:
+                return Transition.To(new NewLine_State());
             case CharType.EOF:
                 return Transition.To(new End_State());
-            case CharType.Hash:
-                return Transition.To(new Hex_State());
             case CharType.Operator:
                 return Transition.To(new Operator_State());
             case CharType.Letter:
@@ -75,7 +75,7 @@ class Whitespace_State extends State {
     }
 }
 
-class Hex_State extends State {
+class NewLine_State extends State {
     public isAccepting: boolean = true;
 
     constructor() {
@@ -83,14 +83,10 @@ class Hex_State extends State {
     }
 
     public handle(char: Character): Transition {
-        switch (char.type) {
-            case CharType.Hash:
-            case CharType.Letter:
-            case CharType.Number:
-                return Transition.Stay();
-            default:
-                return Transition.EmitAndTo(new Initial_State());
+        if (char.type !== CharType.NewLine) {
+            return Transition.EmitAndTo(new Initial_State());
         }
+        return Transition.Stay();
     }
 }
 
@@ -117,14 +113,10 @@ class Number_State extends State {
     }
 
     public handle(char: Character): Transition {
-        switch (char.type) {
-            case CharType.Number:
-                return Transition.Stay();
-            case CharType.Percent:
-                return Transition.To(new Percent_State());
-            default:
-                return Transition.EmitAndTo(new Initial_State());
+        if (char.type !== CharType.Number) {
+            return Transition.EmitAndTo(new Initial_State());
         }
+        return Transition.Stay();
     }
 }
 
@@ -168,7 +160,7 @@ export {
     State,
     Initial_State,
     Whitespace_State,
-    Hex_State,
+    NewLine_State,
     Letter_State,
     Number_State,
     Percent_State,
