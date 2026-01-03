@@ -27,16 +27,6 @@ const inspectOptions: InspectOptions = {
     numericSeparator: true,
 };
 
-console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
-
-const test = 'rgb(255, 0, 0)';
-
-const stream = new CharacterStream(test);
-
-for (const ch of stream) {
-    console.log('CHAR:', inspect(ch, inspectOptions));
-}
-
 const old_old_test = () => {
     console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
 
@@ -94,11 +84,6 @@ const old_test = () => {
         .withLogging('TEST (1): Direct Tokenization from String')
         .tokenizeString('67 a b c 1 word 2 3+2-0');
 
-    // Test 2
-    const characters = tokenizer
-        .withLogging('TEST (2): Character Stream Only')
-        .getCharacters('67 a b c 1 word 2 3+2-0');
-
     // Test 3
     tokenizer
         .withLogging('TEST (3): Direct Tokenization from CSS Color String')
@@ -116,3 +101,4 @@ const old_test = () => {
 }
 
 ////old_test();
+old_old_test();

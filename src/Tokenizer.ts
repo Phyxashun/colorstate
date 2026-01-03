@@ -1,12 +1,13 @@
 // src/Tokenizer.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import { State, Initial_State } from './States.ts';
+import { State, InitialState } from './States.ts';
 import { Context } from './Context.ts';
 import { Character, CharType, CharacterStream } from './Character.ts';
-import type { Mode } from 'node:fs';
+import type { Transition } from './Transition.ts';
 
 enum TokenType {
+    START = 'START',
     IDENTIFIER = 'IDENTIFIER',
     STRING = 'STRING',
     HEXVALUE = 'HEXVALUE',
@@ -24,8 +25,8 @@ enum TokenType {
     OPERATOR = 'OPERATOR',
     NEWLINE = 'NEWLINE',
     WHITESPACE = 'WHITESPACE',
-    EOF = '<end>',
-    ERROR = '<error>',
+    EOF = 'EOF',
+    ERROR = 'ERROR',
 }
 
 interface Token {
@@ -33,17 +34,7 @@ interface Token {
     type: TokenType;
 }
 
-enum ModeType {
-    Token = 'TOKEN',
-    Character = 'CHARACTER',
-}
-
 type TokenizerInput = string;
-
-type TokenizerReturnMap = {
-    [ModeType.Token]: Token[],
-    [ModeType.Character]: Character[],
-}
 
 class Tokenizer {
     private inspectOptions: InspectOptions = {
@@ -60,13 +51,11 @@ class Tokenizer {
         getters: false,
         numericSeparator: true,
     };
-    private initialState: State;
+    private buffer: Character[] = [];
     private shouldLog: boolean = false;
     private message: string | undefined = undefined;
 
-    constructor(initialState = new Initial_State()) {
-        this.initialState = initialState;
-    }
+    constructor(private ctx = new Context(InitialState)) { }
 
     public withLogging(message?: string): this {
         this.shouldLog = true;
@@ -104,17 +93,10 @@ class Tokenizer {
         this.line();
     }
 
-    private logResults<T extends ModeType>(result: TokenizerReturnMap[T], mode: T): void {
+    private logResults(result: Token[]): void {
         if (!this.shouldLog) return;
 
-        switch (mode) {
-            case ModeType.Token:
-                console.log(`RESULT (TOKENS):\n`);
-                break;
-            case ModeType.Character:
-                console.log(`RESULT (${result.length} CHARACTERS):\n`);
-                break;
-        }
+        console.log(`RESULT (TOKENS):\n`);
 
         for (const item of result) {
             console.log(`\t${inspect(item, this.inspectOptions)}`);
@@ -128,40 +110,112 @@ class Tokenizer {
     }
 
     public tokenizeString(input: string): Token[] {
-        return this.tokenize(input, ModeType.Token);
+        return this.tokenize(input);
     }
 
-    public getCharacters(input: string): Character[] {
-        return this.tokenize(input, ModeType.Character);
-    }
-
-    private tokenize<T extends ModeType>(input: TokenizerInput, mode: T): TokenizerReturnMap[T] {
+    private tokenize(input: TokenizerInput): Token[] {
         const stream = new CharacterStream(input);
-
-        const dfa: Context = new Context(this.initialState);
-        const result: any[] = [];
+        const tokens: Token[] = [];
 
         this.logHeader();
         this.logSource(input);
 
-        // Process each character through the DFA
         for (const char of stream) {
-            switch (mode) {
-                case ModeType.Token:
-                    const [tokenEmitted, token] = dfa.processTokens(char);
-                    if (tokenEmitted) result.push(token);
-                    break;
+            const emitted: boolean = this.ctx.process(char);
 
-                case ModeType.Character:
-                    const emitted = dfa.processCharacters(char);
-                    if (emitted) (result as Character[]).push(emitted);
+            switch (emitted) {
+                case false: {
+                    this.buffer.push(char);
                     break;
+                }
+
+                case true: {
+                    const token =
+                        this.buffer.length > 0
+                            ? Tokenizer.createToken(this.buffer)
+                            : undefined;
+                    this.buffer = [];
+                    if (token) tokens.push(token);
+                    console.log(`C. EmitAndTo.\tTOKEN: ${inspect(token, this.inspectOptions)}`);
+                    break;
+                }
             }
-            if (char.type === CharType.EOF) break;
+
+            if (char.type === CharType.EOF) {
+                const token = { value: '', type: TokenType.EOF };
+                console.log(`D. EOF Char.\tTOKEN: ${inspect(token, this.inspectOptions)}\n`);
+                tokens.push(token)
+            }
+        }
+        this.buffer = [];
+        this.logResults(tokens);
+        return tokens;
+    }
+
+    public static createToken(chars: Character[]): Token {
+        if (chars.length === 0) throw new Error('Cannot create token from empty buffer');
+
+        let value = '';
+        for (const ch of chars) {
+            value += ch.value;
         }
 
-        this.logResults(result, mode);
-        return result;
+        const ch = {
+            value,
+            type: chars[0]!.type,
+            position: chars[0]!.position
+        };
+
+        const token = Tokenizer.toTokenType(ch);
+        return token;
+    }
+
+    public static toTokenType(char: Character): Token {
+        const value = char.value;
+
+        if (value.endsWith("%")) {
+            return { value, type: TokenType.PERCENT };
+        }
+
+        switch (char.type) {
+            case CharType.EOF:
+                return { value, type: TokenType.EOF };
+
+            case CharType.Whitespace:
+                return { value, type: TokenType.WHITESPACE };
+
+            case CharType.NewLine:
+                return { value, type: TokenType.NEWLINE }
+
+            case CharType.Operator:
+                switch (value) {
+                    case "+":
+                        return { value, type: TokenType.PLUS };
+                    case "-":
+                        return { value, type: TokenType.MINUS };
+                    case ",":
+                        return { value, type: TokenType.COMMA };
+                    case "/":
+                        return { value, type: TokenType.SLASH };
+                    case "(":
+                        return { value, type: TokenType.LPAREN };
+                    case ")":
+                        return { value, type: TokenType.RPAREN };
+                    case "*":
+                    default:
+                        return { value, type: TokenType.OPERATOR };
+                }
+            case CharType.Letter:
+                return { value, type: TokenType.IDENTIFIER };
+
+            case CharType.Number:
+                return { value, type: TokenType.NUMBER };
+
+
+
+            default:
+                return { value, type: TokenType.ERROR };
+        }
     }
 }
 

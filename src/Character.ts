@@ -122,9 +122,10 @@ class ListNode {
 
 class CharacterList implements IterableIterator<ICharacter> {
     private iteratorNode: ListNode | null = null;
+    private _length: number = 0;
+    
     private head: ListNode | null = null;
     private tail: ListNode | null = null;
-    private _length: number = 0;
 
     get length(): number { return this._length; }
 
@@ -275,6 +276,7 @@ class CharacterStream implements IterableIterator<ICharacter> {
 }
 
 export {
+    type Position,
     CharType,
     Character,
     CharacterStream,
