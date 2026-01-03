@@ -121,32 +121,30 @@ class Tokenizer {
         this.logSource(input);
 
         for (const char of stream) {
-            const emitted: boolean = this.ctx.process(char);
+            let result = this.ctx.process(char);
 
-            switch (emitted) {
-                case false: {
-                    this.buffer.push(char);
-                    break;
-                }
-
-                case true: {
-                    const token =
-                        this.buffer.length > 0
-                            ? Tokenizer.createToken(this.buffer)
-                            : undefined;
+            if (result.emit) {
+                if (this.buffer.length > 0) {
+                    tokens.push(Tokenizer.createToken(this.buffer));
                     this.buffer = [];
-                    if (token) tokens.push(token);
-                    console.log(`C. EmitAndTo.\tTOKEN: ${inspect(token, this.inspectOptions)}`);
-                    break;
                 }
+
+                if (result.reprocess) result = this.ctx.process(char);
+            }
+
+            if (this.ctx.isAccepted() && char.type !== CharType.EOF) {
+                this.buffer.push(char);
             }
 
             if (char.type === CharType.EOF) {
-                const token = { value: '', type: TokenType.EOF };
-                console.log(`D. EOF Char.\tTOKEN: ${inspect(token, this.inspectOptions)}\n`);
-                tokens.push(token)
+                if (this.buffer.length > 0) {
+                    tokens.push(Tokenizer.createToken(this.buffer));
+                    this.buffer = [];
+                }
+                tokens.push({ value: '', type: TokenType.EOF });
             }
         }
+
         this.buffer = [];
         this.logResults(tokens);
         return tokens;

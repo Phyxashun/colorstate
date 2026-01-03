@@ -33,32 +33,30 @@ class Context {
         this.state = state;
     }
 
-    public process(char: Character): boolean {
+    public process(char: Character): { emit: boolean; reprocess: boolean } {
+        const wasAccepting = this.state.isAccepting;
         const transition: Transition = this.state.handle(char);
 
         switch (transition.kind) {
             case "EmitAndTo": {
                 this.transitionTo(transition.state);
-                return EMIT;
+                return { emit: true, reprocess: true };
             }
-            
+
             case "To": {
-                if (this.isAccepted()) {
-                    return NO_EMIT;
-                }
+                const shouldEmit = wasAccepting;
                 this.transitionTo(transition.state);
+
+                if (shouldEmit) return { emit: true, reprocess: false };
                 break;
             }
 
             case "Stay": {
-                if (this.isAccepted()) {
-                    return NO_EMIT;
-                }
                 break;
             }
         }
 
-        return NO_EMIT;
+        return { emit: false, reprocess: false };
     }
 
     public isAccepted(): boolean {
