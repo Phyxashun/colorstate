@@ -54,20 +54,21 @@ class Initial_State extends State {
             case CharType.Start:
                 return Transition.Stay();
             case CharType.Whitespace:
-                return Transition.To(new Whitespace_State());
+                return Transition.To(WhitespaceState);
             case CharType.NewLine:
-                return Transition.To(new NewLine_State());
+                return Transition.To(NewLineState);
             case CharType.Letter:
-                return Transition.To(new Letter_State());
+                return Transition.To(LetterState);
             case CharType.Number:
-                return Transition.To(new Number_State());
+                return Transition.To(NumberState);
             case CharType.Operator:
-                return Transition.To(new Operator_State());
+                return Transition.To(OperatorState);
             case CharType.Other:
             case CharType.EOF:
             case CharType.Error:
+                return Transition.To(EndState);
             default:
-                return Transition.To(new End_State());
+                return Transition.Stay();
         }
     }
 }
