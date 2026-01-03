@@ -35,13 +35,10 @@ export class Parser {
     private current: number = 0;
 
     constructor(tokens: Token[]) {
-        // Filter out WHITESPACE TOKENS
-        //tokens = tokens.filter(t => t.type !== TokenType.WHITESPACE);
-
-        // Filter out COMMA tokens
-        //tokens = tokens.filter(t => t.type !== TokenType.COMMA);
-
-        this.tokens = tokens;
+        this.tokens = tokens.filter(t =>
+            t.type !== TokenType.WHITESPACE &&
+            t.type !== TokenType.NEWLINE
+        );
     }
 
     public parse(): Program {
@@ -149,7 +146,14 @@ export class Parser {
         ) {
             const args: Expression[] = [];
 
+            // ✅ Parse arguments, skipping commas
             while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
+                // Skip comma if present
+                if (this.check(TokenType.COMMA)) {
+                    this.advance();
+                    continue;
+                }
+
                 const arg = this.expression();
                 if (arg) args.push(arg);
             }
@@ -166,23 +170,16 @@ export class Parser {
         return expr as Expression;
     }
 
-    private primary(): Expression | null {
-        if (this.isAtEnd()) return null;
+    private primary(): Expression {
+        if (this.isAtEnd()) {
+            throw this.error(this.peek(), 'Unexpected end of input');
+        }
 
-        // Peek at the current token type to use in the switch statement.
         const currentType = this.peek().type;
 
         switch (currentType) {
-            case TokenType.WHITESPACE:
-                this.advance();
-                return null;
-
-            case TokenType.COMMA:
-                this.advance();
-                return null;
-
             case TokenType.NUMBER: {
-                this.advance(); // Consume the token
+                this.advance();
                 const token = this.previous();
                 return {
                     type: NodeType.NumericLiteral,
@@ -192,7 +189,7 @@ export class Parser {
             }
 
             case TokenType.PERCENT: {
-                this.advance(); // Consume the token
+                this.advance();
                 const token = this.previous();
                 const numStr = token.value.replace('%', '');
                 return {
@@ -203,7 +200,7 @@ export class Parser {
             }
 
             case TokenType.HEXVALUE: {
-                this.advance(); // Consume the token
+                this.advance();
                 const token = this.previous();
                 return {
                     type: NodeType.HexLiteral,
@@ -213,7 +210,7 @@ export class Parser {
             }
 
             case TokenType.IDENTIFIER: {
-                this.advance(); // Consume the token
+                this.advance();
                 const token = this.previous();
                 return {
                     type: NodeType.Identifier,
@@ -222,9 +219,8 @@ export class Parser {
             }
 
             case TokenType.LPAREN: {
-                this.advance(); // Consume the '('
+                this.advance();
                 const expr = this.expression();
-                // Use this.consume() to ensure the closing ')' is present
                 this.consume(TokenType.RPAREN, "Expected ')' after expression");
                 return {
                     type: NodeType.GroupExpression,
@@ -233,10 +229,10 @@ export class Parser {
             }
 
             default:
-                // If none of the above match, throw an error
-                throw this.error(this.peek(), 'Expected expression');
+                throw this.error(this.peek(), `Expected expression, got ${currentType}`);
         }
     }
+
 
     // ===== Helper Methods =====
     private match(...types: TokenType[]): boolean {
