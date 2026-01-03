@@ -3,14 +3,6 @@
 import { inspect, type InspectOptions } from 'node:util';
 import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
-import { CharacterStream } from './src/Character.ts';
-
-const OLD_inspectOptions: InspectOptions = {
-    showHidden: false,
-    depth: null,
-    colors: true,
-    compact: false,
-};
 
 const inspectOptions: InspectOptions = {
     showHidden: true,
@@ -21,87 +13,93 @@ const inspectOptions: InspectOptions = {
     maxArrayLength: null,
     maxStringLength: null,
     breakLength: 100,
-    compact: true,
+    compact: false,
     sorted: false,
     getters: false,
     numericSeparator: true,
 };
 
-const old_old_test = () => {
-    console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
-
-    // Test cases
-    const testCases = [
-        //'1 + 2',
-        //'10 - 5 + 3',
-        //'2 * 3 + 4',
-        'rgb(255, 0, 0)',
-        //'#ff0000',
-        //'50%',
-        //'(1 + 2) * 3',
-        //'-5 + 10',
-        //'rgba(255, 128, 0, 50%)',
-    ];
-
-    for (const input of testCases) {
-
-        // Step 1: Tokenize
-        const tokenizer = new Tokenizer();
-        const tokens = tokenizer
-            .withLogging()
-            .tokenizeString(input);
-
-        // Step 2: Parse
-        const parser = new Parser(tokens);
-        const ast = parser.parse();
-
-        console.log('\nAST:');
-        console.log('\t', inspect(ast, inspectOptions));
-    }
+const line = (newLine: boolean = true, width: number = 80): void => {
+    if (newLine) console.log(`${'─'.repeat(width)}\n`);
+    if (!newLine) console.log(`${'─'.repeat(width)}`);
 }
 
-const old_test = () => {
-    const inspectOptions: InspectOptions = {
-        showHidden: true,
-        depth: null,
-        colors: true,
-        customInspect: false,
-        showProxy: false,
-        maxArrayLength: null,
-        maxStringLength: null,
-        breakLength: 100,
-        compact: true,
-        sorted: false,
-        getters: false,
-        numericSeparator: true,
-    };
-
+const tokenizerTest = () => {
     // Fluent usage
     const tokenizer = new Tokenizer();
 
     // Test 1
     tokenizer
         .withLogging('TEST (1): Direct Tokenization from String')
-        .tokenizeString('67 a b c 1 word 2 3+2-0');
+        .tokenize('67 a, b, c / 1 word 2 3+(2-0)');
+
+    // Test 2
+    tokenizer
+        .withLogging('TEST (2): Direct Tokenization from CSS Color String')
+        .tokenize('rgba(100 128 255 / 0.5)');
 
     // Test 3
     tokenizer
         .withLogging('TEST (3): Direct Tokenization from CSS Color String')
-        .tokenizeString('rgba(100 128 255 / 0.5)');
+        .tokenize('rgba(100grad 360 220  / 50%)');
 
     // Test 4
     tokenizer
-        .withLogging('TEST (4): Direct Tokenization from CSS Color String')
-        .tokenizeString('rgba(100% 360 220  / 50%)');
-
+        .withLogging('TEST (4): Direct Tokenization from Hex Color String')
+        .tokenize('#ff00ff00');
+    
     // Test 5
     tokenizer
-        .withLogging('TEST (5): Direct Tokenization from Hex Color String')
-        .tokenizeString('#ff00ff00');
+        .withLogging('TEST (5): Direct Tokenization from percentage')
+        .tokenize('56%');
+    
+    // Test 6
+    tokenizer
+        .withLogging('TEST (6): Direct Tokenization from units')
+        .tokenize('100grad');
 }
 
-////old_test();
-old_old_test();
+const parserTest = () => {
+    console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
+
+    // Test cases
+    // Commented out cases are not working
+    const testCases = [
+        //'1 + 2',
+        //'10 - 5 + 3',
+        //'2 * 3 + 4',
+        //'rgb(255, 0, 0)',
+        '#ff0000',
+        '50%',
+        //'(1 + 2) * 3',
+        //'-5 + 10',
+        'rgba(255, 128, 0, 50%)',
+    ];
+
+    for (const input of testCases) {
+        line();
+
+        // Step 1: Tokenize
+        const tokenizer = new Tokenizer();
+        const tokens = tokenizer
+            .withLogging(`PARSER TEST ('${input}'): Parsing different inputs`)
+            .tokenize(input);
+
+        // Step 2: Parse
+        const parser = new Parser(tokens);
+        const ast = parser.parse();
+
+        // Step 3: Console log the AST
+        console.log('\nAST:\n');
+        const defaultAST = inspect(ast, inspectOptions);
+        const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
+        console.log(fourSpaceAST, '\n');
+        line();
+    }
+}
+
+tokenizerTest();
+parserTest();
 
 
 
@@ -114,18 +112,21 @@ import { State } from './States.ts';
 export type Transition =
     | { kind: 'Stay' }
     | { kind: 'To'; state: State }
-    | { kind: 'EmitAndTo'; state: State };
-
-export const Transition: TransitionFn = {
-    Stay: (): Transition => ({ kind: 'Stay' }),
-    To: (state: State): Transition => ({ kind: 'To', state }),
-    EmitAndTo: (state: State): Transition => ({ kind: 'EmitAndTo', state }),
-};
+    | { kind: 'EmitAndTo'; state: State }
+    | { kind: 'ToContinue'; state: State };
 
 type TransitionFn =
     & { Stay:       () => Transition; } 
     & { To:         (state: State) => Transition; } 
     & { EmitAndTo:  (state: State) => Transition; }
+    & { ToContinue: (state: State) => Transition; };
+
+export const Transition: TransitionFn = {
+    Stay: (): Transition => ({ kind: 'Stay' }),
+    To: (state: State): Transition => ({ kind: 'To', state }),
+    EmitAndTo: (state: State): Transition => ({ kind: 'EmitAndTo', state }),
+    ToContinue: (state: State): Transition => ({ kind: 'ToContinue', state }),
+};
 
 
 
@@ -138,6 +139,7 @@ import { State, InitialState } from './States.ts';
 import { Context } from './Context.ts';
 import { Character, CharType, CharacterStream } from './Character.ts';
 import type { Transition } from './Transition.ts';
+import { isTokenKind } from 'typescript';
 
 enum TokenType {
     START = 'START',
@@ -242,11 +244,7 @@ class Tokenizer {
         this.message = undefined;
     }
 
-    public tokenizeString(input: string): Token[] {
-        return this.tokenize(input);
-    }
-
-    private tokenize(input: TokenizerInput): Token[] {
+    public tokenize(input: TokenizerInput): Token[] {
         const stream = new CharacterStream(input);
         const tokens: Token[] = [];
 
@@ -254,32 +252,30 @@ class Tokenizer {
         this.logSource(input);
 
         for (const char of stream) {
-            const emitted: boolean = this.ctx.process(char);
+            let result = this.ctx.process(char);
 
-            switch (emitted) {
-                case false: {
-                    this.buffer.push(char);
-                    break;
-                }
-
-                case true: {
-                    const token =
-                        this.buffer.length > 0
-                            ? Tokenizer.createToken(this.buffer)
-                            : undefined;
+            if (result.emit) {
+                if (this.buffer.length > 0) {
+                    tokens.push(Tokenizer.createToken(this.buffer));
                     this.buffer = [];
-                    if (token) tokens.push(token);
-                    console.log(`C. EmitAndTo.\tTOKEN: ${inspect(token, this.inspectOptions)}`);
-                    break;
                 }
+
+                if (result.reprocess) result = this.ctx.process(char);
+            }
+
+            if (this.ctx.isAccepting() && char.type !== CharType.EOF) {
+                this.buffer.push(char);
             }
 
             if (char.type === CharType.EOF) {
-                const token = { value: '', type: TokenType.EOF };
-                console.log(`D. EOF Char.\tTOKEN: ${inspect(token, this.inspectOptions)}\n`);
-                tokens.push(token)
+                if (this.buffer.length > 0) {
+                    tokens.push(Tokenizer.createToken(this.buffer));
+                    this.buffer = [];
+                }
+                tokens.push({ value: '', type: TokenType.EOF });
             }
         }
+
         this.buffer = [];
         this.logResults(tokens);
         return tokens;
@@ -299,11 +295,11 @@ class Tokenizer {
             position: chars[0]!.position
         };
 
-        const token = Tokenizer.toTokenType(ch);
+        const token = Tokenizer.getTokenType(ch);
         return token;
     }
 
-    public static toTokenType(char: Character): Token {
+    public static getTokenType(char: Character): Token {
         const value = char.value;
 
         if (value.endsWith("%")) {
@@ -318,7 +314,25 @@ class Tokenizer {
                 return { value, type: TokenType.WHITESPACE };
 
             case CharType.NewLine:
-                return { value, type: TokenType.NEWLINE }
+                return { value, type: TokenType.NEWLINE };
+
+            case CharType.Percent:
+                return { value, type: TokenType.PERCENT };
+
+            case CharType.Hash:
+                return { value, type: TokenType.HEXVALUE };
+
+            case CharType.Slash:
+                return { value, type: TokenType.SLASH };
+
+            case CharType.Comma:
+                return { value, type: TokenType.COMMA };
+
+            case CharType.RParen:
+                return { value, type: TokenType.RPAREN };
+
+            case CharType.LParen:
+                return { value, type: TokenType.LPAREN };
 
             case CharType.Operator:
                 switch (value) {
@@ -326,15 +340,10 @@ class Tokenizer {
                         return { value, type: TokenType.PLUS };
                     case "-":
                         return { value, type: TokenType.MINUS };
-                    case ",":
-                        return { value, type: TokenType.COMMA };
-                    case "/":
-                        return { value, type: TokenType.SLASH };
                     case "(":
                         return { value, type: TokenType.LPAREN };
                     case ")":
                         return { value, type: TokenType.RPAREN };
-                    case "*":
                     default:
                         return { value, type: TokenType.OPERATOR };
                 }
@@ -369,8 +378,10 @@ import { Character, CharType } from './Character.ts';
 import { Transition } from './Transition';
 
 abstract class State {
-    public name: string = 'State';
+    public name: string;
+
     public abstract isAccepting: boolean;
+    
     protected inspectOptions: InspectOptions = {
         showHidden: true,
         depth: null,
@@ -386,7 +397,7 @@ abstract class State {
         numericSeparator: true,
     };
 
-    constructor(name: string) {
+    constructor(name: string = 'State') {
         this.name = name;
     }
 
@@ -425,6 +436,13 @@ class Initial_State extends State {
                 return Transition.To(LetterState);
             case CharType.Number:
                 return Transition.To(NumberState);
+            case CharType.Hash:
+                return Transition.To(HexState);
+            case CharType.Percent:
+            case CharType.Comma:
+            case CharType.Slash:
+            case CharType.LParen:
+            case CharType.RParen:
             case CharType.Operator:
                 return Transition.To(OperatorState);
             case CharType.Other:
@@ -506,12 +524,23 @@ class Letter_State extends State {
     }
 
     public handle(char: Character): Transition {
+        if (char.type === CharType.RParen) {
+            return Transition.EmitAndTo(InitialState);
+        }
+        
+        if (char.type !== CharType.Letter) {
+            return Transition.EmitAndTo(InitialState);
+        }
+        return Transition.Stay();
+        /*
         switch (char.type) {
             case CharType.Letter:
                 return Transition.Stay();
+            case CharType.RParen:
             default:
                 return Transition.EmitAndTo(InitialState);
         }
+        */
     }
 }
 
@@ -535,9 +564,88 @@ class Number_State extends State {
         switch (char.type) {
             case CharType.Number:
                 return Transition.Stay();
+            case CharType.Percent:
+                return Transition.ToContinue(PercentState);
+            case CharType.Letter:
+                return Transition.To(UnitState);
             default:
                 return Transition.EmitAndTo(InitialState);
         }
+    }
+}
+
+class Unit_State extends State {
+    public isAccepting: boolean = true;
+
+    constructor() {
+        super('UnitState');
+    }
+
+    static #instance: State;
+    
+    public static get instance(): State {
+        if (!this.#instance) {
+            this.#instance = new Unit_State();
+        }
+        return this.#instance;
+    }
+
+    public handle(char: Character): Transition {
+        switch (char.type) {
+            case CharType.Letter:
+                return Transition.Stay();
+            default:
+                return Transition.EmitAndTo(InitialState);
+        }
+    }
+}
+
+class Hex_State extends State {
+    public isAccepting: boolean = true;
+
+    constructor() {
+        super('HexState');
+    }
+
+    static #instance: State;
+    
+    public static get instance(): State {
+        if (!this.#instance) {
+            this.#instance = new Hex_State();
+        }
+        return this.#instance;
+    }
+
+    public handle(char: Character): Transition {
+        switch (char.type) {
+            case CharType.Hash:
+            case CharType.Letter:
+            case CharType.Number:
+                return Transition.Stay();
+            default:
+                return Transition.EmitAndTo(InitialState);
+        }
+    }
+}
+
+class Percent_State extends State {
+    public isAccepting: boolean = true;
+
+    constructor() {
+        super('PercentState');
+    }
+
+    static #instance: State;
+    
+    public static get instance(): State {
+        if (!this.#instance) {
+            this.#instance = new Percent_State();
+        }
+        return this.#instance;
+    }
+
+    public handle(_: Character): Transition {
+        return Transition.EmitAndTo(InitialState);
     }
 }
 
@@ -593,6 +701,9 @@ const WhitespaceState = Whitespace_State.instance;
 const NewLineState = NewLine_State.instance;
 const LetterState = Letter_State.instance;
 const NumberState = Number_State.instance;
+const UnitState = Unit_State.instance;
+const HexState = Hex_State.instance;
+const PercentState = Percent_State.instance;
 const OperatorState = Operator_State.instance;
 const EndState = End_State.instance;
 
@@ -602,6 +713,9 @@ export {
     NewLineState,
     LetterState,
     NumberState,
+    UnitState,
+    HexState,
+    PercentState,
     OperatorState,
     EndState,
     State,
@@ -648,13 +762,10 @@ export class Parser {
     private current: number = 0;
 
     constructor(tokens: Token[]) {
-        // Filter out WHITESPACE TOKENS
-        //tokens = tokens.filter(t => t.type !== TokenType.WHITESPACE);
-
-        // Filter out COMMA tokens
-        //tokens = tokens.filter(t => t.type !== TokenType.COMMA);
-
-        this.tokens = tokens;
+        this.tokens = tokens.filter(t =>
+            t.type !== TokenType.WHITESPACE &&
+            t.type !== TokenType.NEWLINE
+        );
     }
 
     public parse(): Program {
@@ -762,7 +873,14 @@ export class Parser {
         ) {
             const args: Expression[] = [];
 
+            // ✅ Parse arguments, skipping commas
             while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
+                // Skip comma if present
+                if (this.check(TokenType.COMMA)) {
+                    this.advance();
+                    continue;
+                }
+
                 const arg = this.expression();
                 if (arg) args.push(arg);
             }
@@ -779,23 +897,16 @@ export class Parser {
         return expr as Expression;
     }
 
-    private primary(): Expression | null {
-        if (this.isAtEnd()) return null;
+    private primary(): Expression {
+        if (this.isAtEnd()) {
+            throw this.error(this.peek(), 'Unexpected end of input');
+        }
 
-        // Peek at the current token type to use in the switch statement.
         const currentType = this.peek().type;
 
         switch (currentType) {
-            case TokenType.WHITESPACE:
-                this.advance();
-                return null;
-
-            case TokenType.COMMA:
-                this.advance();
-                return null;
-
             case TokenType.NUMBER: {
-                this.advance(); // Consume the token
+                this.advance();
                 const token = this.previous();
                 return {
                     type: NodeType.NumericLiteral,
@@ -805,7 +916,7 @@ export class Parser {
             }
 
             case TokenType.PERCENT: {
-                this.advance(); // Consume the token
+                this.advance();
                 const token = this.previous();
                 const numStr = token.value.replace('%', '');
                 return {
@@ -816,7 +927,7 @@ export class Parser {
             }
 
             case TokenType.HEXVALUE: {
-                this.advance(); // Consume the token
+                this.advance();
                 const token = this.previous();
                 return {
                     type: NodeType.HexLiteral,
@@ -826,7 +937,7 @@ export class Parser {
             }
 
             case TokenType.IDENTIFIER: {
-                this.advance(); // Consume the token
+                this.advance();
                 const token = this.previous();
                 return {
                     type: NodeType.Identifier,
@@ -835,9 +946,8 @@ export class Parser {
             }
 
             case TokenType.LPAREN: {
-                this.advance(); // Consume the '('
+                this.advance();
                 const expr = this.expression();
-                // Use this.consume() to ensure the closing ')' is present
                 this.consume(TokenType.RPAREN, "Expected ')' after expression");
                 return {
                     type: NodeType.GroupExpression,
@@ -846,10 +956,10 @@ export class Parser {
             }
 
             default:
-                // If none of the above match, throw an error
-                throw this.error(this.peek(), 'Expected expression');
+                throw this.error(this.peek(), `Expected expression, got ${currentType}`);
         }
     }
+
 
     // ===== Helper Methods =====
     private match(...types: TokenType[]): boolean {
@@ -903,7 +1013,7 @@ export class Parser {
 
 import { inspect, type InspectOptions } from 'node:util';
 import { type Character } from "./Character.ts";
-import { State } from "./States.ts";
+import { State, PercentState } from "./States.ts";
 import { Transition } from './Transition.ts';
 
 const EMIT = true;
@@ -934,35 +1044,37 @@ class Context {
         this.state = state;
     }
 
-    public process(char: Character): boolean {
+    public process(char: Character): { emit: boolean; reprocess: boolean } {
+        const wasAccepting = this.isAccepting();
         const transition: Transition = this.state.handle(char);
 
         switch (transition.kind) {
+            case "ToContinue": {
+                this.transitionTo(transition.state);
+                break;
+            }
+
             case "EmitAndTo": {
                 this.transitionTo(transition.state);
-                return EMIT;
+                return { emit: true, reprocess: true };
             }
-            
+
             case "To": {
-                if (this.isAccepted()) {
-                    return NO_EMIT;
-                }
+                const shouldEmit = wasAccepting;
                 this.transitionTo(transition.state);
+                if (shouldEmit) return { emit: true, reprocess: false };
                 break;
             }
 
             case "Stay": {
-                if (this.isAccepted()) {
-                    return NO_EMIT;
-                }
                 break;
             }
         }
 
-        return NO_EMIT;
+        return { emit: false, reprocess: false };
     }
 
-    public isAccepted(): boolean {
+    public isAccepting(): boolean {
         return this.state.isAccepting;
     }
 }
@@ -1003,6 +1115,12 @@ enum CharType {
     NewLine = 'NewLine',
     Letter = 'Letter',
     Number = 'Number',
+    Percent = 'Percent',
+    Hash = 'Hash',
+    Slash = 'Slash',
+    Comma = 'Comma',
+    RParen = 'RParen',
+    LParen = 'LParen',
     Operator = 'Operator',
     Other = 'Other',
     EOF = 'EOF',
@@ -1054,13 +1172,12 @@ class Character implements ICharacter {
     ]);
 
     public static Operators: Set<string> = new Set([
-        '`', '~', '!', '@', '#',
-        '$', '%', '^', '&', '*',
-        '(', ')', '-', '_', '=',
+        '`', '~', '!', '@', '|',
+        '$', '?', '^', '&', '*',
+        '<', '>', '-', '_', '=',
         '+', '[', ']', '{', '}',
-        ';', ':', "'", '"', ',',
-        '<', '>', '.', '/', '?',
-        '|', '\\',
+        ';', ':', "'", '"', '.',
+        '\\'
     ]);
 
     public static Whitespace: Set<string> = new Set([
@@ -1073,6 +1190,12 @@ class Character implements ICharacter {
 
     public static CharSpec: Spec = new Map<CharType, CharTypeFn>([
         [CharType.EOF, (char) => char === ''],
+        [CharType.Hash, (char) => char === '#'],
+        [CharType.Percent, (char) => char === '%'],
+        [CharType.Slash, (char) => char === '/'],
+        [CharType.Comma, (char) => char === ','],
+        [CharType.LParen, (char) => char === '('],
+        [CharType.RParen, (char) => char === ')'],
         [CharType.Whitespace, (char) => Character.Whitespace.has(char)],
         [CharType.NewLine, (char) => Character.NewLine.has(char)],
         [CharType.Letter, (char) => Character.Letters.has(char)],

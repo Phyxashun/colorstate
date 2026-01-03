@@ -27,6 +27,12 @@ enum CharType {
     NewLine = 'NewLine',
     Letter = 'Letter',
     Number = 'Number',
+    Percent = 'Percent',
+    Hash = 'Hash',
+    Slash = 'Slash',
+    Comma = 'Comma',
+    RParen = 'RParen',
+    LParen = 'LParen',
     Operator = 'Operator',
     Other = 'Other',
     EOF = 'EOF',
@@ -78,13 +84,12 @@ class Character implements ICharacter {
     ]);
 
     public static Operators: Set<string> = new Set([
-        '`', '~', '!', '@', '#',
-        '$', '%', '^', '&', '*',
-        '(', ')', '-', '_', '=',
+        '`', '~', '!', '@', '|',
+        '$', '?', '^', '&', '*',
+        '<', '>', '-', '_', '=',
         '+', '[', ']', '{', '}',
-        ';', ':', "'", '"', ',',
-        '<', '>', '.', '/', '?',
-        '|', '\\',
+        ';', ':', "'", '"', '.',
+        '\\'
     ]);
 
     public static Whitespace: Set<string> = new Set([
@@ -97,6 +102,12 @@ class Character implements ICharacter {
 
     public static CharSpec: Spec = new Map<CharType, CharTypeFn>([
         [CharType.EOF, (char) => char === ''],
+        [CharType.Hash, (char) => char === '#'],
+        [CharType.Percent, (char) => char === '%'],
+        [CharType.Slash, (char) => char === '/'],
+        [CharType.Comma, (char) => char === ','],
+        [CharType.LParen, (char) => char === '('],
+        [CharType.RParen, (char) => char === ')'],
         [CharType.Whitespace, (char) => Character.Whitespace.has(char)],
         [CharType.NewLine, (char) => Character.NewLine.has(char)],
         [CharType.Letter, (char) => Character.Letters.has(char)],

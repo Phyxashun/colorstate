@@ -2,7 +2,7 @@
 
 import { inspect, type InspectOptions } from 'node:util';
 import { type Character } from "./Character.ts";
-import { State } from "./States.ts";
+import { State, PercentState } from "./States.ts";
 import { Transition } from './Transition.ts';
 
 const EMIT = true;
@@ -34,10 +34,15 @@ class Context {
     }
 
     public process(char: Character): { emit: boolean; reprocess: boolean } {
-        const wasAccepting = this.state.isAccepting;
+        const wasAccepting = this.isAccepting();
         const transition: Transition = this.state.handle(char);
 
         switch (transition.kind) {
+            case "ToContinue": {
+                this.transitionTo(transition.state);
+                break;
+            }
+
             case "EmitAndTo": {
                 this.transitionTo(transition.state);
                 return { emit: true, reprocess: true };
@@ -46,7 +51,6 @@ class Context {
             case "To": {
                 const shouldEmit = wasAccepting;
                 this.transitionTo(transition.state);
-
                 if (shouldEmit) return { emit: true, reprocess: false };
                 break;
             }
@@ -59,7 +63,7 @@ class Context {
         return { emit: false, reprocess: false };
     }
 
-    public isAccepted(): boolean {
+    public isAccepting(): boolean {
         return this.state.isAccepting;
     }
 }

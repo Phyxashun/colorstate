@@ -29,6 +29,7 @@
     "./src/**/*.ts"
   ],
   "exclude": [
-    "./ALL*.ts"
+    "./ALL_FILES.ts",
+    "./ALL_TESTS.ts"
   ]
 }

@@ -5,6 +5,7 @@ import { State, InitialState } from './States.ts';
 import { Context } from './Context.ts';
 import { Character, CharType, CharacterStream } from './Character.ts';
 import type { Transition } from './Transition.ts';
+import { isTokenKind } from 'typescript';
 
 enum TokenType {
     START = 'START',
@@ -109,11 +110,7 @@ class Tokenizer {
         this.message = undefined;
     }
 
-    public tokenizeString(input: string): Token[] {
-        return this.tokenize(input);
-    }
-
-    private tokenize(input: TokenizerInput): Token[] {
+    public tokenize(input: TokenizerInput): Token[] {
         const stream = new CharacterStream(input);
         const tokens: Token[] = [];
 
@@ -129,11 +126,16 @@ class Tokenizer {
                     this.buffer = [];
                 }
 
-                if (result.reprocess) result = this.ctx.process(char);
-            }
-
-            if (this.ctx.isAccepted() && char.type !== CharType.EOF) {
-                this.buffer.push(char);
+                if (result.reprocess) {
+                    result = this.ctx.process(char);
+                    if (this.ctx.isAccepting() && char.type !== CharType.EOF) {
+                        this.buffer.push(char);
+                    }
+                }
+            } else {
+                if (this.ctx.isAccepting() && char.type !== CharType.EOF) {
+                    this.buffer.push(char);
+                }
             }
 
             if (char.type === CharType.EOF) {
@@ -164,11 +166,11 @@ class Tokenizer {
             position: chars[0]!.position
         };
 
-        const token = Tokenizer.toTokenType(ch);
+        const token = Tokenizer.getTokenType(ch);
         return token;
     }
 
-    public static toTokenType(char: Character): Token {
+    public static getTokenType(char: Character): Token {
         const value = char.value;
 
         if (value.endsWith("%")) {
@@ -183,7 +185,25 @@ class Tokenizer {
                 return { value, type: TokenType.WHITESPACE };
 
             case CharType.NewLine:
-                return { value, type: TokenType.NEWLINE }
+                return { value, type: TokenType.NEWLINE };
+
+            case CharType.Percent:
+                return { value, type: TokenType.PERCENT };
+
+            case CharType.Hash:
+                return { value, type: TokenType.HEXVALUE };
+
+            case CharType.Slash:
+                return { value, type: TokenType.SLASH };
+
+            case CharType.Comma:
+                return { value, type: TokenType.COMMA };
+
+            case CharType.RParen:
+                return { value, type: TokenType.RPAREN };
+
+            case CharType.LParen:
+                return { value, type: TokenType.LPAREN };
 
             case CharType.Operator:
                 switch (value) {
@@ -191,15 +211,10 @@ class Tokenizer {
                         return { value, type: TokenType.PLUS };
                     case "-":
                         return { value, type: TokenType.MINUS };
-                    case ",":
-                        return { value, type: TokenType.COMMA };
-                    case "/":
-                        return { value, type: TokenType.SLASH };
                     case "(":
                         return { value, type: TokenType.LPAREN };
                     case ")":
                         return { value, type: TokenType.RPAREN };
-                    case "*":
                     default:
                         return { value, type: TokenType.OPERATOR };
                 }
