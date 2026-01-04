@@ -1,7 +1,7 @@
 // src/States.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import { Character, CharType } from './Character.ts';
+import { type Character, CharType } from './Character.ts';
 import { Transition } from './Transition';
 
 abstract class State {
@@ -70,12 +70,16 @@ class Initial_State extends State {
 
             case CharType.Hash:
                 return Transition.To(HexState);
-
             case CharType.Percent:
+                return Transition.To(PercentState);
+
             case CharType.Comma:
             case CharType.Slash:
             case CharType.LParen:
             case CharType.RParen:
+            case CharType.Plus:
+            case CharType.Minus:
+            case CharType.Star:
                 return Transition.To(SingleCharState);
 
             case CharType.Operator:
@@ -85,7 +89,7 @@ class Initial_State extends State {
             case CharType.EOF:
             case CharType.Error:
                 return Transition.To(EndState);
-                
+
             default:
                 return Transition.Stay();
         }
@@ -188,19 +192,20 @@ class Number_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Number:
-                return Transition.Stay();
             case CharType.Percent:
                 return Transition.ToContinue(PercentState);
             case CharType.Letter:
-                return Transition.To(UnitState);
+                return Transition.ToContinue(DimensionState);
+            case CharType.Number:
+            case CharType.Dot:
+                return Transition.Stay();
             default:
                 return Transition.EmitAndTo(InitialState);
         }
     }
 }
 
-class Unit_State extends State {
+class Dimension_State extends State {
     public isAccepting: boolean = true;
 
     constructor() {
@@ -211,7 +216,7 @@ class Unit_State extends State {
 
     public static get instance(): State {
         if (!this.#instance) {
-            this.#instance = new Unit_State();
+            this.#instance = new Dimension_State();
         }
         return this.#instance;
     }
@@ -270,8 +275,13 @@ class Percent_State extends State {
         return this.#instance;
     }
 
-    public handle(_: Character): Transition {
-        return Transition.EmitAndTo(InitialState);
+    public handle(char: Character): Transition {
+        switch (char.type) {
+            case CharType.Percent:
+                return Transition.Stay();
+            default:
+                return Transition.EmitAndTo(InitialState);
+        }
     }
 }
 
@@ -348,7 +358,7 @@ const WhitespaceState = Whitespace_State.instance;
 const NewLineState = NewLine_State.instance;
 const LetterState = Letter_State.instance;
 const NumberState = Number_State.instance;
-const UnitState = Unit_State.instance;
+const DimensionState = Dimension_State.instance;
 const HexState = Hex_State.instance;
 const PercentState = Percent_State.instance;
 const SingleCharState = SingleChar_State.instance;
@@ -361,7 +371,7 @@ export {
     NewLineState,
     LetterState,
     NumberState,
-    UnitState,
+    DimensionState,
     HexState,
     PercentState,
     SingleCharState,

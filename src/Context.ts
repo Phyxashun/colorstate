@@ -1,48 +1,17 @@
 // src/Context.ts
 
-import { inspect, type InspectOptions } from 'node:util';
 import { type Character } from "./Character.ts";
-import { State, PercentState } from "./States.ts";
+import { State, InitialState } from "./States.ts";
 import { Transition } from './Transition.ts';
 
-const EMIT = true;
-const NO_EMIT = false;
-
 class Context {
-    private inspectOptions: InspectOptions = {
-        showHidden: true,
-        depth: null,
-        colors: true,
-        customInspect: false,
-        showProxy: false,
-        maxArrayLength: null,
-        maxStringLength: null,
-        breakLength: 100,
-        compact: true,
-        sorted: false,
-        getters: false,
-        numericSeparator: true,
-    };
-    private state: State;
-
-    constructor(initialState: State) {
-        this.state = initialState;
-    }
-
-    public transitionTo(state: State): void {
-        this.state = state;
-    }
+    constructor(private state: State = InitialState) { }
 
     public process(char: Character): { emit: boolean; reprocess: boolean } {
         const wasAccepting = this.isAccepting();
-        const transition: Transition = this.state.handle(char);
+        const transition: Transition = this.handle(char);
 
         switch (transition.kind) {
-            case "ToContinue": {
-                this.transitionTo(transition.state);
-                break;
-            }
-
             case "EmitAndTo": {
                 this.transitionTo(transition.state);
                 return { emit: true, reprocess: true };
@@ -52,6 +21,11 @@ class Context {
                 const shouldEmit = wasAccepting;
                 this.transitionTo(transition.state);
                 if (shouldEmit) return { emit: true, reprocess: false };
+                break;
+            }
+
+            case "ToContinue": {
+                this.transitionTo(transition.state);
                 break;
             }
 
@@ -65,6 +39,14 @@ class Context {
 
     public isAccepting(): boolean {
         return this.state.isAccepting;
+    }
+
+    private handle(char: Character): Transition {
+        return this.state.handle(char);
+    }
+
+    public transitionTo(state: State): void {
+        this.state = state;
     }
 }
 

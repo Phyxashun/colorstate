@@ -100,12 +100,9 @@ export class Parser {
 
         while (
             !this.isAtEnd() &&
-            this.match(TokenType.SLASH, TokenType.OPERATOR)
+            this.match(TokenType.STAR, TokenType.SLASH)  // ✅ Fixed: Added STAR
         ) {
-            const op = this.previous().value;
-            if (op !== '*' && op !== '/' && op !== '%') break;
-
-            const operator = op as '*' | '/' | '%';
+            const operator = this.previous().value as '*' | '/';
             const right = this.unary();
             expr = {
                 type: NodeType.BinaryExpression,
@@ -146,7 +143,7 @@ export class Parser {
         ) {
             const args: Expression[] = [];
 
-            // ✅ Parse arguments, skipping commas
+            // Parse arguments, skipping commas
             while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
                 // Skip comma if present
                 if (this.check(TokenType.COMMA)) {

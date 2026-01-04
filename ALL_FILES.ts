@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 // ./index.ts
 
 import { inspect, type InspectOptions } from 'node:util';
@@ -65,14 +67,14 @@ const parserTest = () => {
     // Test cases
     // Commented out cases are not working
     const testCases = [
-        //'1 + 2',
-        //'10 - 5 + 3',
-        //'2 * 3 + 4',
-        //'rgb(255, 0, 0)',
+        '1 + 2',
+        '10 - 5 + 3',
+        '2 * 3 + 4',
+        'rgb(255, 0, 0)',
         '#ff0000',
         '50%',
-        //'(1 + 2) * 3',
-        //'-5 + 10',
+        '(1 + 2) * 3',
+        '-5 + 10',
         'rgba(255, 128, 0, 50%)',
     ];
 
@@ -104,7 +106,6 @@ parserTest();
 
 
 
-
 // src/Transition.ts
 
 import { State } from './States.ts';
@@ -131,7 +132,6 @@ export const Transition: TransitionFn = {
 
 
 
-
 // src/Tokenizer.ts
 
 import { inspect, type InspectOptions } from 'node:util';
@@ -152,6 +152,8 @@ enum TokenType {
     UNICODE = 'UNICODE',
     PLUS = 'PLUS',
     MINUS = 'MINUS',
+    STAR = 'STAR',
+    DOT = 'DOT',
     COMMA = 'COMMA',
     SLASH = 'SLASH',
     LPAREN = 'LPAREN',
@@ -260,11 +262,16 @@ class Tokenizer {
                     this.buffer = [];
                 }
 
-                if (result.reprocess) result = this.ctx.process(char);
-            }
-
-            if (this.ctx.isAccepting() && char.type !== CharType.EOF) {
-                this.buffer.push(char);
+                if (result.reprocess) {
+                    result = this.ctx.process(char);
+                    if (this.ctx.isAccepting() && char.type !== CharType.EOF) {
+                        this.buffer.push(char);
+                    }
+                }
+            } else {
+                if (this.ctx.isAccepting() && char.type !== CharType.EOF) {
+                    this.buffer.push(char);
+                }
             }
 
             if (char.type === CharType.EOF) {
@@ -316,6 +323,12 @@ class Tokenizer {
             case CharType.NewLine:
                 return { value, type: TokenType.NEWLINE };
 
+            case CharType.Letter:
+                return { value, type: TokenType.IDENTIFIER };
+
+            case CharType.Number:
+                return { value, type: TokenType.NUMBER };
+
             case CharType.Percent:
                 return { value, type: TokenType.PERCENT };
 
@@ -334,26 +347,20 @@ class Tokenizer {
             case CharType.LParen:
                 return { value, type: TokenType.LPAREN };
 
+            case CharType.Plus:
+                return { value, type: TokenType.PLUS };
+
+            case CharType.Minus:
+                return { value, type: TokenType.MINUS };
+
+            case CharType.Star:
+                return { value, type: TokenType.STAR };
+
+            case CharType.Dot:
+                return { value, type: TokenType.DOT };
+
             case CharType.Operator:
-                switch (value) {
-                    case "+":
-                        return { value, type: TokenType.PLUS };
-                    case "-":
-                        return { value, type: TokenType.MINUS };
-                    case "(":
-                        return { value, type: TokenType.LPAREN };
-                    case ")":
-                        return { value, type: TokenType.RPAREN };
-                    default:
-                        return { value, type: TokenType.OPERATOR };
-                }
-            case CharType.Letter:
-                return { value, type: TokenType.IDENTIFIER };
-
-            case CharType.Number:
-                return { value, type: TokenType.NUMBER };
-
-
+                return { value, type: TokenType.OPERATOR };
 
             default:
                 return { value, type: TokenType.ERROR };
@@ -381,7 +388,7 @@ abstract class State {
     public name: string;
 
     public abstract isAccepting: boolean;
-    
+
     protected inspectOptions: InspectOptions = {
         showHidden: true,
         depth: null,
@@ -428,27 +435,41 @@ class Initial_State extends State {
         switch (char.type) {
             case CharType.Start:
                 return Transition.Stay();
+
             case CharType.Whitespace:
                 return Transition.To(WhitespaceState);
+
             case CharType.NewLine:
                 return Transition.To(NewLineState);
+
             case CharType.Letter:
                 return Transition.To(LetterState);
+
             case CharType.Number:
                 return Transition.To(NumberState);
+
             case CharType.Hash:
                 return Transition.To(HexState);
+
             case CharType.Percent:
             case CharType.Comma:
             case CharType.Slash:
             case CharType.LParen:
             case CharType.RParen:
+            case CharType.Plus:
+            case CharType.Minus:
+            case CharType.Star:
+            case CharType.Dot:
+                return Transition.To(SingleCharState);
+
             case CharType.Operator:
                 return Transition.To(OperatorState);
+
             case CharType.Other:
             case CharType.EOF:
             case CharType.Error:
                 return Transition.To(EndState);
+
             default:
                 return Transition.Stay();
         }
@@ -463,7 +484,7 @@ class Whitespace_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Whitespace_State();
@@ -489,7 +510,7 @@ class NewLine_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new NewLine_State();
@@ -515,7 +536,7 @@ class Letter_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Letter_State();
@@ -524,23 +545,12 @@ class Letter_State extends State {
     }
 
     public handle(char: Character): Transition {
-        if (char.type === CharType.RParen) {
-            return Transition.EmitAndTo(InitialState);
-        }
-        
-        if (char.type !== CharType.Letter) {
-            return Transition.EmitAndTo(InitialState);
-        }
-        return Transition.Stay();
-        /*
         switch (char.type) {
             case CharType.Letter:
                 return Transition.Stay();
-            case CharType.RParen:
             default:
                 return Transition.EmitAndTo(InitialState);
         }
-        */
     }
 }
 
@@ -552,7 +562,7 @@ class Number_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Number_State();
@@ -567,14 +577,14 @@ class Number_State extends State {
             case CharType.Percent:
                 return Transition.ToContinue(PercentState);
             case CharType.Letter:
-                return Transition.To(UnitState);
+                return Transition.ToContinue(DimensionState);
             default:
                 return Transition.EmitAndTo(InitialState);
         }
     }
 }
 
-class Unit_State extends State {
+class Dimension_State extends State {
     public isAccepting: boolean = true;
 
     constructor() {
@@ -582,10 +592,10 @@ class Unit_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
-            this.#instance = new Unit_State();
+            this.#instance = new Dimension_State();
         }
         return this.#instance;
     }
@@ -608,7 +618,7 @@ class Hex_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Hex_State();
@@ -636,10 +646,31 @@ class Percent_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Percent_State();
+        }
+        return this.#instance;
+    }
+
+    public handle(_: Character): Transition {
+        return Transition.EmitAndTo(InitialState);
+    }
+}
+
+class SingleChar_State extends State {
+    public isAccepting: boolean = true;
+
+    constructor() {
+        super('SingleCharState');
+    }
+
+    static #instance: State;
+
+    public static get instance(): State {
+        if (!this.#instance) {
+            this.#instance = new SingleChar_State();
         }
         return this.#instance;
     }
@@ -657,7 +688,7 @@ class Operator_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new Operator_State();
@@ -683,7 +714,7 @@ class End_State extends State {
     }
 
     static #instance: State;
-    
+
     public static get instance(): State {
         if (!this.#instance) {
             this.#instance = new End_State();
@@ -701,9 +732,10 @@ const WhitespaceState = Whitespace_State.instance;
 const NewLineState = NewLine_State.instance;
 const LetterState = Letter_State.instance;
 const NumberState = Number_State.instance;
-const UnitState = Unit_State.instance;
+const DimensionState = Dimension_State.instance;
 const HexState = Hex_State.instance;
 const PercentState = Percent_State.instance;
+const SingleCharState = SingleChar_State.instance;
 const OperatorState = Operator_State.instance;
 const EndState = End_State.instance;
 
@@ -713,9 +745,10 @@ export {
     NewLineState,
     LetterState,
     NumberState,
-    UnitState,
+    DimensionState,
     HexState,
     PercentState,
+    SingleCharState,
     OperatorState,
     EndState,
     State,
@@ -873,7 +906,6 @@ export class Parser {
         ) {
             const args: Expression[] = [];
 
-            // ✅ Parse arguments, skipping commas
             while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
                 // Skip comma if present
                 if (this.check(TokenType.COMMA)) {
@@ -1008,7 +1040,6 @@ export class Parser {
 
 
 
-
 // src/Context.ts
 
 import { inspect, type InspectOptions } from 'node:util';
@@ -1085,7 +1116,6 @@ export { Context };
 
 
 
-
 // src/Character.ts
 
 import { inspect, type InspectOptions } from 'node:util';
@@ -1115,12 +1145,17 @@ enum CharType {
     NewLine = 'NewLine',
     Letter = 'Letter',
     Number = 'Number',
+    Dimension = 'Dimension',
     Percent = 'Percent',
     Hash = 'Hash',
     Slash = 'Slash',
     Comma = 'Comma',
     RParen = 'RParen',
     LParen = 'LParen',
+    Plus = 'Plus',
+    Minus = 'Minus',
+    Star = 'Star',
+    Dot = 'Dot',
     Operator = 'Operator',
     Other = 'Other',
     EOF = 'EOF',
@@ -1172,12 +1207,12 @@ class Character implements ICharacter {
     ]);
 
     public static Operators: Set<string> = new Set([
-        '`', '~', '!', '@', '|',
-        '$', '?', '^', '&', '*',
-        '<', '>', '-', '_', '=',
-        '+', '[', ']', '{', '}',
-        ';', ':', "'", '"', '.',
-        '\\'
+        '`', '~', '!', '@',
+        '$', '?', '^', '&',
+        '<', '>', '_', '=',
+        '[', ']', '{', '}',
+        ';', ':', "'", '"',
+        '|', '\\'
     ]);
 
     public static Whitespace: Set<string> = new Set([
@@ -1196,6 +1231,10 @@ class Character implements ICharacter {
         [CharType.Comma, (char) => char === ','],
         [CharType.LParen, (char) => char === '('],
         [CharType.RParen, (char) => char === ')'],
+        [CharType.Plus, (char) => char === '+'],
+        [CharType.Minus, (char) => char === '-'],
+        [CharType.Star, (char) => char === '*'],
+        [CharType.Dot, (char) => char === '.'],
         [CharType.Whitespace, (char) => Character.Whitespace.has(char)],
         [CharType.NewLine, (char) => Character.NewLine.has(char)],
         [CharType.Letter, (char) => Character.Letters.has(char)],
@@ -1384,7 +1423,6 @@ export {
 
 
 
-
 // src/AST.ts
 
 /**
@@ -1549,3 +1587,7 @@ export interface GroupExpression extends ASTNode {
     type: NodeType.GroupExpression;
     expression: Expression;
 }
+
+
+
+

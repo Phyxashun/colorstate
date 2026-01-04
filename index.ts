@@ -3,6 +3,22 @@
 import { inspect, type InspectOptions } from 'node:util';
 import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
+import { CharacterStream } from './src/Character.ts';
+
+const compactInspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
 
 const inspectOptions: InspectOptions = {
     showHidden: true,
@@ -22,6 +38,24 @@ const inspectOptions: InspectOptions = {
 const line = (newLine: boolean = true, width: number = 80): void => {
     if (newLine) console.log(`${'─'.repeat(width)}\n`);
     if (!newLine) console.log(`${'─'.repeat(width)}`);
+}
+
+const characterStreamTest = () => {
+    line();
+    console.log('=== CHARACTERSTREAM DEMO ===\n');
+    line();
+
+    const input = 'rgb(255, 100, 75)';
+
+    const stream = new CharacterStream(input);
+
+    console.log(`INPUT: '${input}'\n`);
+    console.log('RESULT OF CHARACTERSTREAM:\n');
+    for (const char of stream) {
+        console.log('\t', inspect(char, compactInspectOptions));
+    }
+    console.log();
+    line();
 }
 
 const tokenizerTest = () => {
@@ -98,5 +132,6 @@ const parserTest = () => {
     }
 }
 
-//tokenizerTest();
-parserTest();
+//characterStreamTest();
+tokenizerTest();
+//parserTest();

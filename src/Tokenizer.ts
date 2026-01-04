@@ -1,11 +1,12 @@
 // src/Tokenizer.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import { State, InitialState } from './States.ts';
 import { Context } from './Context.ts';
-import { Character, CharType, CharacterStream } from './Character.ts';
-import type { Transition } from './Transition.ts';
-import { isTokenKind } from 'typescript';
+import { type Character, CharType, CharacterStream } from './Character.ts';
+
+type ClassifyTokenFn = (char: Character) => Token;
+type TokenTypeFn = (type: CharType) => boolean;
+type TokenSpec = Map<TokenType, TokenTypeFn>;
 
 enum TokenType {
     START = 'START',
@@ -18,6 +19,8 @@ enum TokenType {
     UNICODE = 'UNICODE',
     PLUS = 'PLUS',
     MINUS = 'MINUS',
+    STAR = 'STAR',
+    DOT = 'DOT',
     COMMA = 'COMMA',
     SLASH = 'SLASH',
     LPAREN = 'LPAREN',
@@ -56,7 +59,7 @@ class Tokenizer {
     private shouldLog: boolean = false;
     private message: string | undefined = undefined;
 
-    constructor(private ctx = new Context(InitialState)) { }
+    constructor(private ctx = new Context()) { }
 
     public withLogging(message?: string): this {
         this.shouldLog = true;
@@ -79,7 +82,7 @@ class Tokenizer {
         if (!this.shouldLog) return;
 
         if (this.message) {
-            console.log(`\n${this.message}\n`);
+            console.log(`${this.message}\n`);
             return;
         }
 
@@ -91,7 +94,6 @@ class Tokenizer {
     private logSource(input: TokenizerInput): void {
         if (!this.shouldLog) return;
         console.log(`SOURCE:\t${input}\n`);
-        this.line();
     }
 
     private logResults(result: Token[]): void {
@@ -103,7 +105,7 @@ class Tokenizer {
             console.log(`\t${inspect(item, this.inspectOptions)}`);
         }
 
-        console.log(`\n`);
+        console.log();
         this.line();
 
         this.shouldLog = false;
@@ -128,24 +130,25 @@ class Tokenizer {
 
                 if (result.reprocess) {
                     result = this.ctx.process(char);
-                    if (this.ctx.isAccepting() && char.type !== CharType.EOF) {
+                    if (this.ctx.isAccepting() &&
+                        char.type !== CharType.EOF) {
                         this.buffer.push(char);
                     }
                 }
             } else {
-                if (this.ctx.isAccepting() && char.type !== CharType.EOF) {
+                if (this.ctx.isAccepting() &&
+                    char.type !== CharType.EOF) {
                     this.buffer.push(char);
                 }
             }
-
-            if (char.type === CharType.EOF) {
-                if (this.buffer.length > 0) {
-                    tokens.push(Tokenizer.createToken(this.buffer));
-                    this.buffer = [];
-                }
-                tokens.push({ value: '', type: TokenType.EOF });
-            }
         }
+
+        if (this.buffer.length > 0) {
+            tokens.push(Tokenizer.createToken(this.buffer));
+            this.buffer = [];
+        }
+
+        tokens.push({ value: '', type: TokenType.EOF });
 
         this.buffer = [];
         this.logResults(tokens);
@@ -166,70 +169,56 @@ class Tokenizer {
             position: chars[0]!.position
         };
 
-        const token = Tokenizer.getTokenType(ch);
+        const token = Tokenizer.classify(ch);
         return token;
     }
 
-    public static getTokenType(char: Character): Token {
+    private static TokenSpec: TokenSpec = new Map<TokenType, TokenTypeFn>([
+        [TokenType.START, (type) => type === CharType.Start],
+        [TokenType.IDENTIFIER, (type) => type === CharType.Letter],
+        [TokenType.HEXVALUE, (type) => type === CharType.Hash],
+        [TokenType.NUMBER, (type) => type === CharType.Number],
+        [TokenType.PERCENT, (type) => type === CharType.Percent],
+        [TokenType.DIMENSION, (type) => type === CharType.Dimension],
+        [TokenType.PLUS, (type) => type === CharType.Plus],
+        [TokenType.MINUS, (type) => type === CharType.Minus],
+        [TokenType.STAR, (type) => type === CharType.Star],
+        [TokenType.DOT, (type) => type === CharType.Dot],
+        [TokenType.COMMA, (type) => type === CharType.Comma],
+        [TokenType.SLASH, (type) => type === CharType.Slash],
+        [TokenType.LPAREN, (type) => type === CharType.LParen],
+        [TokenType.RPAREN, (type) => type === CharType.RParen],
+        [TokenType.OPERATOR, (type) => type === CharType.Operator],
+        [TokenType.NEWLINE, (type) => type === CharType.NewLine],
+        [TokenType.WHITESPACE, (type) => type === CharType.Whitespace],
+        [TokenType.EOF, (type) => type === CharType.EOF],
+        [TokenType.ERROR, (type) => type === CharType.Error],
+    ])
+
+    public static classify: ClassifyTokenFn = (char: Character): Token => {
         const value = char.value;
 
-        if (value.endsWith("%")) {
-            return { value, type: TokenType.PERCENT };
-        }
-
-        switch (char.type) {
-            case CharType.EOF:
-                return { value, type: TokenType.EOF };
-
-            case CharType.Whitespace:
-                return { value, type: TokenType.WHITESPACE };
-
-            case CharType.NewLine:
-                return { value, type: TokenType.NEWLINE };
-
-            case CharType.Percent:
+        for (const [tokenType, fn] of Tokenizer.TokenSpec) {
+            if (value.endsWith('%')) {
                 return { value, type: TokenType.PERCENT };
+            }
 
-            case CharType.Hash:
-                return { value, type: TokenType.HEXVALUE };
+            if (
+                value.endsWith('deg') ||
+                value.endsWith('grad') ||
+                value.endsWith('rad') ||
+                value.endsWith('turn')
+            ) {
+                return { value, type: TokenType.DIMENSION };
+            }
 
-            case CharType.Slash:
-                return { value, type: TokenType.SLASH };
-
-            case CharType.Comma:
-                return { value, type: TokenType.COMMA };
-
-            case CharType.RParen:
-                return { value, type: TokenType.RPAREN };
-
-            case CharType.LParen:
-                return { value, type: TokenType.LPAREN };
-
-            case CharType.Operator:
-                switch (value) {
-                    case "+":
-                        return { value, type: TokenType.PLUS };
-                    case "-":
-                        return { value, type: TokenType.MINUS };
-                    case "(":
-                        return { value, type: TokenType.LPAREN };
-                    case ")":
-                        return { value, type: TokenType.RPAREN };
-                    default:
-                        return { value, type: TokenType.OPERATOR };
-                }
-            case CharType.Letter:
-                return { value, type: TokenType.IDENTIFIER };
-
-            case CharType.Number:
-                return { value, type: TokenType.NUMBER };
-
-
-
-            default:
-                return { value, type: TokenType.ERROR };
+            if (fn(char.type)) {
+                return { value, type: tokenType };
+            }
         }
-    }
+
+        return { value, type: TokenType.ERROR };
+    };
 }
 
 export {
