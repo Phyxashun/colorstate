@@ -5,6 +5,10 @@ import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
 import { CharacterStream } from './src/Character.ts';
 
+/**
+ * @TODO Add character, token, and state support for quotes
+ */
+
 const compactInspectOptions: InspectOptions = {
     showHidden: true,
     depth: null,
@@ -99,16 +103,34 @@ const parserTest = () => {
     // Test cases
     // Commented out cases are not working
     const testCases = [
-        '1 + 2',
-        '10 - 5 + 3',
-        '2 * 3 + 4',
-        'rgb(255, 0, 0)',
-        '#ff0000',
-        '50%',
-        '(1 + 2) * 3',
-        '-5 + 10',
-        'rgba(255, 128, 0, 50%)',
+        //'1 + 2',
+        //'10 - 5 + 3',
+        //'2 * 3 + 4',
+        //'rgb(255, 0, 0)',
+        //'#ff0000',
+        //'50%',
+        //'(1 + 2) * 3',
+        //'-5 + 10',
+        //'rgba(255, 128, 0, 50%)',
+`const characterStreamTest = () => {
+line();
+console.log('=== CHARACTERSTREAM DEMO ===');
+line();
+
+const input = 'rgb(255, 100, 75)';
+
+const stream = new CharacterStream(input);
+
+console.log('INPUT:');
+console.log('RESULT OF CHARACTERSTREAM:');
+for (const char of stream) {
+    console.log(inspect(char, compactInspectOptions));
+}
+console.log();
+line();
+}`
     ];
+
 
     for (const input of testCases) {
         line();
@@ -133,5 +155,5 @@ const parserTest = () => {
 }
 
 //characterStreamTest();
-tokenizerTest();
-//parserTest();
+//tokenizerTest();
+parserTest();
