@@ -1,3 +1,8 @@
+// @ts-nocheck
+
+
+// ==================== Start of file: tests/Character.test.ts ====================
+
 // tests/Character.test.ts
 
 import { describe, it, expect } from 'vitest';
@@ -164,117 +169,119 @@ describe('CharacterArrayStream', () => {
 
 
 
+// ==================== End of file: tests/Character.test.ts ====================
 
 
 
+
+
+// @ts-nocheck
+
+
+// ==================== Start of file: tests/Context.test.ts ====================
 
 // tests/Context.test.ts
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Context } from '../src/Context';
-import { InitialState, LetterState, NumberState } from '../src/States';
-import { CharType, Character } from '../src/Character';
-import { TokenType } from '../src/Tokenizer';
+import { CharType, type Character } from '../src/Character';
+import { Initial_State } from '../src/States';
 
-describe('Context', () => {
-    it('should initialize with a given state', () => {
-        const context = new Context(InitialState);
-        expect(context.isAccepted()).toBe(false);
+function ch(
+    value: string,
+    type: CharType,
+    index = 0,
+    line = 1,
+    column = 1
+): Character {
+    return { value, type, index, line, column };
+}
+
+describe('Context – processCharacters()', () => {
+    it('emits letters individually', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        const a = ctx.processCharacters(ch('a', CharType.Letter));
+        const b = ctx.processCharacters(ch('b', CharType.Letter));
+
+        expect(a?.value).toBe('a');
+        expect(b?.value).toBe('b');
     });
 
-    it('should transition to a new state', () => {
-        const context = new Context(InitialState);
-        context.transitionTo(LetterState);
-        expect(context.isAccepted()).toBe(true);
+    it('emits numbers individually', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        const n = ctx.processCharacters(ch('5', CharType.Number));
+
+        expect(n?.value).toBe('5');
     });
 
-    it('should process a simple tokenization flow', () => {
-        const context = new Context(InitialState);
-        context.processTokens({ value: 'a', type: CharType.Letter } as Character); // Enters LetterState, buffer: ['a']
-        const emittedToken = context.processTokens({ value: ' ', type: CharType.Whitespace } as Character); // State changes, emits 'a'
+    it('does not emit on EOF', () => {
+        const ctx = new Context(Initial_State.instance);
 
-        expect(emittedToken).not.toBeNull();
-        expect(emittedToken!.value).toBe('a');
-    });
+        const r = ctx.processCharacters(
+            ch('', CharType.EOF)
+        );
 
-    it('should handle EOF in processCharacters', () => {
-        const context = new Context(InitialState);
-        const result = context.processCharacters({ type: CharType.EOF } as Character);
-        expect(result).toBeNull();
-    });
-
-    describe('toTokenType', () => {
-        it('should convert various CharTypes to the correct TokenTypes', () => {
-            expect(Context.toTokenType({ value: '#', type: CharType.Hash } as Character).type).toBe(TokenType.HEXVALUE);
-            expect(Context.toTokenType({ value: '1', type: CharType.Number } as Character).type).toBe(TokenType.NUMBER);
-            expect(Context.toTokenType({ value: '+', type: CharType.Operator } as Character).type).toBe(TokenType.PLUS);
-            expect(Context.toTokenType({ value: '-', type: CharType.Operator } as Character).type).toBe(TokenType.MINUS);
-            expect(Context.toTokenType({ value: ',', type: CharType.Operator } as Character).type).toBe(TokenType.COMMA);
-            expect(Context.toTokenType({ value: '/', type: CharType.Operator } as Character).type).toBe(TokenType.SLASH);
-            expect(Context.toTokenType({ value: '(', type: CharType.Operator } as Character).type).toBe(TokenType.LPAREN);
-            expect(Context.toTokenType({ value: ')', type: CharType.Operator } as Character).type).toBe(TokenType.RPAREN);
-            expect(Context.toTokenType({ value: '%', type: CharType.Percent } as Character).type).toBe(TokenType.PERCENT);
-        });
-    });
-
-    // --- 100% COVERAGE COMPLETION TESTS ---
-
-    describe('Context.ts Final Coverage', () => {
-        it('should throw an Error (lines 105)', () => {
-            const context = new Context(InitialState);
-            const emptyArray: Character[] = [];
-
-            expect(() => {
-                (context as any).createToken(emptyArray);
-            }).toThrow('Cannot create token from empty buffer');
-        });
-
-        it('should emit a final token when EOF is reached while buffer has content (lines 27-33)', () => {
-            const context = new Context(InitialState);
-            // Buffer has 'a', state is accepting
-            context.processTokens({ value: 'a', type: CharType.Letter } as Character);
-            const finalToken = context.processTokens({ type: CharType.EOF } as Character);
-
-            expect(finalToken).not.toBeNull();
-            expect(finalToken!.value).toBe('a');
-        });
-
-        it('should emit null when EOF is reached while buffer is empty (lines 34-36)', () => {
-            const context = new Context(InitialState);
-            const finalToken = context.processTokens({ type: CharType.EOF } as Character);
-            expect(finalToken).toBeNull();
-        });
-
-        it('should handle complex state change in processCharacters (line 92)', () => {
-            // Test Path: NumberState (Accepting) -> InitialState (Non-Accepting) -> LetterState (Accepting)
-            const context = new Context(NumberState);
-            const result = context.processCharacters({ value: 'a', type: CharType.Letter } as Character);
-
-            // The logic should return the character that caused this complex transition
-            expect(result).not.toBeNull();
-            expect(result!.value).toBe('a');
-        });
-
-        it('should correctly map CharType.Letter in toTokenType (line 147)', () => {
-            const token = Context.toTokenType({ value: 'word', type: CharType.Letter } as Character);
-            expect(token.type).toBe(TokenType.IDENTIFIER);
-        });
-
-        it('should map unhandled CharTypes to an ERROR token (line 159)', () => {
-            const token = Context.toTokenType({ value: '', type: CharType.EOF } as Character);
-            expect(token.type).toBe(TokenType.EOF);
-        });
-
-        it('should map unhandled CharTypes to an ERROR token (line 159)', () => {
-            const token = Context.toTokenType({ value: '`', type: CharType.Other } as Character);
-            expect(token.type).toBe(TokenType.ERROR);
-        });
+        expect(r).toBeNull();
     });
 });
 
+describe('Context – processTokens()', () => {
+    it('emits a letter token on state change', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        ctx.processTokens(ch('a', CharType.Letter, 0, 1, 1));
+        const token = ctx.processTokens(ch(' ', CharType.Whitespace, 1, 1, 2));
+
+        expect(token).not.toBeNull();
+        expect(token!.value).toBe('a');
+        expect(token!.type).toBe(CharType.Letter);
+    });
+
+    it('accumulates multi-digit numbers', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        ctx.processTokens(ch('1', CharType.Number));
+        ctx.processTokens(ch('2', CharType.Number));
+        const token = ctx.processTokens(ch(' ', CharType.Whitespace));
+
+        expect(token!.value).toBe('12');
+        expect(token!.type).toBe(CharType.Number);
+    });
+
+    it('emits buffered token on EOF', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        ctx.processTokens(ch('9', CharType.Number));
+        const token = ctx.processTokens(ch('', CharType.EOF));
+
+        expect(token).not.toBeNull();
+        expect(token!.value).toBe('9');
+    });
+
+    it('handles percent numbers correctly', () => {
+        const ctx = new Context(Initial_State.instance);
+
+        ctx.processTokens(ch('1', CharType.Number));
+        ctx.processTokens(ch('0', CharType.Number));
+        const token = ctx.processTokens(ch('%', CharType.Percent));
+
+        expect(token).not.toBeNull();
+        expect(token!.value).toBe('10');
+    });
+});
+
+// ==================== End of file: tests/Context.test.ts ====================
 
 
 
+
+
+// @ts-nocheck
+
+
+// ==================== Start of file: tests/index.test.ts ====================
 
 // tests/index.test.ts
 
@@ -397,15 +404,32 @@ describe('End-to-End Tokenization Tests from index.ts', () => {
     });
 });
 
+// ==================== End of file: tests/index.test.ts ====================
 
 
 
-// test/Parser.test.ts
+
+
+// @ts-nocheck
+
+
+// ==================== Start of file: tests/Parser.test.ts ====================
 
 import { describe, it, expect } from 'vitest';
 import { Tokenizer } from '../src/Tokenizer.ts';
 import { Parser } from '../src/Parser.ts';
-import type { Program, BinaryExpression, CallExpression } from '../src/AST.ts';
+import { NodeType } from '../src/AST.ts';
+import type {
+    Program,
+    BinaryExpression,
+    CallExpression,
+    NumericLiteral,
+    HexLiteral,
+    PercentLiteral,
+    Identifier,
+    UnaryExpression,
+    GroupExpression
+} from '../src/AST.ts';
 
 describe('Parser', () => {
     const parseInput = (input: string): Program => {
@@ -418,363 +442,358 @@ describe('Parser', () => {
     it('should parse number literals', () => {
         const ast = parseInput('42');
         expect(ast.body).toHaveLength(1);
-        expect(ast.body[0]!.type).toBe('ExpressionStatement');
-        expect(ast.body[0]!.expression.type).toBe('NumericLiteral');
-        expect((ast.body[0]!.expression as any).value).toBe(42);
+        expect(ast.body[0]!.type).toBe(NodeType.ExpressionStatement);
+        const expr = ast.body[0]!.expression as NumericLiteral;
+        expect(expr.type).toBe(NodeType.NumericLiteral);
+        expect(expr.value).toBe(42);
     });
 
     it('should parse addition', () => {
         const ast = parseInput('1 + 2');
         const expr = ast.body[0]!.expression as BinaryExpression;
-        expect(expr.type).toBe('BinaryExpression');
+        expect(expr.type).toBe(NodeType.BinaryExpression);
         expect(expr.operator).toBe('+');
-        expect((expr.left as any).value).toBe(1);
-        expect((expr.right as any).value).toBe(2);
+        expect((expr.left as NumericLiteral).value).toBe(1);
+        expect((expr.right as NumericLiteral).value).toBe(2);
     });
 
     it('should parse operator precedence', () => {
         const ast = parseInput('2 + 3 * 4');
         const expr = ast.body[0]!.expression as BinaryExpression;
         expect(expr.operator).toBe('+');
-        expect((expr.left as any).value).toBe(2);
-        expect((expr.right as BinaryExpression).operator).toBe('*');
+        expect((expr.left as NumericLiteral).value).toBe(2);
+
+        const right = expr.right as BinaryExpression;
+        expect(right.operator).toBe('*');
+        expect((right.left as NumericLiteral).value).toBe(3);
+        expect((right.right as NumericLiteral).value).toBe(4);
     });
 
     it('should parse function calls', () => {
         const ast = parseInput('rgb(255, 0, 0)');
         const expr = ast.body[0]!.expression as CallExpression;
-        expect(expr.type).toBe('CallExpression');
+        expect(expr.type).toBe(NodeType.CallExpression);
         expect(expr.callee.name).toBe('rgb');
         expect(expr.arguments).toHaveLength(3);
+        expect((expr.arguments[0] as NumericLiteral).value).toBe(255);
+        expect((expr.arguments[1] as NumericLiteral).value).toBe(0);
+        expect((expr.arguments[2] as NumericLiteral).value).toBe(0);
     });
 
     it('should parse hex literals', () => {
         const ast = parseInput('#ff0000');
-        const expr = ast.body[0]!.expression as any;
-        expect(expr.type).toBe('HexLiteral');
+        const expr = ast.body[0]!.expression as HexLiteral;
+        expect(expr.type).toBe(NodeType.HexLiteral);
         expect(expr.value).toBe('#ff0000');
     });
 
     it('should parse percentage literals', () => {
         const ast = parseInput('50%');
-        const expr = ast.body[0]!.expression as any;
-        expect(expr.type).toBe('PercentLiteral');
+        const expr = ast.body[0]!.expression as PercentLiteral;
+        expect(expr.type).toBe(NodeType.PercentLiteral);
         expect(expr.value).toBe(50);
+        expect(expr.raw).toBe('50%');
     });
 
     it('should parse unary operators', () => {
         const ast = parseInput('-5');
-        const expr = ast.body[0]!.expression as any;
-        expect(expr.type).toBe('UnaryExpression');
+        const expr = ast.body[0]!.expression as UnaryExpression;
+        expect(expr.type).toBe(NodeType.UnaryExpression);
         expect(expr.operator).toBe('-');
+        expect((expr.argument as NumericLiteral).value).toBe(5);
     });
 
     it('should parse grouped expressions', () => {
         const ast = parseInput('(1 + 2) * 3');
         const expr = ast.body[0]!.expression as BinaryExpression;
         expect(expr.operator).toBe('*');
-        expect((expr.left as any).type).toBe('GroupExpression');
+        expect((expr.left as GroupExpression).type).toBe(NodeType.GroupExpression);
+
+        const grouped = (expr.left as GroupExpression).expression as BinaryExpression;
+        expect(grouped.operator).toBe('+');
+        expect((grouped.left as NumericLiteral).value).toBe(1);
+        expect((grouped.right as NumericLiteral).value).toBe(2);
+
+        expect((expr.right as NumericLiteral).value).toBe(3);
     });
 });
+// ==================== End of file: tests/Parser.test.ts ====================
 
 
 
 
 
+// @ts-nocheck
 
-// tests/States.test.ts
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// ==================== Start of file: tests/States.test.ts ====================
+
+import { describe, it, expect } from 'vitest';
+
 import {
     Initial_State,
-    Whitespace_State,
-    Hex_State,
     Letter_State,
     Number_State,
-    Percent_State,
     Operator_State,
+    Whitespace_State,
+    Hex_State,
+    Percent_State,
     End_State,
-    State
 } from '../src/States';
-import { Context } from '../src/Context';
-import { CharType, Character, CharacterStream } from '../src/Character';
-import { Tokenizer } from '../src/Tokenizer';
 
-// Note: The aliased exports (e.g., InitialState) are instances.
-// We use the class directly (e.g., Initial_State) to access the static .instance property
-// for consistency and clarity in the tests.
+import { CharType, type Character } from '../src/Character';
+import type { Transition } from '../src/Transition';
+import type { State } from '../src/States';
 
-describe('States1', () => {
+/* -------------------------------------------------- */
+/* Helpers                                            */
+/* -------------------------------------------------- */
 
-    describe('InitialState Transitions', () => {
-        let context: Context;
-        let transitionToSpy: any;
+function char(
+    value: string,
+    type: CharType
+): Character {
+    return {
+        value,
+        type,
+        index: 0,
+        line: 1,
+        column: 1,
+    };
+}
 
-        // This runs before each `it` block in this `describe` block
-        beforeEach(() => {
-            context = new Context(Initial_State.instance);
-            transitionToSpy = vi.spyOn(context, 'transitionTo');
-        });
+function expectTo(
+    t: Transition,
+    state: State
+) {
+    expect(t.kind).toBe('To');
+    if (t.kind === 'To') {
+        expect(t.state).toBe(state);
+    }
+}
 
-        it('should transition to Whitespace_State on whitespace', () => {
-            context.processCharacters({ type: CharType.Whitespace } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Whitespace_State.instance);
-        });
+function expectEmitAndTo(
+    t: Transition,
+    state: State
+) {
+    expect(t.kind).toBe('EmitAndTo');
+    if (t.kind === 'EmitAndTo') {
+        expect(t.state).toBe(state);
+    }
+}
 
-        it('should transition to Hex_State on hash', () => {
-            context.processCharacters({ type: CharType.Hash } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Hex_State.instance);
-        });
+function expectStay(t: Transition) {
+    expect(t.kind).toBe('Stay');
+}
 
-        it('should transition to Letter_State on a letter', () => {
-            context.processCharacters({ type: CharType.Letter } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Letter_State.instance);
-        });
+function expectEnd(t: Transition) {
+    expect(t.kind).toBe('End');
+}
 
-        it('should transition to Number_State on a number', () => {
-            context.processCharacters({ type: CharType.Number } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Number_State.instance);
-        });
+/* -------------------------------------------------- */
+/* Initial State                                      */
+/* -------------------------------------------------- */
 
-        it('should transition to Operator_State on an operator', () => {
-            context.processCharacters({ type: CharType.Operator } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Operator_State.instance);
-        });
+describe('Initial_State', () => {
+    it('routes letters to Letter_State', () => {
+        const t = Initial_State.instance.handle(
+            char('a', CharType.Letter)
+        );
 
-        it('should transition to End_State on EOF', () => {
-            context.processCharacters({ type: CharType.EOF } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(End_State.instance);
-        });
+        expectTo(t, Letter_State.instance);
     });
 
-    it('should return correct accepting status for each state', () => {
-        expect(Initial_State.instance.isAccepting()).toBe(false);
-        expect(Whitespace_State.instance.isAccepting()).toBe(true);
-        expect(Hex_State.instance.isAccepting()).toBe(true);
-        expect(Letter_State.instance.isAccepting()).toBe(true);
-        expect(Number_State.instance.isAccepting()).toBe(true);
-        expect(Percent_State.instance.isAccepting()).toBe(true);
-        expect(Operator_State.instance.isAccepting()).toBe(true);
-        expect(End_State.instance.isAccepting()).toBe(true);
+    it('routes numbers to Number_State', () => {
+        const t = Initial_State.instance.handle(
+            char('1', CharType.Number)
+        );
+
+        expectTo(t, Number_State.instance);
     });
 
-    it('NumberState should transition to PercentState', () => {
-        const context = new Context(Number_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        // Directly call the state's handle method for a unit test
-        Number_State.instance.setContext(context);
-        Number_State.instance.handle({ type: CharType.Percent } as Character);
-        expect(transitionToSpy).toHaveBeenCalledWith(Percent_State.instance);
+    it('routes operators to Operator_State', () => {
+        const t = Initial_State.instance.handle(
+            char('+', CharType.Operator)
+        );
+
+        expectTo(t, Operator_State.instance);
     });
 
-    it('should have singleton instances for states', () => {
-        const instance1 = Whitespace_State.instance;
-        const instance2 = Whitespace_State.instance;
-        expect(instance1).toBe(instance2);
+    it('routes whitespace to Whitespace_State', () => {
+        const t = Initial_State.instance.handle(
+            char(' ', CharType.Whitespace)
+        );
+
+        expectTo(t, Whitespace_State.instance);
     });
 
-    it('should have a toString method', () => {
-        expect(Initial_State.instance.toString()).toBeTypeOf('string');
+    it('routes # to Hex_State', () => {
+        const t = Initial_State.instance.handle(
+            char('#', CharType.Hash)
+        );
+
+        expectTo(t, Hex_State.instance);
     });
 
-    it('should transition through Hex_State', () => {
-        const context = new Context(Hex_State.instance);
-        const transitionToSpy = vi.spyOn(Hex_State.instance, 'handle');
+    it('routes EOF to End_State', () => {
+        const t = Initial_State.instance.handle(
+            char('', CharType.EOF)
+        );
 
-        Hex_State.instance.setContext(context);
-
-        const tokenizer = new Tokenizer();
-        const input = '#ff00ff00';
-        const chars = tokenizer.getCharacters(input);
-
-        for (const ch of chars) {
-            Hex_State.instance.handle(ch);
-            expect(transitionToSpy).toHaveBeenCalledWith(ch);
-        }
-    });
-
-    it('should transition out of Percent_State to Initial_State (lines 215-217)', () => {
-        const ch = { value: '0', type: CharType.Number, index: 0, line: 1, column: 1 };
-        const context = new Context(Percent_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const handleSpy = vi.spyOn(Percent_State.instance, 'handle');
-        Percent_State.instance.setContext(context);
-        Percent_State.instance.handle(ch);
-
-        expect(handleSpy).toHaveBeenCalledWith(ch);
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('should transition out of Letter_State to Initial_State', () => {
-        const ch = { value: '#', type: CharType.Number, index: 0, line: 1, column: 1 };
-        const context = new Context(Letter_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        Letter_State.instance.setContext(context);
-        Letter_State.instance.handle(ch);
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
+        expectTo(t, End_State.instance);
     });
 });
 
-describe('States2', () => {
-    describe('Initial_State Transitions', () => {
-        let context: Context;
-        let transitionToSpy: any;
+/* -------------------------------------------------- */
+/* Letter State                                       */
+/* -------------------------------------------------- */
 
-        // A fresh context and spy are created before each test in this block
-        beforeEach(() => {
-            context = new Context(Initial_State.instance);
-            transitionToSpy = vi.spyOn(context, 'transitionTo');
-        });
+describe('Letter_State', () => {
+    it('stays on letters', () => {
+        const t = Letter_State.instance.handle(
+            char('b', CharType.Letter)
+        );
 
-        it('should transition to Whitespace_State on a whitespace character', () => {
-            // We are testing the handle method of Initial_State
-            const state = Initial_State.instance;
-            state.setContext(context); // The state needs the context to transition
-            state.handle({ type: CharType.Whitespace } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Whitespace_State.instance);
-        });
-
-        it('should transition to Hex_State on a hash character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.Hash } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Hex_State.instance);
-        });
-
-        it('should transition to Letter_State on a letter character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.Letter } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Letter_State.instance);
-        });
-
-        it('should transition to Number_State on a number character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.Number } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Number_State.instance);
-        });
-
-        it('should transition to Operator_State on an operator character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.Operator } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(Operator_State.instance);
-        });
-
-        it('should transition to End_State on an EOF character', () => {
-            const state = Initial_State.instance;
-            state.setContext(context);
-            state.handle({ type: CharType.EOF } as Character);
-            expect(transitionToSpy).toHaveBeenCalledWith(End_State.instance);
-        });
+        expectStay(t);
     });
 
-    it('should return the correct accepting status for each state', () => {
-        expect(Initial_State.instance.isAccepting()).toBe(false);
-        expect(Whitespace_State.instance.isAccepting()).toBe(true);
-        expect(Hex_State.instance.isAccepting()).toBe(true);
-        expect(Letter_State.instance.isAccepting()).toBe(true);
-        expect(Number_State.instance.isAccepting()).toBe(true);
-        expect(Percent_State.instance.isAccepting()).toBe(true);
-        expect(Operator_State.instance.isAccepting()).toBe(true);
-        expect(End_State.instance.isAccepting()).toBe(true);
-    });
+    it('emits and returns to Initial on non-letter', () => {
+        const t = Letter_State.instance.handle(
+            char('1', CharType.Number)
+        );
 
-    it('Number_State should transition to Percent_State on a percent character', () => {
-        const context = new Context(Number_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Number_State.instance;
-        state.setContext(context);
-        state.handle({ type: CharType.Percent } as Character);
-        expect(transitionToSpy).toHaveBeenCalledWith(Percent_State.instance);
-    });
-
-    it('should maintain singleton instances for states', () => {
-        const instance1 = Whitespace_State.instance;
-        const instance2 = Whitespace_State.instance;
-        expect(instance1).toBe(instance2);
-    });
-
-    it('should have a working toString method', () => {
-        expect(Initial_State.instance.toString()).toBeTypeOf('string');
-    });
-
-    it('Whitespace_State should transition to Initial_State on a non-whitespace char', () => {
-        const context = new Context(Whitespace_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Whitespace_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Letter } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('Hex_State should transition to Initial_State on a non-hex char', () => {
-        const context = new Context(Hex_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Hex_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Whitespace } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('Operator_State should transition to Initial_State on a non-operator char (line 242)', () => {
-        const context = new Context(Operator_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Operator_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Whitespace } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('Letter_State should transition to Initial_State on a non-letter char', () => {
-        const context = new Context(Letter_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Letter_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Whitespace } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('Number_State should transition to Initial_State on a non-numeric char', () => {
-        const context = new Context(Number_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = Number_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Whitespace } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
-    });
-
-    it('End_State should transition to Initial_State on a non-EOF char (line 268)', () => {
-        const context = new Context(End_State.instance);
-        const transitionToSpy = vi.spyOn(context, 'transitionTo');
-        const state = End_State.instance;
-        state.setContext(context);
-
-        // This is the action that triggers the uncovered line
-        state.handle({ type: CharType.Letter } as Character);
-
-        expect(transitionToSpy).toHaveBeenCalledWith(Initial_State.instance);
+        expectEmitAndTo(t, Initial_State.instance);
     });
 });
 
+/* -------------------------------------------------- */
+/* Number State                                       */
+/* -------------------------------------------------- */
+
+describe('Number_State', () => {
+    it('stays on digits', () => {
+        const t = Number_State.instance.handle(
+            char('2', CharType.Number)
+        );
+
+        expectStay(t);
+    });
+
+    it('transitions to Percent_State on %', () => {
+        const t = Number_State.instance.handle(
+            char('%', CharType.Percent)
+        );
+
+        expectTo(t, Percent_State.instance);
+    });
+
+    it('emits and returns to Initial on non-digit', () => {
+        const t = Number_State.instance.handle(
+            char('+', CharType.Operator)
+        );
+
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
+
+/* -------------------------------------------------- */
+/* Percent State                                      */
+/* -------------------------------------------------- */
+
+describe('Percent_State', () => {
+    it('stays on %', () => {
+        const t = Percent_State.instance.handle(
+            char('%', CharType.Percent)
+        );
+
+        expectStay(t);
+    });
+
+    it('emits and returns to Initial on other input', () => {
+        const t = Percent_State.instance.handle(
+            char(' ', CharType.Whitespace)
+        );
+
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
+
+/* -------------------------------------------------- */
+/* Operator State                                     */
+/* -------------------------------------------------- */
+
+describe('Operator_State', () => {
+    it('stays on operator', () => {
+        const t = Operator_State.instance.handle(
+            char('+', CharType.Operator)
+        );
+
+        expectStay(t);
+    });
+
+    it('emits and returns to Initial on non-operator', () => {
+        const t = Operator_State.instance.handle(
+            char('a', CharType.Letter)
+        );
+
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
+
+/* -------------------------------------------------- */
+/* Whitespace State                                   */
+/* -------------------------------------------------- */
+
+describe('Whitespace_State', () => {
+    it('stays on whitespace', () => {
+        const t = Whitespace_State.instance.handle(
+            char(' ', CharType.Whitespace)
+        );
+
+        expectStay(t);
+    });
+
+    it('emits and returns to Initial on non-whitespace', () => {
+        const t = Whitespace_State.instance.handle(
+            char('a', CharType.Letter)
+        );
+
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
+
+/* -------------------------------------------------- */
+/* End State                                          */
+/* -------------------------------------------------- */
+
+describe('End_State', () => {
+    it('ends on EOF', () => {
+        const t = End_State.instance.handle(
+            char('', CharType.EOF)
+        );
+
+        expectEnd(t);
+    });
+
+    it('emits and returns to Initial if input appears after EOF', () => {
+        const t = End_State.instance.handle(
+            char('a', CharType.Letter)
+        );
+
+        expectEmitAndTo(t, Initial_State.instance);
+    });
+});
+
+// ==================== End of file: tests/States.test.ts ====================
 
 
+
+
+
+// @ts-nocheck
+
+
+// ==================== Start of file: tests/Tokenizer.test.ts ====================
 
 // tests/Tokenizer.test.ts
 
@@ -903,3 +922,9 @@ describe('Tokenizer', () => {
         consoleSpy.mockRestore();
     });
 });
+// ==================== End of file: tests/Tokenizer.test.ts ====================
+
+
+
+
+
