@@ -112,23 +112,24 @@ const parserTest = () => {
         //'(1 + 2) * 3',
         //'-5 + 10',
         //'rgba(255, 128, 0, 50%)',
-`const characterStreamTest = () => {
-line();
-console.log('=== CHARACTERSTREAM DEMO ===');
-line();
+// `const characterStreamTest = () => {
+// line();
+// console.log('=== CHARACTERSTREAM DEMO ===');
+// line();
 
-const input = 'rgb(255, 100, 75)';
+// const input = 'rgb(255, 100, 75)';
 
-const stream = new CharacterStream(input);
+// const stream = new CharacterStream(input);
 
-console.log('INPUT:');
-console.log('RESULT OF CHARACTERSTREAM:');
-for (const char of stream) {
-    console.log(inspect(char, compactInspectOptions));
-}
-console.log();
-line();
-}`
+// console.log('INPUT:');
+// console.log('RESULT OF CHARACTERSTREAM:');
+// for (const char of stream) {
+//     console.log(inspect(char, compactInspectOptions));
+// }
+// console.log();
+// line();
+// }`
+        '"this is a 123 string!"'
     ];
 
 
@@ -138,7 +139,7 @@ line();
         // Step 1: Tokenize
         const tokenizer = new Tokenizer();
         const tokens = tokenizer
-            .withLogging(`PARSER TEST ('${input}'): Parsing different inputs`)
+            .withLogging(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
             .tokenize(input);
 
         // Step 2: Parse

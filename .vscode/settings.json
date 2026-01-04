@@ -54,6 +54,7 @@
         "HEXVALUE",
         "LPAREN",
         "retokenized",
-        "RPAREN"
+        "RPAREN",
+        "STRINGSTATE"
     ]
 }

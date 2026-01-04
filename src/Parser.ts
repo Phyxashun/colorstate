@@ -8,6 +8,7 @@ import {
     type Statement,
     type ExpressionStatement,
     type Identifier,
+    type StringLiteral,
     type NumericLiteral,
     type HexLiteral,
     type PercentLiteral,
@@ -175,6 +176,16 @@ export class Parser {
         const currentType = this.peek().type;
 
         switch (currentType) {
+            case TokenType.STRING: {
+                this.advance();
+                const token = this.previous();
+                return {
+                    type: NodeType.StringLiteral,
+                    value: token.value,
+                    raw: token.value
+                } as StringLiteral;
+            }
+
             case TokenType.NUMBER: {
                 this.advance();
                 const token = this.previous();

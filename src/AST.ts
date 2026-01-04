@@ -9,6 +9,7 @@ export enum NodeType {
     Expression = 'Expression',
     ExpressionStatement = 'ExpressionStatement',
     Identifier = 'Identifier',
+    StringLiteral = 'StringLiteral',
     NumericLiteral = 'NumericLiteral',
     HexLiteral = 'HexLiteral',
     PercentLiteral = 'PercentLiteral',
@@ -76,6 +77,7 @@ export interface ExpressionStatement extends ASTNode {
  */
 export type Expression =
     | Identifier
+    | StringLiteral
     | NumericLiteral
     | HexLiteral
     | PercentLiteral
@@ -91,6 +93,16 @@ export type Expression =
 export interface Identifier extends ASTNode {
     type: NodeType.Identifier;
     name: string;
+}
+
+/**
+ * String literal node
+ * Example: "hello", 'world'
+ */
+export interface StringLiteral extends ASTNode {
+    type: NodeType.StringLiteral;
+    value: string;
+    raw: string;
 }
 
 /**

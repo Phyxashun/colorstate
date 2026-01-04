@@ -16,7 +16,6 @@ enum TokenType {
     NUMBER = 'NUMBER',
     PERCENT = 'PERCENT',
     DIMENSION = 'DIMENSION',
-    UNICODE = 'UNICODE',
     PLUS = 'PLUS',
     MINUS = 'MINUS',
     STAR = 'STAR',
@@ -25,8 +24,8 @@ enum TokenType {
     SLASH = 'SLASH',
     LPAREN = 'LPAREN',
     RPAREN = 'RPAREN',
-    DELIMITER = 'DELIMITER',
-    OPERATOR = 'OPERATOR',
+    ESCAPE = 'ESCAPE',
+    SYMBOL = 'SYMBOL',
     NEWLINE = 'NEWLINE',
     WHITESPACE = 'WHITESPACE',
     EOF = 'EOF',
@@ -93,7 +92,7 @@ class Tokenizer {
 
     private logSource(input: TokenizerInput): void {
         if (!this.shouldLog) return;
-        console.log(`SOURCE:\t${input}\n`);
+        console.log(`SOURCE:\t'${input}'\n`);
     }
 
     private logResults(result: Token[]): void {
@@ -174,25 +173,29 @@ class Tokenizer {
     }
 
     private static TokenSpec: TokenSpec = new Map<TokenType, TokenTypeFn>([
-        [TokenType.START, (type) => type === CharType.Start],
-        [TokenType.IDENTIFIER, (type) => type === CharType.Letter],
-        [TokenType.HEXVALUE, (type) => type === CharType.Hash],
-        [TokenType.NUMBER, (type) => type === CharType.Number],
-        [TokenType.PERCENT, (type) => type === CharType.Percent],
-        [TokenType.DIMENSION, (type) => type === CharType.Dimension],
-        [TokenType.PLUS, (type) => type === CharType.Plus],
-        [TokenType.MINUS, (type) => type === CharType.Minus],
-        [TokenType.STAR, (type) => type === CharType.Star],
-        [TokenType.DOT, (type) => type === CharType.Dot],
-        [TokenType.COMMA, (type) => type === CharType.Comma],
-        [TokenType.SLASH, (type) => type === CharType.Slash],
-        [TokenType.LPAREN, (type) => type === CharType.LParen],
-        [TokenType.RPAREN, (type) => type === CharType.RParen],
-        [TokenType.OPERATOR, (type) => type === CharType.Operator],
-        [TokenType.NEWLINE, (type) => type === CharType.NewLine],
-        [TokenType.WHITESPACE, (type) => type === CharType.Whitespace],
-        [TokenType.EOF, (type) => type === CharType.EOF],
-        [TokenType.ERROR, (type) => type === CharType.Error],
+        [TokenType.START,       (type) => type === CharType.Start],
+        [TokenType.IDENTIFIER,  (type) => type === CharType.Letter],
+        [TokenType.HEXVALUE,    (type) => type === CharType.Hash],
+        [TokenType.NUMBER,      (type) => type === CharType.Number],
+        [TokenType.PERCENT,     (type) => type === CharType.Percent],
+        [TokenType.DIMENSION,   (type) => type === CharType.Dimension],
+        [TokenType.STRING,      (type) => type === CharType.Quote],
+        [TokenType.STRING,      (type) => type === CharType.SingleQuote],
+        [TokenType.STRING,      (type) => type === CharType.DoubleQuote],
+        [TokenType.PLUS,        (type) => type === CharType.Plus],
+        [TokenType.MINUS,       (type) => type === CharType.Minus],
+        [TokenType.STAR,        (type) => type === CharType.Star],
+        [TokenType.DOT,         (type) => type === CharType.Dot],
+        [TokenType.COMMA,       (type) => type === CharType.Comma],
+        [TokenType.SLASH,       (type) => type === CharType.Slash],
+        [TokenType.ESCAPE,      (type) => type === CharType.BackSlash],
+        [TokenType.LPAREN,      (type) => type === CharType.LParen],
+        [TokenType.RPAREN,      (type) => type === CharType.RParen],
+        [TokenType.SYMBOL,      (type) => type === CharType.Symbol],
+        [TokenType.NEWLINE,     (type) => type === CharType.NewLine],
+        [TokenType.WHITESPACE,  (type) => type === CharType.Whitespace],
+        [TokenType.EOF,         (type) => type === CharType.EOF],
+        [TokenType.ERROR,       (type) => type === CharType.Error],
     ])
 
     public static classify: ClassifyTokenFn = (char: Character): Token => {

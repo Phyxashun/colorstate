@@ -53,14 +53,14 @@ class Initial_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Start:
-                return Transition.Stay();
+            case CharType.SingleQuote:
+                return Transition.BeginString(StringState, CharType.SingleQuote);
+            
+            case CharType.DoubleQuote:
+                return Transition.BeginString(StringState, CharType.DoubleQuote);
 
             case CharType.Whitespace:
                 return Transition.To(WhitespaceState);
-
-            case CharType.NewLine:
-                return Transition.To(NewLineState);
 
             case CharType.Letter:
                 return Transition.To(LetterState);
@@ -70,6 +70,7 @@ class Initial_State extends State {
 
             case CharType.Hash:
                 return Transition.To(HexState);
+
             case CharType.Percent:
                 return Transition.To(PercentState);
 
@@ -82,8 +83,26 @@ class Initial_State extends State {
             case CharType.Star:
                 return Transition.To(SingleCharState);
 
-            case CharType.Operator:
-                return Transition.To(OperatorState);
+            case CharType.Tilde:
+            case CharType.Exclamation:
+            case CharType.At:
+            case CharType.Dollar:
+            case CharType.Question:
+            case CharType.Caret:
+            case CharType.Ampersand:
+            case CharType.LessThan:
+            case CharType.GreaterThan:
+            case CharType.Underscore:
+            case CharType.EqualSign:
+            case CharType.LBracket:
+            case CharType.RBracket:
+            case CharType.LBrace:
+            case CharType.RBrace:
+            case CharType.SemiColon:
+            case CharType.Colon:
+            case CharType.Pipe:
+            case CharType.Symbol:
+                return Transition.To(SymbolState);
 
             case CharType.Other:
             case CharType.EOF:
@@ -259,6 +278,41 @@ class Hex_State extends State {
     }
 }
 
+class String_State extends State {
+    public isAccepting: boolean = true;
+
+    constructor() {
+        super('StringState');
+    }
+
+    static #instance: State;
+
+    public static get instance(): State {
+        if (!this.#instance) {
+            this.#instance = new String_State();
+        }
+        return this.#instance;
+    }
+
+    public handle(char: Character): Transition {
+        switch (char.type) {
+            case CharType.BackSlash:
+                return Transition.EscapeNext(StringState);
+            
+            case CharType.SingleQuote:
+            case CharType.DoubleQuote:
+                return Transition.EndString(InitialState);
+            
+            case CharType.EOF:
+            case CharType.NewLine:
+                return Transition.EmitAndTo(InitialState);
+            
+            default:
+                return Transition.Stay();
+        }
+    }
+}
+
 class Percent_State extends State {
     public isAccepting: boolean = true;
 
@@ -306,25 +360,28 @@ class SingleChar_State extends State {
     }
 }
 
-class Operator_State extends State {
+class Symbol_State extends State {
     public isAccepting: boolean = true;
 
     constructor() {
-        super('OperatorState');
+        super('SymbolState');
     }
 
     static #instance: State;
 
     public static get instance(): State {
         if (!this.#instance) {
-            this.#instance = new Operator_State();
+            this.#instance = new Symbol_State();
         }
         return this.#instance;
     }
 
     public handle(char: Character): Transition {
-        switch (char.type) {
-            case CharType.Operator:
+        switch(char.type) {
+            case CharType.Plus:
+            case CharType.Minus:
+            case CharType.Star:
+            case CharType.EqualSign:
                 return Transition.Stay();
             default:
                 return Transition.EmitAndTo(InitialState);
@@ -360,9 +417,10 @@ const LetterState = Letter_State.instance;
 const NumberState = Number_State.instance;
 const DimensionState = Dimension_State.instance;
 const HexState = Hex_State.instance;
+const StringState = String_State.instance;
 const PercentState = Percent_State.instance;
 const SingleCharState = SingleChar_State.instance;
-const OperatorState = Operator_State.instance;
+const SymbolState = Symbol_State.instance;
 const EndState = End_State.instance;
 
 export {
@@ -373,9 +431,10 @@ export {
     NumberState,
     DimensionState,
     HexState,
+    StringState,
     PercentState,
     SingleCharState,
-    OperatorState,
+    SymbolState,
     EndState,
     State,
 }
