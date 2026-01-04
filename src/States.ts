@@ -52,67 +52,73 @@ class Initial_State extends State {
     }
 
     public handle(char: Character): Transition {
-        switch (char.type) {
-            case CharType.SingleQuote:
-                return Transition.BeginString(StringState, CharType.SingleQuote);
-            
-            case CharType.DoubleQuote:
-                return Transition.BeginString(StringState, CharType.DoubleQuote);
+    switch (char.type) {
+        // String delimiters
+        case CharType.SingleQuote:
+            return Transition.BeginString(StringState, CharType.SingleQuote);
+        case CharType.DoubleQuote:
+            return Transition.BeginString(StringState, CharType.DoubleQuote);
+        case CharType.Backtick:
+            return Transition.BeginString(StringState, CharType.Backtick);
 
-            case CharType.Whitespace:
-                return Transition.To(WhitespaceState);
+        // Whitespace
+        case CharType.Whitespace:
+            return Transition.To(WhitespaceState);
+        case CharType.NewLine:
+            return Transition.To(NewLineState);
 
-            case CharType.Letter:
-                return Transition.To(LetterState);
+        // Letters
+        case CharType.Letter:
+            return Transition.To(LetterState);
 
-            case CharType.Number:
-                return Transition.To(NumberState);
+        // Numbers
+        case CharType.Number:
+            return Transition.To(NumberState);
 
-            case CharType.Hash:
-                return Transition.To(HexState);
+        // Hexadecimal
+        case CharType.Hash:
+            return Transition.To(HexState);
 
-            case CharType.Percent:
-                return Transition.To(PercentState);
+        // All single-character tokens
+        case CharType.Comma:
+        case CharType.LParen:
+        case CharType.RParen:
+        case CharType.LBracket:
+        case CharType.RBracket:
+        case CharType.LBrace:
+        case CharType.RBrace:
+        case CharType.SemiColon:
+        case CharType.Dot:
+        case CharType.Plus:
+        case CharType.Minus:
+        case CharType.Star:
+        case CharType.Slash:
+        case CharType.Percent:
+        case CharType.EqualSign:
+        case CharType.GreaterThan:
+        case CharType.LessThan:
+        case CharType.Exclamation:
+        case CharType.Question:
+        case CharType.Colon:
+        case CharType.Caret:
+        case CharType.Ampersand:
+        case CharType.Pipe:
+        case CharType.Tilde:
+        case CharType.At:
+        case CharType.Dollar:
+        case CharType.Underscore:
+        case CharType.Symbol:
+            return Transition.To(SingleCharState);
 
-            case CharType.Comma:
-            case CharType.Slash:
-            case CharType.LParen:
-            case CharType.RParen:
-            case CharType.Plus:
-            case CharType.Minus:
-            case CharType.Star:
-                return Transition.To(SingleCharState);
+        case CharType.Other:
+        case CharType.EOF:
+        case CharType.Error:
+            return Transition.To(EndState);
 
-            case CharType.Tilde:
-            case CharType.Exclamation:
-            case CharType.At:
-            case CharType.Dollar:
-            case CharType.Question:
-            case CharType.Caret:
-            case CharType.Ampersand:
-            case CharType.LessThan:
-            case CharType.GreaterThan:
-            case CharType.Underscore:
-            case CharType.EqualSign:
-            case CharType.LBracket:
-            case CharType.RBracket:
-            case CharType.LBrace:
-            case CharType.RBrace:
-            case CharType.SemiColon:
-            case CharType.Colon:
-            case CharType.Pipe:
-            case CharType.Symbol:
-                return Transition.To(SymbolState);
-
-            case CharType.Other:
-            case CharType.EOF:
-            case CharType.Error:
-                return Transition.To(EndState);
-
-            default:
-                return Transition.Stay();
-        }
+        default:
+            return Transition.Stay();
     }
+}
 }
 
 class Whitespace_State extends State {
@@ -158,12 +164,7 @@ class NewLine_State extends State {
     }
 
     public handle(char: Character): Transition {
-        switch (char.type) {
-            case CharType.NewLine:
-                return Transition.Stay();
-            default:
-                return Transition.EmitAndTo(InitialState);
-        }
+        return Transition.EmitAndTo(InitialState);
     }
 }
 
@@ -298,15 +299,16 @@ class String_State extends State {
         switch (char.type) {
             case CharType.BackSlash:
                 return Transition.EscapeNext(StringState);
-            
+
             case CharType.SingleQuote:
             case CharType.DoubleQuote:
+            case CharType.Backtick:
                 return Transition.EndString(InitialState);
-            
+
             case CharType.EOF:
             case CharType.NewLine:
                 return Transition.EmitAndTo(InitialState);
-            
+
             default:
                 return Transition.Stay();
         }
@@ -330,12 +332,7 @@ class Percent_State extends State {
     }
 
     public handle(char: Character): Transition {
-        switch (char.type) {
-            case CharType.Percent:
-                return Transition.Stay();
-            default:
-                return Transition.EmitAndTo(InitialState);
-        }
+        return Transition.EmitAndTo(InitialState);
     }
 }
 
@@ -377,11 +374,11 @@ class Symbol_State extends State {
     }
 
     public handle(char: Character): Transition {
-        switch(char.type) {
-            case CharType.Plus:
-            case CharType.Minus:
-            case CharType.Star:
-            case CharType.EqualSign:
+        switch (char.type) {
+            case CharType.At:
+            case CharType.Dollar:
+            case CharType.Underscore:
+            case CharType.Symbol:
                 return Transition.Stay();
             default:
                 return Transition.EmitAndTo(InitialState);

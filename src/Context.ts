@@ -59,7 +59,7 @@ class Context {
         return this.stringContext.openingQuoteType === quoteType;
     }
 
-    public process(char: Character): { emit: boolean; reprocess: boolean } {
+    public process(char: Character): { emit: boolean; reprocess: boolean, endString?: boolean } {
         const wasAccepting = this.isAccepting();
         const transition: Transition = this.getCurrentState().handle(char);
 
@@ -94,7 +94,7 @@ class Context {
             case "EndString": {
                 this.endString();
                 this.transitionTo(transition.state);
-                return { emit: true, reprocess: false };
+                return { emit: true, reprocess: false, endString: true };
             }
 
             case "ToContinue": {
@@ -127,7 +127,7 @@ class Context {
     }
 }
 
-export { 
+export {
     type StringContext,
-    Context 
+    Context
 }

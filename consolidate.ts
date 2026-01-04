@@ -14,7 +14,7 @@ console.log();
 line();
 figlet.parseFont('Standard', standard);
 
-const asciiArt = await figlet.text('    Consolidator!     ', {
+const asciiArt = await figlet.text('    Consolidator!', {
     font: 'Standard',
     horizontalLayout: "default",
     verticalLayout: "default",
@@ -22,7 +22,7 @@ const asciiArt = await figlet.text('    Consolidator!     ', {
     whitespaceBreak: true
 });
 
-const coloredArt = styleText(['black', 'bold', 'bgGray'], asciiArt!);
+const coloredArt = styleText(['yellowBright', 'bold'], asciiArt);
 console.log(coloredArt);
 
 const processFiles = (what: string, outputFile: string, patterns: string[]) => {
