@@ -1,0 +1,145 @@
+To simplify your code using a **Functional States** approach, we can replace the verbose singleton classes with a single object (or a set of functions) that maps state names to transition logic. This eliminates the need for `instance` getters and class inheritance for every state.
+
+Here is how you can refactor `src/States.ts` and update the `Context` to handle it.
+
+### 1. Refactored `src/States.ts`
+
+Instead of classes, we use a `Record` where each key is a state name and each value is a function that takes a `Character` and returns a `Transition`.
+
+```typescript
+import { type Character, CharType } from './Character.ts';
+import { Transition } from './Transition.ts';
+
+// Define the available state names as a type for safety
+export type StateName = 
+    | 'Initial' | 'Whitespace' | 'NewLine' | 'Letter' 
+    | 'Number' | 'Dimension' | 'Hex' | 'String' 
+    | 'Percent' | 'SingleChar' | 'Symbol' | 'End';
+
+// Define the functional state handler type
+type StateHandler = (char: Character) => Transition;
+
+export const FunctionalStates: Record<StateName, StateHandler> = {
+    Initial: (char) => {
+        switch (char.type) {
+            case CharType.SingleQuote: return Transition.BeginString('String', CharType.SingleQuote);
+            case CharType.DoubleQuote: return Transition.BeginString('String', CharType.DoubleQuote);
+            case CharType.Backtick:    return Transition.BeginString('String', CharType.Backtick);
+            case CharType.Whitespace:  return Transition.To('Whitespace');
+            case CharType.NewLine:     return Transition.To('NewLine');
+            case CharType.Letter:      return Transition.To('Letter');
+            case CharType.Number:      return Transition.To('Number');
+            case CharType.Hash:        return Transition.To('Hex');
+            
+            case CharType.Comma: case CharType.LParen: case CharType.RParen:
+            case CharType.Plus:  case CharType.Minus:  case CharType.Star:
+            case CharType.Slash: case CharType.Percent:
+                return Transition.To('SingleChar');
+
+            case CharType.EOF:   return Transition.To('End');
+            default:             return Transition.To('SingleChar');
+        }
+    },
+
+    Whitespace: (char) => 
+        char.type === CharType.Whitespace ? Transition.Stay() : Transition.EmitAndTo('Initial'),
+
+    NewLine: (_) => Transition.EmitAndTo('Initial'),
+
+    Letter: (char) => 
+        char.type === CharType.Letter ? Transition.Stay() : Transition.EmitAndTo('Initial'),
+
+    Number: (char) => {
+        if (char.type === CharType.Percent) return Transition.ToContinue('Percent');
+        if (char.type === CharType.Letter)  return Transition.ToContinue('Dimension');
+        if (char.type === CharType.Number || char.type === CharType.Dot) return Transition.Stay();
+        return Transition.EmitAndTo('Initial');
+    },
+
+    Dimension: (char) => 
+        char.type === CharType.Letter ? Transition.Stay() : Transition.EmitAndTo('Initial'),
+
+    Hex: (char) => {
+        const isHex = char.type === CharType.Hash || char.type === CharType.Letter || char.type === CharType.Number;
+        return isHex ? Transition.Stay() : Transition.EmitAndTo('Initial');
+    },
+
+    String: (char) => {
+        if (char.type === CharType.BackSlash) return Transition.EscapeNext('String');
+        if (char.type === CharType.SingleQuote || char.type === CharType.DoubleQuote || char.type === CharType.Backtick) {
+            return Transition.EndString('Initial');
+        }
+        if (char.type === CharType.EOF || char.type === CharType.NewLine) return Transition.EmitAndTo('Initial');
+        return Transition.Stay();
+    },
+
+    Percent: (_) => Transition.EmitAndTo('Initial'),
+
+    SingleChar: (_) => Transition.EmitAndTo('Initial'),
+
+    Symbol: (char) => {
+        const isSym = [CharType.Unicode, CharType.BackSlash, CharType.At, CharType.Symbol].includes(char.type);
+        return isSym ? Transition.Stay() : Transition.EmitAndTo('Initial');
+    },
+
+    End: (_) => Transition.Stay(),
+};
+
+// Define which states are "Accepting" (can produce a token)
+export const AcceptingStates = new Set<StateName>([
+    'Whitespace', 'NewLine', 'Letter', 'Number', 'Dimension', 
+    'Hex', 'String', 'Percent', 'SingleChar', 'Symbol', 'End'
+]);
+
+```
+
+### 2. Update `src/Transition.ts`
+
+Update your `Transition` type to use the `StateName` string instead of the `State` class instance.
+
+```typescript
+export type Transition =
+    | { kind: 'Stay' }
+    | { kind: 'To'; state: StateName }
+    | { kind: 'EmitAndTo'; state: StateName }
+    | { kind: 'ToContinue'; state: StateName }
+    | { kind: 'BeginString'; state: StateName; quoteType: CharType }
+    | { kind: 'EndString'; state: StateName }
+    | { kind: 'EscapeNext'; state: StateName };
+
+```
+
+### 3. Simplify `src/Context.ts`
+
+The `Context` now simply tracks the string name of the state and calls the function from the `FunctionalStates` map.
+
+```typescript
+import { FunctionalStates, AcceptingStates, type StateName } from './States.ts';
+
+class Context {
+    private currentState: StateName = 'Initial';
+    // ... stringContext properties ...
+
+    public process(char: Character) {
+        const wasAccepting = AcceptingStates.has(this.currentState);
+        const transition = FunctionalStates[this.currentState](char);
+
+        // ... existing logic to handle EscapeNext, BeginString, etc. ...
+        
+        // When updating state:
+        if ('state' in transition) {
+            this.currentState = transition.state;
+        }
+
+        // ... return emit/reprocess flags ...
+    }
+}
+
+```
+
+### Why this is better:
+
+1. **Readability:** All state transition logic is in one file and visible at a glance. You don't have to jump between ten different files to see how the lexer moves from `Number` to `Dimension`.
+2. **Boilerplate Reduction:** You removed dozens of `static #instance` and `public static get instance()` blocks.
+3. **Memory:** You are no longer creating class instances for every state; you are just looking up a function in a standard object.
+4. **Extensibility:** Adding a new state is now as simple as adding one key to the `FunctionalStates` object and one entry in the `AcceptingStates` set.

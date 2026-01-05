@@ -697,19 +697,19 @@ class Context {
         const wasAccepting = this.isAccepting();
         const transition: Transition = this.state.handle(char);
 
+        if (this.isEscaping() && transition.kind !== "EscapeNext") {
+            this.setEscaping(false);
+            return { emit: false, reprocess: false };
+        }
+
         if (transition.kind === "EndString" && this.isInString()) {
             if (this.isMatchingQuote(char.type)) {
                 this.endString();
                 this.transitionTo(transition.state);
-                return { emit: true, reprocess: false };
+                return { emit: true, reprocess: false, endString: true };
             } else {
                 return { emit: false, reprocess: false };
             }
-        }
-
-        if (this.isEscaping() && transition.kind !== "EscapeNext") {
-            this.setEscaping(false);
-            return { emit: false, reprocess: false };
         }
 
         switch (transition.kind) {
@@ -1097,8 +1097,6 @@ import { type Character, CharType } from './Character.ts';
 import { Transition } from './Transition';
 
 abstract class State {
-    public name: string;
-
     public abstract isAccepting: boolean;
 
     protected inspectOptions: InspectOptions = {
@@ -1116,10 +1114,6 @@ abstract class State {
         numericSeparator: true,
     };
 
-    constructor(name: string = 'State') {
-        this.name = name;
-    }
-
     public toString(): string {
         return `\t${inspect(this, this.inspectOptions)}`;
     }
@@ -1130,9 +1124,7 @@ abstract class State {
 class Initial_State extends State {
     public isAccepting: boolean = false;
 
-    private constructor() {
-        super('InitialState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1224,9 +1216,7 @@ class Initial_State extends State {
 class Whitespace_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('WhitespaceState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1250,9 +1240,7 @@ class Whitespace_State extends State {
 class NewLine_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('HexState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1271,9 +1259,7 @@ class NewLine_State extends State {
 class Letter_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('LetterState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1297,9 +1283,7 @@ class Letter_State extends State {
 class Number_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('NumberState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1328,9 +1312,7 @@ class Number_State extends State {
 class Dimension_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('UnitState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1354,9 +1336,7 @@ class Dimension_State extends State {
 class Hex_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('HexState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1382,9 +1362,7 @@ class Hex_State extends State {
 class String_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('StringState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1418,9 +1396,7 @@ class String_State extends State {
 class Percent_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('PercentState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1439,9 +1415,7 @@ class Percent_State extends State {
 class SingleChar_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('SingleCharState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1460,9 +1434,7 @@ class SingleChar_State extends State {
 class Symbol_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('SymbolState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1491,9 +1463,7 @@ class Symbol_State extends State {
 class End_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('EndState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -1685,59 +1655,46 @@ class Tokenizer {
         this.logSource(input);
 
         for (const char of stream) {
-            const wasInStringState = this.ctx.isInString();
-            const wasEscaping = this.ctx.isEscaping();
+        const wasInStringState = this.ctx.isInString();
+        const wasEscaping = this.ctx.isEscaping();
 
-            let result = this.ctx.process(char);
+        // 1. Process the character
+        let result = this.ctx.process(char);
 
-            //if (result.endString) {
-            //    tokens.push(Tokenizer.createToken(this.buffer, true));
-            //    this.buffer = [];
-            //}
-
-            let shouldEndString = false;
-
-            if (result.endString && !wasEscaping) {
-                shouldEndString = true;
-            }
-
-            if (result.emit) {
-                if (this.buffer.length > 0) {
-                    tokens.push(Tokenizer.createToken(this.buffer, wasInStringState));
-                    this.buffer = [];
-                }
-
-                if (result.reprocess) {
-                    result = this.ctx.process(char);
-                }
-            }
-
-            if (this.ctx.isInString()) {
-                const isQuote =
-                    char.type === CharType.SingleQuote ||
-                    char.type === CharType.DoubleQuote ||
-                    char.type === CharType.Backtick;
-
-                if (char.type === CharType.BackSlash) {
-                    continue;
-                }
-
-                if (!isQuote || wasEscaping) {
-                    this.buffer.push(char);
-                }
-            }
-            else {
-                if (this.ctx.isAccepting() &&
-                    char.type !== CharType.EOF) {
-                    this.buffer.push(char);
-                }
-            }
-
-            if (shouldEndString) {
-                tokens.push(Tokenizer.createToken(this.buffer, true));
+        // 2. Handle Emitting (Flushing existing buffer)
+        if (result.emit) {
+            if (this.buffer.length > 0) {
+                tokens.push(Tokenizer.createToken(this.buffer, wasInStringState));
                 this.buffer = [];
             }
+
+            if (result.reprocess) {
+                result = this.ctx.process(char);
+            }
         }
+
+        // 3. Handle Buffer logic
+        if (!result.endString && char.type !== CharType.EOF) {
+            if (this.ctx.isInString()) {
+                // If we are in a string, we add EVERYTHING except the starting quote
+                // Transition logic: if we just transitioned TO a string, result.emit is false 
+                // and the state changed.
+                
+                // Simplified: Check if this char is a quote. 
+                // If it's a quote AND we weren't in a string before this char, it's the opener.
+                const isQuote = 
+                    char.type === CharType.SingleQuote || 
+                    char.type === CharType.DoubleQuote || 
+                    char.type === CharType.Backtick;
+
+                if (!(isQuote && !wasInStringState)) {
+                    this.buffer.push(char);
+                }
+            } else if (this.ctx.isAccepting()) {
+                this.buffer.push(char);
+            }
+        }
+    }
 
         if (this.buffer.length > 0) {
             const wasInString = this.ctx.isInString();

@@ -1,0 +1,110 @@
+To streamline your `Parser` class, you should focus on reducing the repetitive logic in your binary expression methods and moving the heavy `switch` statement out of `primary` into a more modular dispatcher.
+
+Here are three specific architectural improvements to make the parser cleaner and more extensible.
+
+### 1. DRY Binary Expressions with a Helper
+
+Your `addition` and `multiplication` methods share identical logic: a loop that checks for operators and builds a tree. You can replace both with a single helper method.
+
+```typescript
+// src/Parser.ts
+
+/**
+ * Higher-order helper to handle left-associative binary operations.
+ * @param builder The next higher precedence level (e.g., unary or multiplication)
+ * @param types The token types to match (e.g., PLUS, MINUS)
+ */
+private binaryExpr(builder: () => Expression, ...types: TokenType[]): Expression {
+    let expr = builder();
+
+    while (this.match(...types)) {
+        const operator = this.previous().value as any;
+        const right = builder();
+        expr = {
+            type: NodeType.BinaryExpression,
+            operator,
+            left: expr,
+            right,
+        };
+    }
+
+    return expr;
+}
+
+// Now your grammar methods are one-liners:
+private addition(): Expression {
+    return this.binaryExpr(() => this.multiplication(), TokenType.PLUS, TokenType.MINUS);
+}
+
+private multiplication(): Expression {
+    return this.binaryExpr(() => this.unary(), TokenType.STAR, TokenType.SLASH);
+}
+
+```
+
+### 2. Use a Dispatcher for `primary`
+
+Instead of a giant `switch` statement in `primary`, which becomes hard to read as you add more literals (Booleans, Null, etc.), use a lookup table.
+
+```typescript
+// src/Parser.ts
+
+// Define a type for primary parsing functions
+type PrimaryParser = (token: Token) => Expression;
+
+private readonly primaryParsers: Partial<Record<TokenType, PrimaryParser>> = {
+    [TokenType.STRING]: (t) => ({ type: NodeType.StringLiteral, value: t.value, raw: t.value }),
+    [TokenType.NUMBER]: (t) => ({ type: NodeType.NumericLiteral, value: parseFloat(t.value), raw: t.value }),
+    [TokenType.HEXVALUE]: (t) => ({ type: NodeType.HexLiteral, value: t.value, raw: t.value }),
+    [TokenType.IDENTIFIER]: (t) => ({ type: NodeType.Identifier, name: t.value }),
+    [TokenType.PERCENT]: (t) => ({ 
+        type: NodeType.PercentLiteral, 
+        value: parseFloat(t.value.replace('%', '')), 
+        raw: t.value 
+    }),
+};
+
+private primary(): Expression {
+    if (this.isAtEnd()) throw this.error(this.peek(), 'Unexpected end of input');
+
+    const token = this.peek();
+    const parser = this.primaryParsers[token.type];
+
+    if (parser) {
+        this.advance();
+        return parser(token);
+    }
+
+    // Special case for grouping (since it recurses back to expression)
+    if (this.match(TokenType.LPAREN)) {
+        const expr = this.expression();
+        this.consume(TokenType.RPAREN, "Expected ')' after expression");
+        return { type: NodeType.GroupExpression, expression: expr };
+    }
+
+    throw this.error(token, `Expected expression, got ${token.type}`);
+}
+
+```
+
+### 3. Move AST Creation to Factory Functions
+
+Creating AST objects manually inside the parser methods adds noise. By moving these to a separate utility or static methods, you make the parser's logic purely about "grammar" rather than "object shape."
+
+```typescript
+// Define factories in AST.ts or as private helpers in Parser.ts
+private createBinary(left: Expression, operator: string, right: Expression): BinaryExpression {
+    return { type: NodeType.BinaryExpression, operator: operator as any, left, right };
+}
+
+private createLiteral(token: Token): Expression {
+    // ... logic to return the correct Literal type ...
+}
+
+```
+
+### Summary of Benefits:
+
+* **Maintenance**: To add a new operator (like `^` for power), you just add `TokenType.POW` to the `binaryExpr` call in the appropriate precedence level.
+* **Readability**: The grammar levels (`addition`, `multiplication`, `unary`) now look exactly like the BNF grammar rules they represent.
+* **Scalability**: The `primaryParsers` map makes it trivial to add new literal types (like `true`/`false` or `null`) without making the `primary()` method longer.

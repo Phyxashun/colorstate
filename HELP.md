@@ -1,0 +1,146 @@
+Your code is a well-structured example of a classic "State Machine" lexer and a "Recursive Descent" parser. However, it currently suffers from **"Boilerplate Overload"**—there are many layers of abstraction (Context, Transition objects, Singleton State classes) that make it harder to see the actual logic.
+
+Here is a review and a set of recommendations to simplify the code while keeping its robust architecture.
+
+---
+
+### 1. Simplify the State Machine (The "Big Win")
+
+Currently, every state is a class with a singleton getter. This is very verbose. In TypeScript, you can represent states as a **Record of functions**.
+
+**Instead of this:**
+
+```typescript
+class Letter_State extends State {
+    static #instance: State;
+    public static get instance() { ... }
+    public handle(char: Character) { ... }
+}
+
+```
+
+**Try this (Functional States):**
+Define your states as a simple object where each key is a state name and the value is a function that returns the next state and action.
+
+```typescript
+const States: Record<string, (char: Character) => Transition> = {
+  Initial: (char) => {
+    if (char.type === CharType.Letter) return { type: 'To', next: 'Letter' };
+    if (char.type === CharType.Number) return { type: 'To', next: 'Number' };
+    // ...
+  },
+  Letter: (char) => {
+    if (char.type === CharType.Letter) return { type: 'Stay' };
+    return { type: 'Emit', next: 'Initial' };
+  }
+};
+
+```
+
+This removes about 200 lines of boilerplate from `States.ts` and makes the transitions readable in one place.
+
+---
+
+### 2. Streamline `CharUtility`
+
+You have large `Set` objects for letters and numbers, but then you use Regex in `CharSpec`. You can consolidate this. Modern JavaScript/TypeScript handles Unicode properties very well.
+
+**Simplified Classification:**
+
+```typescript
+const isLetter = (c: string) => /\p{L}/u.test(c);
+const isDigit = (c: string) => /\d/.test(c);
+const isWhitespace = (c: string) => /\s/.test(c);
+
+// Use a simple lookup for single-char symbols
+const SYMBOLS: Record<string, CharType> = {
+  '#': CharType.Hash,
+  '%': CharType.Percent,
+  '(': CharType.LParen,
+  ')': CharType.RParen,
+  // ...
+};
+
+```
+
+---
+
+### 3. Simplify the `Tokenizer` Buffer Logic
+
+In `Tokenizer.ts`, the logic to decide whether to push a character to the buffer or ignore it (like quotes) is split between `Context` and `Tokenizer`.
+
+**Recommendation:** Let the `process` method return exactly what should happen to the current character.
+
+```typescript
+interface ProcessResult {
+  action: 'buffer' | 'ignore' | 'emit';
+  nextState: StateName;
+}
+
+```
+
+This prevents the "Check if I just entered a string" logic from being scattered.
+
+---
+
+### 4. Improve the `Parser` Structure
+
+Your `Parser.ts` is actually quite clean! One way to make it "easier to follow" is to use a **Binary Expression Helper**. Since Addition and Multiplication look almost identical, you can DRY (Don't Repeat Yourself) that logic.
+
+**Refactored Binary Parser:**
+
+```typescript
+private binaryExpr(builder: () => Expression, ...tokenTypes: TokenType[]): Expression {
+    let expr = builder();
+    while (this.match(...tokenTypes)) {
+        const operator = this.previous().value;
+        const right = builder();
+        expr = { type: NodeType.BinaryExpression, operator, left: expr, right };
+    }
+    return expr;
+}
+
+// Then use it like this:
+private addition() {
+    return this.binaryExpr(() => this.multiplication(), TokenType.PLUS, TokenType.MINUS);
+}
+
+private multiplication() {
+    return this.binaryExpr(() => this.unary(), TokenType.STAR, TokenType.SLASH);
+}
+
+```
+
+---
+
+### 5. Architectural Review: "The Double Classification"
+
+Currently, you classify a character (e.g., `CharType.Hash`), then the state machine processes it, then the Tokenizer classifies it *again* to turn it into a `TokenType.HEXVALUE`.
+
+**Optimization:** The State Machine should know what it's building. When the `NumberState` exits, it should tell the Tokenizer: "I just finished a Number." This removes the need for `Tokenizer.classify` and `TokenSpec`.
+
+---
+
+### 6. Recommended Folder Structure
+
+For a project of this size, you might find it easier to follow if you group by "Phase" rather than "Class":
+
+* `/lexer`
+* `types.ts` (CharType, TokenType)
+* `character-stream.ts`
+* `state-machine.ts` (The simplified transition logic)
+
+
+* `/parser`
+* `ast.ts`
+* `parser.ts`
+
+
+
+### Summary of specific code fixes:
+
+1. **In `Parser.ts**`: You have a `// ✅ Fixed: Added STAR` comment. You can also add `%` (Modulo) there since it's in your `BinaryExpression` type definition but missing from the parser logic.
+2. **In `States.ts**`: The `EndString` logic in `String_State` returns `InitialState`. If your input is `'hello'world`, it might fail to tokenize `world` correctly because it emits and resets in one go. Using a `Reprocess` flag (which you have) is good, but ensure it's used consistently for all delimiters.
+3. **In `index.ts**`: The `fourSpaceAST` regex is a clever way to format. You can also achieve this by passing a number to `JSON.stringify(ast, null, 4)` if you convert your AST to a plain object first.
+
+**Would you like me to provide a simplified version of one of these specific files (like the new Functional States approach)?**

@@ -1,0 +1,113 @@
+Beyond the structural refactors already discussed, there are several "logic-level" efficiencies you can implement to remove redundant code and improve performance. Currently, your pipeline performs **double classification**: the `States` classify characters to build tokens, and then the `Tokenizer` re-scans those tokens to determine their final `TokenType`.
+
+Here are the next steps to streamline your compiler.
+
+### 1. State-Driven Token Typing (Removing `Tokenizer.classify`)
+
+Your `States` already "know" what they are building (e.g., the `Hex_State` knows it's building a hex value). You can pass this information through the `Transition` so that the `Tokenizer` doesn't have to perform string-matching logic like `value.endsWith('%')` at the end.
+
+**The Efficiency:** Move the `TokenType` assignment into the `Transition`.
+
+```typescript
+// src/Transition.ts
+export type Transition =
+    | { kind: 'Stay' }
+    | { kind: 'EmitAndTo'; state: StateName; tokenType: TokenType } // Add type here
+    // ... other kinds ...
+
+// src/States.ts
+Number: (char) => {
+    if (char.type === CharType.Percent) return Transition.To('Percent');
+    // ...
+    return Transition.EmitAndTo('Initial', TokenType.NUMBER);
+},
+Percent: (_) => Transition.EmitAndTo('Initial', TokenType.PERCENT),
+
+```
+
+By doing this, you can delete the entire `Tokenizer.classify` method and its 60+ lines of logic.
+
+### 2. Add `peek()` to the `CharacterStream`
+
+Currently, your `States` must "consume" a character to see what it is, which often forces a `reprocess` flag in the `Context`. Adding a `peek()` method allows states to look ahead without advancing the index, which simplifies the `Tokenizer` loop logic.
+
+**The Efficiency:** Reduce loop iterations and "reprocess" complexity.
+
+```typescript
+// src/Character.ts
+class CharacterStream {
+    // ...
+    public peek(): Character {
+        if (this.isEOF()) return this.atEOF();
+        const codePoint = this.source.codePointAt(this.index);
+        const value = String.fromCodePoint(codePoint!);
+        return {
+            value,
+            type: CharUtility.classify(value),
+            position: { ...this.position }
+        };
+    }
+}
+
+```
+
+### 3. Lazy Token Filtering in the Parser
+
+In your `Parser` constructor, you use `tokens.filter(...)` to remove whitespace and newlines. This creates a completely new array in memory. For large files, it is more efficient to keep the original array and have your `advance()` and `peek()` methods simply skip over "ignored" tokens.
+
+**The Efficiency:** Save memory and allow the parser to access whitespace if you ever need to (e.g., for "Automatic Semicolon Insertion" or code formatting).
+
+```typescript
+// src/Parser.ts
+private advance(): Token {
+    this.current++;
+    // Automatically skip tokens we don't care about
+    while (!this.isAtEnd() && this.isIgnored(this.peek())) {
+        this.current++;
+    }
+    return this.previous();
+}
+
+private isIgnored(token: Token): boolean {
+    return token.type === TokenType.WHITESPACE || token.type === TokenType.NEWLINE;
+}
+
+```
+
+### 4. Consolidated String Unescaping
+
+Your `Tokenizer` currently uses a heavy Regex-based `unescapeString` method. If you want to make this faster, you can handle the unescaping **while** you are in the `String_State`.
+
+Instead of buffering the backslash and the 'n', when the state machine sees `\` followed by `n`, it can immediately push the actual newline character `\n` to the buffer.
+
+**The Efficiency:**
+
+* **Original**: Buffer has `['\', 'n']`  Join to `"\\n"`  Regex  `" \n "`.
+* **Optimized**: `EscapeNext` state sees 'n'  Pushes `\n` directly to buffer  Token is already unescaped.
+
+### 5. Unified Literal Parsing
+
+In `src/Parser.ts`, your `primary()` method has separate blocks for `NUMBER`, `HEXVALUE`, `PERCENT`, and `DIMENSION`. These are all effectively "Literals." You can unify these into a single "Literal" check that returns the correct AST node based on the token type.
+
+```typescript
+// src/Parser.ts
+private primary(): Expression {
+    const token = this.peek();
+
+    // Check if it's any type of literal
+    if (this.match(TokenType.NUMBER, TokenType.STRING, TokenType.HEXVALUE, TokenType.PERCENT, TokenType.DIMENSION)) {
+        return this.createLiteralNode(this.previous());
+    }
+    // ... handle identifiers and groups ...
+}
+
+```
+
+### Summary of Cleanup
+
+| Component | Old Way | New Efficiency |
+| --- | --- | --- |
+| **Tokens** | Re-classified by `Tokenizer.classify` | Tagged directly by `States` |
+| **Memory** | Filters token array | Lazy-skips tokens during parsing |
+| **Strings** | Regex post-processing | Unescaped during buffering |
+| **Lookahead** | Reprocess flag | `stream.peek()` |
