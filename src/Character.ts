@@ -1,8 +1,6 @@
 // src/Character.ts
 
 type ClassifyFn = (char: string) => CharType;
-type CharTypeFn = (char: string) => boolean;
-type Spec = Map<CharType, CharTypeFn>;
 
 enum CharType {
     Unicode = 'Unicode',
@@ -11,6 +9,8 @@ enum CharType {
     NewLine = 'NewLine',
     Letter = 'Letter',
     Number = 'Number',
+    Punctuation = 'Punctuation',
+    SymbolMark = 'SymbolMark',
     Dimension = 'Dimension',
     Percent = 'Percent',
     Hash = 'Hash',
@@ -44,11 +44,87 @@ enum CharType {
     SemiColon = 'SemiColon',
     Colon = 'Colon',
     Pipe = 'Pipe',
+    Currency = 'Currency',
     Symbol = 'Symbol',
     Other = 'Other',
     EOF = 'EOF',
     Error = 'Error',
-}
+} // End enum CharType
+
+class CharUtility {
+    /**
+     * Map of single characters to their specific types.
+     * This provides O(1) lookup for common symbols.
+     */
+    private static readonly SYMBOL_MAP: Record<string, CharType> = {
+        '#': CharType.Hash,
+        '%': CharType.Percent,
+        '/': CharType.Slash,
+        ',': CharType.Comma,
+        '(': CharType.LParen,
+        ')': CharType.RParen,
+        '+': CharType.Plus,
+        '-': CharType.Minus,
+        '*': CharType.Star,
+        '.': CharType.Dot,
+        '`': CharType.Backtick,
+        "'": CharType.SingleQuote,
+        '"': CharType.DoubleQuote,
+        '\\': CharType.BackSlash,
+        '~': CharType.Tilde,
+        '!': CharType.Exclamation,
+        '@': CharType.At,
+        '$': CharType.Dollar,
+        '?': CharType.Question,
+        '^': CharType.Caret,
+        '&': CharType.Ampersand,
+        '<': CharType.LessThan,
+        '>': CharType.GreaterThan,
+        '_': CharType.Underscore,
+        '=': CharType.EqualSign,
+        '[': CharType.LBracket,
+        ']': CharType.RBracket,
+        '{': CharType.LBrace,
+        '}': CharType.RBrace,
+        ';': CharType.SemiColon,
+        ':': CharType.Colon,
+        '|': CharType.Pipe,
+    };
+
+    // Pre-compiled regex for performance and clarity
+    private static readonly IS_NEWLINE = /[\n\r]/;
+    private static readonly IS_WHITESPACE = /\s/u;
+    private static readonly IS_LETTER = /\p{L}/u;
+    private static readonly IS_NUMBER = /\p{N}/u;
+    private static readonly IS_PUNCTUATION = /\p{P}/u;
+    private static readonly IS_SYMBOL = /\p{S}/u;
+
+    /**
+     * Classifies a character using the symbol map and regex for categories.
+     */
+    public static classify: ClassifyFn = (char: string): CharType => {
+        // 1. Handle End-Of-File character
+        if (char === '') return CharType.EOF;
+
+        // 2. Handle characters in the symbol map
+        if (this.SYMBOL_MAP[char]) return this.SYMBOL_MAP[char];
+
+        // 3. Handle Whitespace and Newlines
+        if (this.IS_NEWLINE.test(char)) return CharType.NewLine;
+        if (this.IS_WHITESPACE.test(char)) return CharType.Whitespace;
+
+        // 4. Handle Letters and Numbers (Unicode aware)
+        if (this.IS_LETTER.test(char)) return CharType.Letter;
+        if (this.IS_NUMBER.test(char)) return CharType.Number;
+
+        // 5. Handle specific Unicode categories
+        if (this.IS_PUNCTUATION.test(char)) return CharType.Punctuation;
+        if (this.IS_SYMBOL.test(char)) return CharType.SymbolMark;
+
+        // 6. All remaining characters fall here
+        return CharType.Other;
+    }
+} // End class CharUtility
 
 interface Position {
     index: number;
@@ -62,118 +138,11 @@ interface Character {
     position: Position;
 }
 
-class CharUtility {
-    public static Letters: Set<string> = new Set([
-        // Uppercase
-        'A', 'B', 'C', 'D', 'E',
-        'F', 'G', 'H', 'I', 'J',
-        'K', 'L', 'M', 'N', 'O',
-        'P', 'Q', 'R', 'S', 'T',
-        'U', 'V', 'W', 'X', 'Y',
-        'Z',
-
-        // Lowercase
-        'a', 'b', 'c', 'd', 'e',
-        'f', 'g', 'h', 'i', 'j',
-        'k', 'l', 'm', 'n', 'o',
-        'p', 'q', 'r', 's', 't',
-        'u', 'v', 'w', 'x', 'y',
-        'z',
-    ]);
-
-    public static Numbers: Set<string> = new Set([
-        '1', '2', '3', '4', '5',
-        '6', '7', '8', '9', '0',
-    ]);
-
-    public static Symbols: Set<string> = new Set([
-    ]);
-
-    public static Whitespace: Set<string> = new Set([
-        ' ', '\t',
-    ]);
-
-    public static NewLine: Set<string> = new Set([
-        '\n', '\r',
-    ]);
-
-    public static CharSpec: Spec = new Map<CharType, CharTypeFn>([
-        [CharType.EOF, (char) => char === ''],
-        [CharType.Hash, (char) => char === '#'],
-        [CharType.Percent, (char) => char === '%'],
-        [CharType.Slash, (char) => char === '/'],
-        [CharType.Comma, (char) => char === ','],
-        [CharType.LParen, (char) => char === '('],
-        [CharType.RParen, (char) => char === ')'],
-        [CharType.Plus, (char) => char === '+'],
-        [CharType.Minus, (char) => char === '-'],
-        [CharType.Star, (char) => char === '*'],
-        [CharType.Dot, (char) => char === '.'],
-        [CharType.Backtick, (char) => char === '`'],
-        [CharType.SingleQuote, (char) => char === "'"],
-        [CharType.DoubleQuote, (char) => char === '"'],
-        [CharType.BackSlash, (char) => char === '\\'],
-        [CharType.Tilde, (char) => char === '~'],
-        [CharType.Exclamation, (char) => char === '!'],
-        [CharType.At, (char) => char === '@'],
-        [CharType.Dollar, (char) => char === '$'],
-        [CharType.Question, (char) => char === '?'],
-        [CharType.Caret, (char) => char === '^'],
-        [CharType.Ampersand, (char) => char === '&'],
-        [CharType.LessThan, (char) => char === '<'],
-        [CharType.GreaterThan, (char) => char === '>'],
-        [CharType.Underscore, (char) => char === '_'],
-        [CharType.EqualSign, (char) => char === '='],
-        [CharType.LBracket, (char) => char === '['],
-        [CharType.RBracket, (char) => char === ']'],
-        [CharType.LBrace, (char) => char === '{'],
-        [CharType.RBrace, (char) => char === '}'],
-        [CharType.SemiColon, (char) => char === ';'],
-        [CharType.Colon, (char) => char === ':'],
-        [CharType.Pipe, (char) => char === '|'],
-        [CharType.Symbol, (char) => CharUtility.Symbols.has(char)],
-        //[CharType.Letter,       (char) => CharUtility.Letters.has(char)],
-        //[CharType.Number,       (char) => CharUtility.Numbers.has(char)],
-        //[CharType.Whitespace,   (char) => CharUtility.Whitespace.has(char)],
-        //[CharType.NewLine,      (char) => CharUtility.NewLine.has(char)],
-        [CharType.Letter, (char) => /\p{L}/u.test(char)],
-        [CharType.Number, (char) => /\p{N}/u.test(char)],
-        [CharType.NewLine, (char) => char === '\n' || char === '\r'],
-        [CharType.Whitespace, (char) => /\s/u.test(char)],
-        [CharType.Unicode, (char) => /[^\x00-\x7F]/.test(char)]
-    ]);
-
-    public static classify: ClassifyFn = (char: string): CharType => {
-        if (char === '') return CharType.EOF;
-
-        for (const [charType, fn] of CharUtility.CharSpec) {
-            if (fn(char)) return charType as CharType;
-        }
-
-        return CharType.Other;
-    };
-}
-
 class CharacterStream implements IterableIterator<Character> {
     private readonly source: string;
-    private value: string = '';
     private index: number = 0;
     private line: number = 1;
     private column: number = 1;
-
-    private get position(): Position {
-        return {
-            index: this.index,
-            line: this.line,
-            column: this.column,
-        };
-    }
-
-    private set position(value: Position) {
-        this.index = value.index;
-        this.line = value.line;
-        this.column = value.column;
-    }
 
     constructor(input: string) {
         this.source = input.normalize('NFC');
@@ -183,44 +152,43 @@ class CharacterStream implements IterableIterator<Character> {
         return this;
     }
 
+    public peek(): Character {
+        if (this.isEOF()) return this.atEOF();
+        
+        const value = String.fromCodePoint(this.source.codePointAt(this.index)!);
+        
+        return {
+            value,
+            type: CharUtility.classify(value),
+            position: { 
+                index: this.index,
+                line: this.line,
+                column: this.column
+            }
+        };
+    }
+
     public next(): IteratorResult<Character> {
         if (this.isEOF()) {
             return {
                 done: true,
-                value: {
-                    value: '',
-                    type: CharType.EOF,
-                    position: { ...this.position }
-                }
+                value: this.atEOF()
             };
         }
 
-        const codePoint = this.source.codePointAt(this.index);
-        this.value = String.fromCodePoint(codePoint!);
-
-        const char: Character = {
-            value: this.value,
-            type: CharUtility.classify(this.value),
-            position: { ...this.position }
-        };
-
-        this.advance();
+        const char: Character = this.peek();
+        this.advance(char.value);
         return { done: false, value: char };
     }
 
-    public advance(): void {
-        const charLength = this.value.length;
-        const newPosition = { ...this.position };
-
-        newPosition.index += charLength;
-        if (this.value === '\n') {
-            newPosition.line++;
-            newPosition.column = 1;
+    public advance(charValue: string): void {
+        this.index += charValue.length;
+        if (charValue === '\n') {
+            this.line++;
+            this.column = 1;
         } else {
-            newPosition.column++;
+            this.column += [...charValue].length;
         }
-
-        this.position = { ...newPosition };
     }
 
     public isEOF(): boolean {
@@ -231,7 +199,11 @@ class CharacterStream implements IterableIterator<Character> {
         return ({
             value: '',
             type: CharType.EOF,
-            position: { ...this.position }
+            position: { 
+                index: this.index,
+                line: this.line,
+                column: this.column
+            }
         });
     }
 
@@ -239,14 +211,18 @@ class CharacterStream implements IterableIterator<Character> {
         return {
             value: 'Error',
             type: CharType.Other,
-            position: { ...this.position }
+            position: { 
+                index: this.index,
+                line: this.line,
+                column: this.column
+            }
         };
     }
-}
+} // End class CharacterStream
 
 export {
+    CharType,
     type Position,
     type Character,
-    CharType,
     CharacterStream,
 }

@@ -5,6 +5,8 @@
  */
 export enum NodeType {
     Program = 'Program',
+    Declaration = 'Declaration',
+    VariableDeclaration = 'VariableDeclaration',
     Statement = 'Statement',
     Expression = 'Expression',
     ExpressionStatement = 'ExpressionStatement',
@@ -44,12 +46,12 @@ export interface SourceLocation {
  * Position in source code
  */
 export interface Position {
+    /** Byte index */
+    index: number;
     /** Line number (1-indexed) */
     line: number;
     /** Column number (1-indexed) */
     column: number;
-    /** Byte index */
-    index: number;
 }
 
 /**
@@ -63,7 +65,7 @@ export interface Program extends ASTNode {
 /**
  * Base type for all statements
  */
-export type Statement = ExpressionStatement;
+export type Statement = ExpressionStatement | VariableDeclaration;
 
 /**
  * Expression wrapped as a statement
@@ -71,6 +73,20 @@ export type Statement = ExpressionStatement;
 export interface ExpressionStatement extends ASTNode {
     type: NodeType.ExpressionStatement;
     expression: Expression;
+}
+
+/**
+ * Variable declaration node
+ * Example: const x = 5;
+ */
+export interface VariableDeclaration extends ASTNode {
+    type: NodeType.VariableDeclaration;
+    /** The kind of declaration (e.g., const, let, var) */
+    kind: 'const' | 'let' | 'var';
+    /** The identifier being declared */
+    identifier: Identifier;
+    /** The expression the variable is initialized to (optional) */
+    initializer?: Expression;
 }
 
 /**

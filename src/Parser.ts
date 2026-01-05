@@ -7,6 +7,7 @@ import {
     type Expression,
     type Statement,
     type ExpressionStatement,
+    type VariableDeclaration,
     type Identifier,
     type StringLiteral,
     type NumericLiteral,
@@ -44,19 +45,40 @@ export class Parser {
 
     public parse(): Program {
         const statements: Statement[] = [];
-
         while (!this.isAtEnd()) {
-            if (this.check(TokenType.EOF)) {
-                this.advance();
-                continue;
-            }
-            const stmt = this.statement();
-            if (stmt) statements.push(stmt);
+            statements.push(this.declaration());
         }
-
         return {
             type: NodeType.Program,
-            body: statements,
+            body: statements
+        };
+    }
+
+    private declaration(): Statement {
+        if (this.match(TokenType.CONST)) {
+            return this.variableDeclaration('const');
+        }
+        // Add checks for `let`, `function`, etc. here in the future
+
+        // If it's not a known declaration, assume it's a regular statement
+        return this.statement();
+    }
+
+    private variableDeclaration(kind: 'const' | 'let'): VariableDeclaration {
+        const name = this.consume(TokenType.IDENTIFIER, 'Expect variable name.').value;
+
+        this.consume(TokenType.EQUALS, "Expect '=' after variable name.");
+
+        const initializer = this.expression();
+
+        // Assuming you have a Semicolon token type or will handle it
+        // this.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+
+        return {
+            type: NodeType.VariableDeclaration,
+            kind,
+            identifier: { type: NodeType.Identifier, name },
+            initializer,
         };
     }
 
