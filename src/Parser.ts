@@ -137,8 +137,12 @@ export class Parser {
         let expr = this.primary();
 
         // Only parse call if expr is Identifier
-        while (
+        /*while (
             expr &&
+            expr.type === NodeType.Identifier &&
+            this.match(TokenType.LPAREN)
+        ) //*/
+        if (
             expr.type === NodeType.Identifier &&
             this.match(TokenType.LPAREN)
         ) {
@@ -205,6 +209,19 @@ export class Parser {
                     value: parseFloat(numStr),
                     raw: token.value
                 } as PercentLiteral;
+            }
+
+            case TokenType.DIMENSION: {
+                this.advance();
+                const token = this.previous();
+                const match = token.value.match(/^([\d.]+)([a-zA-Z]+)$/)!;
+
+                return {
+                    type: NodeType.DimensionLiteral,
+                    value: parseFloat(match[1]!),
+                    unit: match[2]!,
+                    raw: token.value
+                };
             }
 
             case TokenType.HEXVALUE: {

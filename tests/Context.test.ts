@@ -21,4 +21,9 @@ describe('Context string handling', () => {
         ctx.setEscaping(false);
         expect(ctx.isEscaping()).toBe(false);
     });
+
+    it('ignores endString when not in string', () => {
+        const ctx = new Context();
+        expect(() => ctx.endString()).not.toThrow();
+    });
 });

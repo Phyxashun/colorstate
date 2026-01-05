@@ -25,4 +25,10 @@ describe('Parser', () => {
 
         expect(ast.body[0].expression.type).toBe(NodeType.GroupExpression);
     });
+
+    it('throws on invalid binary expression', () => {
+        const tokens = new Tokenizer().tokenize('1 +');
+        
+        expect(() => new Parser(tokens).parse()).toThrow();
+    });
 });

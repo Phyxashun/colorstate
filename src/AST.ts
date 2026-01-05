@@ -13,6 +13,7 @@ export enum NodeType {
     NumericLiteral = 'NumericLiteral',
     HexLiteral = 'HexLiteral',
     PercentLiteral = 'PercentLiteral',
+    DimensionLiteral = 'DimensionLiteral',
     BinaryExpression = 'BinaryExpression',
     UnaryExpression = 'UnaryExpression',
     CallExpression = 'CallExpression',
@@ -81,6 +82,7 @@ export type Expression =
     | NumericLiteral
     | HexLiteral
     | PercentLiteral
+    | DimensionLiteral
     | BinaryExpression
     | UnaryExpression
     | CallExpression
@@ -132,6 +134,13 @@ export interface HexLiteral extends ASTNode {
 export interface PercentLiteral extends ASTNode {
     type: NodeType.PercentLiteral;
     value: number;
+    raw: string;
+}
+
+export interface DimensionLiteral extends ASTNode {
+    type: NodeType.DimensionLiteral;
+    value: number;
+    unit: string;
     raw: string;
 }
 

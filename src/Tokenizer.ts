@@ -4,7 +4,22 @@ import { inspect, styleText, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
 import { type Character, CharType, CharacterStream } from './Character.ts';
 
-type ClassifyTokenFn = (char: Character) => Token;
+const inspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
+
+type ClassifyTokenFn = (char: Character, wasInString: boolean) => Token;
 type TokenTypeFn = (type: CharType) => boolean;
 type TokenSpec = Map<TokenType, TokenTypeFn>;
 
@@ -29,6 +44,7 @@ enum TokenType {
     NEWLINE = 'NEWLINE',
     WHITESPACE = 'WHITESPACE',
     EOF = 'EOF',
+    OTHER = 'OTHER',
     ERROR = 'ERROR',
 }
 
@@ -119,46 +135,49 @@ class Tokenizer {
         this.logSource(input);
 
         for (const char of stream) {
-            const wasInStringState = this.ctx.getCurrentState().name === 'StringState';
+        const wasInStringState = this.ctx.isInString();
+        const wasEscaping = this.ctx.isEscaping();
 
-            let result = this.ctx.process(char);
+        // 1. Process the character
+        let result = this.ctx.process(char);
 
-            if (result.endString) {
-                tokens.push(Tokenizer.createToken(this.buffer, true));
+        // 2. Handle Emitting (Flushing existing buffer)
+        if (result.emit) {
+            if (this.buffer.length > 0) {
+                tokens.push(Tokenizer.createToken(this.buffer, wasInStringState));
                 this.buffer = [];
             }
 
-            if (result.emit) {
-                if (this.buffer.length > 0) {
-                    tokens.push(Tokenizer.createToken(this.buffer, wasInStringState));
-                    this.buffer = [];
-                }
-
-                if (result.reprocess) {
-                    result = this.ctx.process(char);
-                }
-            }
-
-            if (this.ctx.isInString()) {
-                if (
-                    char.type !== CharType.SingleQuote &&
-                    char.type !== CharType.DoubleQuote &&
-                    char.type !== CharType.Backtick
-                ) {
-                    this.buffer.push(char);
-                }
-            } else {
-                if (
-                    this.ctx.isAccepting() &&
-                    char.type !== CharType.EOF
-                ) {
-                    this.buffer.push(char);
-                }
+            if (result.reprocess) {
+                result = this.ctx.process(char);
             }
         }
 
+        // 3. Handle Buffer logic
+        if (!result.endString && char.type !== CharType.EOF) {
+            if (this.ctx.isInString()) {
+                // If we are in a string, we add EVERYTHING except the starting quote
+                // Transition logic: if we just transitioned TO a string, result.emit is false 
+                // and the state changed.
+                
+                // Simplified: Check if this char is a quote. 
+                // If it's a quote AND we weren't in a string before this char, it's the opener.
+                const isQuote = 
+                    char.type === CharType.SingleQuote || 
+                    char.type === CharType.DoubleQuote || 
+                    char.type === CharType.Backtick;
+
+                if (!(isQuote && !wasInStringState)) {
+                    this.buffer.push(char);
+                }
+            } else if (this.ctx.isAccepting()) {
+                this.buffer.push(char);
+            }
+        }
+    }
+
         if (this.buffer.length > 0) {
-            const wasInString = this.ctx.getCurrentState().name === 'StringState';
+            const wasInString = this.ctx.isInString();
             tokens.push(Tokenizer.createToken(this.buffer, wasInString));
             this.buffer = [];
         }
@@ -178,6 +197,8 @@ class Tokenizer {
             value += ch.value;
         }
 
+        let token = { value, type: TokenType.OTHER }
+
         const ch = {
             value,
             type: chars[0]!.type,
@@ -185,10 +206,16 @@ class Tokenizer {
         };
 
         if (wasInString) {
-            return { value, type: TokenType.STRING };
+            const unescaped = Tokenizer.unescapeString(value);
+            console.log('CREATETOKEN: VALUE:', inspect(value, inspectOptions))
+            return {
+                value: unescaped,
+                type: TokenType.STRING
+            };
+        } else {
+            token = Tokenizer.classify(ch, wasInString);
         }
 
-        const token = Tokenizer.classify(ch);
         return token;
     }
 
@@ -205,18 +232,18 @@ class Tokenizer {
         [TokenType.DOT, (type) => type === CharType.Dot],
         [TokenType.COMMA, (type) => type === CharType.Comma],
         [TokenType.SLASH, (type) => type === CharType.Slash],
-        [TokenType.ESCAPE, (type) => type === CharType.BackSlash],
         [TokenType.LPAREN, (type) => type === CharType.LParen],
         [TokenType.RPAREN, (type) => type === CharType.RParen],
         [TokenType.NEWLINE, (type) => type === CharType.NewLine],
         [TokenType.WHITESPACE, (type) => type === CharType.Whitespace],
         [TokenType.EOF, (type) => type === CharType.EOF],
+        [TokenType.OTHER, (type) => type === CharType.Other],
         [TokenType.ERROR, (type) => type === CharType.Error],
     ])
 
-    private static classify: ClassifyTokenFn = (char: Character): Token => {
+    private static classify: ClassifyTokenFn = (char: Character, wasInString: boolean = false): Token => {
         const value = char.value;
-        let result: Token = { value, type: TokenType.ERROR };
+        let result: Token = { value, type: TokenType.OTHER };
 
         if (value.endsWith('%')) {
             char.type = CharType.Percent;
@@ -234,6 +261,13 @@ class Tokenizer {
         }
 
         switch (char.type) {
+            case CharType.BackSlash:
+                return {
+                    value,
+                    type: wasInString ? TokenType.ESCAPE : TokenType.SYMBOL
+                };
+
+            case CharType.Unicode:
             case CharType.Tilde:
             case CharType.Exclamation:
             case CharType.At:
@@ -267,6 +301,41 @@ class Tokenizer {
 
         return result;
     };
+
+    /**
+     * Converts escaped sequences in a string to their actual characters
+     * Supports: \n, \t, \r, \', \", \\, \uXXXX, \xXX
+     */
+    private static unescapeString(input: string): string {
+        return input.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|[nrt'\"\\])/g, (match, seq) => {
+            switch (true) {
+                // Unicode escape: \uXXXX
+                case /^u[0-9a-fA-F]{4}$/.test(seq):
+                    return String.fromCharCode(parseInt(seq.slice(1), 16));
+
+                // Hex escape: \xXX
+                case /^x[0-9a-fA-F]{2}$/.test(seq):
+                    return String.fromCharCode(parseInt(seq.slice(1), 16));
+
+                // Single-character escapes
+                case seq === 'n':
+                    return '\n';
+                case seq === 'r':
+                    return '\r';
+                case seq === 't':
+                    return '\t';
+                case seq === "'":
+                    return "'";
+                case seq === '"':
+                    return '"';
+                case seq === '\\':
+                    return '\\';
+
+                default:
+                    return seq;
+            }
+        });
+    }
 
 }
 

@@ -5,8 +5,6 @@ import { type Character, CharType } from './Character.ts';
 import { Transition } from './Transition';
 
 abstract class State {
-    public name: string;
-
     public abstract isAccepting: boolean;
 
     protected inspectOptions: InspectOptions = {
@@ -24,10 +22,6 @@ abstract class State {
         numericSeparator: true,
     };
 
-    constructor(name: string = 'State') {
-        this.name = name;
-    }
-
     public toString(): string {
         return `\t${inspect(this, this.inspectOptions)}`;
     }
@@ -38,9 +32,7 @@ abstract class State {
 class Initial_State extends State {
     public isAccepting: boolean = false;
 
-    private constructor() {
-        super('InitialState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -52,81 +44,87 @@ class Initial_State extends State {
     }
 
     public handle(char: Character): Transition {
-    switch (char.type) {
-        // String delimiters
-        case CharType.SingleQuote:
-            return Transition.BeginString(StringState, CharType.SingleQuote);
-        case CharType.DoubleQuote:
-            return Transition.BeginString(StringState, CharType.DoubleQuote);
-        case CharType.Backtick:
-            return Transition.BeginString(StringState, CharType.Backtick);
+        switch (char.type) {
+            // String delimiters
+            case CharType.SingleQuote:
+                return Transition.BeginString(StringState, CharType.SingleQuote);
+            case CharType.DoubleQuote:
+                return Transition.BeginString(StringState, CharType.DoubleQuote);
+            case CharType.Backtick:
+                return Transition.BeginString(StringState, CharType.Backtick);
 
-        // Whitespace
-        case CharType.Whitespace:
-            return Transition.To(WhitespaceState);
-        case CharType.NewLine:
-            return Transition.To(NewLineState);
+            // Whitespace
+            case CharType.Whitespace:
+                return Transition.To(WhitespaceState);
+            case CharType.NewLine:
+                return Transition.To(NewLineState);
 
-        // Letters
-        case CharType.Letter:
-            return Transition.To(LetterState);
+            // Letters
+            case CharType.Letter:
+                return Transition.To(LetterState);
 
-        // Numbers
-        case CharType.Number:
-            return Transition.To(NumberState);
+            // Numbers
+            case CharType.Number:
+                return Transition.To(NumberState);
 
-        // Hexadecimal
-        case CharType.Hash:
-            return Transition.To(HexState);
+            // Hexadecimal
+            case CharType.Hash:
+                return Transition.To(HexState);
 
-        // All single-character tokens
-        case CharType.Comma:
-        case CharType.LParen:
-        case CharType.RParen:
-        case CharType.LBracket:
-        case CharType.RBracket:
-        case CharType.LBrace:
-        case CharType.RBrace:
-        case CharType.SemiColon:
-        case CharType.Dot:
-        case CharType.Plus:
-        case CharType.Minus:
-        case CharType.Star:
-        case CharType.Slash:
-        case CharType.Percent:
-        case CharType.EqualSign:
-        case CharType.GreaterThan:
-        case CharType.LessThan:
-        case CharType.Exclamation:
-        case CharType.Question:
-        case CharType.Colon:
-        case CharType.Caret:
-        case CharType.Ampersand:
-        case CharType.Pipe:
-        case CharType.Tilde:
-        case CharType.At:
-        case CharType.Dollar:
-        case CharType.Underscore:
-        case CharType.Symbol:
-            return Transition.To(SingleCharState);
+            // All single-character tokens
+            case CharType.Comma:
+            case CharType.LParen:
+            case CharType.RParen:
+            case CharType.LBracket:
+            case CharType.RBracket:
+            case CharType.LBrace:
+            case CharType.RBrace:
+            case CharType.SemiColon:
+            case CharType.Dot:
+            case CharType.Plus:
+            case CharType.Minus:
+            case CharType.Star:
+            case CharType.Slash:
+            case CharType.Percent:
+            case CharType.EqualSign:
+            case CharType.GreaterThan:
+            case CharType.LessThan:
+            case CharType.Exclamation:
+            case CharType.Question:
+            case CharType.Colon:
+            case CharType.Caret:
+            case CharType.Ampersand:
+            case CharType.Pipe:
+            case CharType.Tilde:
+            case CharType.At:
+            case CharType.Dollar:
+            case CharType.Underscore:
+            case CharType.Symbol:
+                return Transition.To(SingleCharState);
 
-        case CharType.Other:
-        case CharType.EOF:
-        case CharType.Error:
-            return Transition.To(EndState);
+            case CharType.BackSlash:
+            case CharType.Unicode:
+                return Transition.To(SymbolState);
 
-        default:
-            return Transition.Stay();
+            case CharType.Other:
+                return Transition.To(SingleCharState);
+
+            case CharType.EOF:
+                return Transition.To(EndState);
+
+            case CharType.Error:
+                return Transition.To(EndState);
+
+            default:
+                return Transition.Stay();
+        }
     }
-}
 }
 
 class Whitespace_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('WhitespaceState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -150,9 +148,7 @@ class Whitespace_State extends State {
 class NewLine_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('HexState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -171,9 +167,7 @@ class NewLine_State extends State {
 class Letter_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('LetterState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -197,9 +191,7 @@ class Letter_State extends State {
 class Number_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('NumberState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -228,9 +220,7 @@ class Number_State extends State {
 class Dimension_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('UnitState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -254,9 +244,7 @@ class Dimension_State extends State {
 class Hex_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('HexState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -282,9 +270,7 @@ class Hex_State extends State {
 class String_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('StringState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -318,9 +304,7 @@ class String_State extends State {
 class Percent_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('PercentState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -339,9 +323,7 @@ class Percent_State extends State {
 class SingleChar_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('SingleCharState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -360,9 +342,7 @@ class SingleChar_State extends State {
 class Symbol_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('SymbolState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 
@@ -375,6 +355,8 @@ class Symbol_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
+            case CharType.Unicode:
+            case CharType.BackSlash:
             case CharType.At:
             case CharType.Dollar:
             case CharType.Underscore:
@@ -389,9 +371,7 @@ class Symbol_State extends State {
 class End_State extends State {
     public isAccepting: boolean = true;
 
-    constructor() {
-        super('EndState');
-    }
+    private constructor() { super(); }
 
     static #instance: State;
 

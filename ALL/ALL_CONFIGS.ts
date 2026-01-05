@@ -101,6 +101,7 @@
     "cSpell.words": [
         "CHARACTERSTREAM",
         "colorstate",
+        "CREATETOKEN",
         "dotenv",
         "eslintcache",
         "HEXVALUE",
@@ -237,6 +238,7 @@ cspell.json
     "./src/**/*.ts"
   ],
   "exclude": [
+    "ALL/ALL_CONFIGS.ts",
     "ALL/ALL_FILES.ts",
     "ALL/ALL_TESTS.ts"
   ]

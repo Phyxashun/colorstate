@@ -188,6 +188,7 @@ export enum NodeType {
     NumericLiteral = 'NumericLiteral',
     HexLiteral = 'HexLiteral',
     PercentLiteral = 'PercentLiteral',
+    DimensionLiteral = 'DimensionLiteral',
     BinaryExpression = 'BinaryExpression',
     UnaryExpression = 'UnaryExpression',
     CallExpression = 'CallExpression',
@@ -256,6 +257,7 @@ export type Expression =
     | NumericLiteral
     | HexLiteral
     | PercentLiteral
+    | DimensionLiteral
     | BinaryExpression
     | UnaryExpression
     | CallExpression
@@ -307,6 +309,13 @@ export interface HexLiteral extends ASTNode {
 export interface PercentLiteral extends ASTNode {
     type: NodeType.PercentLiteral;
     value: number;
+    raw: string;
+}
+
+export interface DimensionLiteral extends ASTNode {
+    type: NodeType.DimensionLiteral;
+    value: number;
+    unit: string;
     raw: string;
 }
 
@@ -367,6 +376,7 @@ type CharTypeFn = (char: string) => boolean;
 type Spec = Map<CharType, CharTypeFn>;
 
 enum CharType {
+    Unicode = 'Unicode',
     Start = 'Start',
     Whitespace = 'Whitespace',
     NewLine = 'NewLine',
@@ -459,54 +469,59 @@ class CharUtility {
     ]);
 
     public static CharSpec: Spec = new Map<CharType, CharTypeFn>([
-        [CharType.EOF,          (char) => char === ''],
-        [CharType.Hash,         (char) => char === '#'],
-        [CharType.Percent,      (char) => char === '%'],
-        [CharType.Slash,        (char) => char === '/'],
-        [CharType.Comma,        (char) => char === ','],
-        [CharType.LParen,       (char) => char === '('],
-        [CharType.RParen,       (char) => char === ')'],
-        [CharType.Plus,         (char) => char === '+'],
-        [CharType.Minus,        (char) => char === '-'],
-        [CharType.Star,         (char) => char === '*'],
-        [CharType.Dot,          (char) => char === '.'],
-        [CharType.Backtick,     (char) => char === '`'],
-        [CharType.SingleQuote,  (char) => char === "'"],
-        [CharType.DoubleQuote,  (char) => char === '"'],
-        [CharType.BackSlash,    (char) => char === '\\'],
-        [CharType.Tilde,        (char) => char === '~'],
-        [CharType.Exclamation,  (char) => char === '!'],
-        [CharType.At,           (char) => char === '@'],
-        [CharType.Dollar,       (char) => char === '$'],
-        [CharType.Question,     (char) => char === '?'],
-        [CharType.Caret,        (char) => char === '^'],
-        [CharType.Ampersand,    (char) => char === '&'],
-        [CharType.LessThan,     (char) => char === '<'],
-        [CharType.GreaterThan,  (char) => char === '>'],
-        [CharType.Underscore,   (char) => char === '_'],
-        [CharType.EqualSign,    (char) => char === '='],
-        [CharType.LBracket,     (char) => char === '['],
-        [CharType.RBracket,     (char) => char === ']'],
-        [CharType.LBrace,       (char) => char === '{'],
-        [CharType.RBrace,       (char) => char === '}'],
-        [CharType.SemiColon,    (char) => char === ';'],
-        [CharType.Colon,        (char) => char === ':'],
-        [CharType.Pipe,         (char) => char === '|'],
-        [CharType.Whitespace,   (char) => CharUtility.Whitespace.has(char)],
-        [CharType.NewLine,      (char) => CharUtility.NewLine.has(char)],
-        [CharType.Letter,       (char) => CharUtility.Letters.has(char)],
-        [CharType.Number,       (char) => CharUtility.Numbers.has(char)],
-        [CharType.Symbol,       (char) => CharUtility.Symbols.has(char)],
+        [CharType.EOF, (char) => char === ''],
+        [CharType.Hash, (char) => char === '#'],
+        [CharType.Percent, (char) => char === '%'],
+        [CharType.Slash, (char) => char === '/'],
+        [CharType.Comma, (char) => char === ','],
+        [CharType.LParen, (char) => char === '('],
+        [CharType.RParen, (char) => char === ')'],
+        [CharType.Plus, (char) => char === '+'],
+        [CharType.Minus, (char) => char === '-'],
+        [CharType.Star, (char) => char === '*'],
+        [CharType.Dot, (char) => char === '.'],
+        [CharType.Backtick, (char) => char === '`'],
+        [CharType.SingleQuote, (char) => char === "'"],
+        [CharType.DoubleQuote, (char) => char === '"'],
+        [CharType.BackSlash, (char) => char === '\\'],
+        [CharType.Tilde, (char) => char === '~'],
+        [CharType.Exclamation, (char) => char === '!'],
+        [CharType.At, (char) => char === '@'],
+        [CharType.Dollar, (char) => char === '$'],
+        [CharType.Question, (char) => char === '?'],
+        [CharType.Caret, (char) => char === '^'],
+        [CharType.Ampersand, (char) => char === '&'],
+        [CharType.LessThan, (char) => char === '<'],
+        [CharType.GreaterThan, (char) => char === '>'],
+        [CharType.Underscore, (char) => char === '_'],
+        [CharType.EqualSign, (char) => char === '='],
+        [CharType.LBracket, (char) => char === '['],
+        [CharType.RBracket, (char) => char === ']'],
+        [CharType.LBrace, (char) => char === '{'],
+        [CharType.RBrace, (char) => char === '}'],
+        [CharType.SemiColon, (char) => char === ';'],
+        [CharType.Colon, (char) => char === ':'],
+        [CharType.Pipe, (char) => char === '|'],
+        [CharType.Symbol, (char) => CharUtility.Symbols.has(char)],
+        //[CharType.Letter,       (char) => CharUtility.Letters.has(char)],
+        //[CharType.Number,       (char) => CharUtility.Numbers.has(char)],
+        //[CharType.Whitespace,   (char) => CharUtility.Whitespace.has(char)],
+        //[CharType.NewLine,      (char) => CharUtility.NewLine.has(char)],
+        [CharType.Letter, (char) => /\p{L}/u.test(char)],
+        [CharType.Number, (char) => /\p{N}/u.test(char)],
+        [CharType.NewLine, (char) => char === '\n' || char === '\r'],
+        [CharType.Whitespace, (char) => /\s/u.test(char)],
+        [CharType.Unicode, (char) => /[^\x00-\x7F]/.test(char)]
     ]);
 
     public static classify: ClassifyFn = (char: string): CharType => {
-        if (!char) return CharType.Other;
+        if (char === '') return CharType.EOF;
 
         for (const [charType, fn] of CharUtility.CharSpec) {
             if (fn(char)) return charType as CharType;
         }
 
-        return CharType.Error;
+        return CharType.Other;
     };
 }
 
@@ -532,7 +547,7 @@ class CharacterStream implements IterableIterator<Character> {
     }
 
     constructor(input: string) {
-        this.source = input;
+        this.source = input.normalize('NFC');
     }
 
     public [Symbol.iterator](): IterableIterator<Character> {
@@ -551,8 +566,9 @@ class CharacterStream implements IterableIterator<Character> {
             };
         }
 
-        this.value = this.source[this.index] as string;
-        
+        const codePoint = this.source.codePointAt(this.index);
+        this.value = String.fromCodePoint(codePoint!);
+
         const char: Character = {
             value: this.value,
             type: CharUtility.classify(this.value),
@@ -564,9 +580,10 @@ class CharacterStream implements IterableIterator<Character> {
     }
 
     public advance(): void {
+        const charLength = this.value.length;
         const newPosition = { ...this.position };
 
-        newPosition.index++;
+        newPosition.index += charLength;
         if (this.value === '\n') {
             newPosition.line++;
             newPosition.column = 1;
@@ -678,7 +695,7 @@ class Context {
 
     public process(char: Character): { emit: boolean; reprocess: boolean, endString?: boolean } {
         const wasAccepting = this.isAccepting();
-        const transition: Transition = this.getCurrentState().handle(char);
+        const transition: Transition = this.state.handle(char);
 
         if (transition.kind === "EndString" && this.isInString()) {
             if (this.isMatchingQuote(char.type)) {
@@ -898,8 +915,12 @@ export class Parser {
         let expr = this.primary();
 
         // Only parse call if expr is Identifier
-        while (
+        /*while (
             expr &&
+            expr.type === NodeType.Identifier &&
+            this.match(TokenType.LPAREN)
+        ) //*/
+        if (
             expr.type === NodeType.Identifier &&
             this.match(TokenType.LPAREN)
         ) {
@@ -966,6 +987,19 @@ export class Parser {
                     value: parseFloat(numStr),
                     raw: token.value
                 } as PercentLiteral;
+            }
+
+            case TokenType.DIMENSION: {
+                this.advance();
+                const token = this.previous();
+                const match = token.value.match(/^([\d.]+)([a-zA-Z]+)$/)!;
+
+                return {
+                    type: NodeType.DimensionLiteral,
+                    value: parseFloat(match[1]!),
+                    unit: match[2]!,
+                    raw: token.value
+                };
             }
 
             case TokenType.HEXVALUE: {
@@ -1110,73 +1144,81 @@ class Initial_State extends State {
     }
 
     public handle(char: Character): Transition {
-    switch (char.type) {
-        // String delimiters
-        case CharType.SingleQuote:
-            return Transition.BeginString(StringState, CharType.SingleQuote);
-        case CharType.DoubleQuote:
-            return Transition.BeginString(StringState, CharType.DoubleQuote);
-        case CharType.Backtick:
-            return Transition.BeginString(StringState, CharType.Backtick);
+        switch (char.type) {
+            // String delimiters
+            case CharType.SingleQuote:
+                return Transition.BeginString(StringState, CharType.SingleQuote);
+            case CharType.DoubleQuote:
+                return Transition.BeginString(StringState, CharType.DoubleQuote);
+            case CharType.Backtick:
+                return Transition.BeginString(StringState, CharType.Backtick);
 
-        // Whitespace
-        case CharType.Whitespace:
-            return Transition.To(WhitespaceState);
-        case CharType.NewLine:
-            return Transition.To(NewLineState);
+            // Whitespace
+            case CharType.Whitespace:
+                return Transition.To(WhitespaceState);
+            case CharType.NewLine:
+                return Transition.To(NewLineState);
 
-        // Letters
-        case CharType.Letter:
-            return Transition.To(LetterState);
+            // Letters
+            case CharType.Letter:
+                return Transition.To(LetterState);
 
-        // Numbers
-        case CharType.Number:
-            return Transition.To(NumberState);
+            // Numbers
+            case CharType.Number:
+                return Transition.To(NumberState);
 
-        // Hexadecimal
-        case CharType.Hash:
-            return Transition.To(HexState);
+            // Hexadecimal
+            case CharType.Hash:
+                return Transition.To(HexState);
 
-        // All single-character tokens
-        case CharType.Comma:
-        case CharType.LParen:
-        case CharType.RParen:
-        case CharType.LBracket:
-        case CharType.RBracket:
-        case CharType.LBrace:
-        case CharType.RBrace:
-        case CharType.SemiColon:
-        case CharType.Dot:
-        case CharType.Plus:
-        case CharType.Minus:
-        case CharType.Star:
-        case CharType.Slash:
-        case CharType.Percent:
-        case CharType.EqualSign:
-        case CharType.GreaterThan:
-        case CharType.LessThan:
-        case CharType.Exclamation:
-        case CharType.Question:
-        case CharType.Colon:
-        case CharType.Caret:
-        case CharType.Ampersand:
-        case CharType.Pipe:
-        case CharType.Tilde:
-        case CharType.At:
-        case CharType.Dollar:
-        case CharType.Underscore:
-        case CharType.Symbol:
-            return Transition.To(SingleCharState);
+            // All single-character tokens
+            case CharType.Comma:
+            case CharType.LParen:
+            case CharType.RParen:
+            case CharType.LBracket:
+            case CharType.RBracket:
+            case CharType.LBrace:
+            case CharType.RBrace:
+            case CharType.SemiColon:
+            case CharType.Dot:
+            case CharType.Plus:
+            case CharType.Minus:
+            case CharType.Star:
+            case CharType.Slash:
+            case CharType.Percent:
+            case CharType.EqualSign:
+            case CharType.GreaterThan:
+            case CharType.LessThan:
+            case CharType.Exclamation:
+            case CharType.Question:
+            case CharType.Colon:
+            case CharType.Caret:
+            case CharType.Ampersand:
+            case CharType.Pipe:
+            case CharType.Tilde:
+            case CharType.At:
+            case CharType.Dollar:
+            case CharType.Underscore:
+            case CharType.Symbol:
+                return Transition.To(SingleCharState);
 
-        case CharType.Other:
-        case CharType.EOF:
-        case CharType.Error:
-            return Transition.To(EndState);
+            case CharType.BackSlash:
+            case CharType.Unicode:
+                return Transition.To(SymbolState);
 
-        default:
-            return Transition.Stay();
+            case CharType.Other:
+                return Transition.To(SingleCharState);
+
+            case CharType.EOF:
+                return Transition.To(EndState);
+
+            case CharType.Error:
+                return Transition.To(EndState);
+
+            default:
+                return Transition.Stay();
+        }
     }
-}
 }
 
 class Whitespace_State extends State {
@@ -1433,6 +1475,8 @@ class Symbol_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
+            case CharType.Unicode:
+            case CharType.BackSlash:
             case CharType.At:
             case CharType.Dollar:
             case CharType.Underscore:
@@ -1510,7 +1554,22 @@ import { inspect, styleText, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
 import { type Character, CharType, CharacterStream } from './Character.ts';
 
-type ClassifyTokenFn = (char: Character) => Token;
+const inspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
+
+type ClassifyTokenFn = (char: Character, wasInString: boolean) => Token;
 type TokenTypeFn = (type: CharType) => boolean;
 type TokenSpec = Map<TokenType, TokenTypeFn>;
 
@@ -1535,6 +1594,7 @@ enum TokenType {
     NEWLINE = 'NEWLINE',
     WHITESPACE = 'WHITESPACE',
     EOF = 'EOF',
+    OTHER = 'OTHER',
     ERROR = 'ERROR',
 }
 
@@ -1625,13 +1685,20 @@ class Tokenizer {
         this.logSource(input);
 
         for (const char of stream) {
-            const wasInStringState = this.ctx.getCurrentState().name === 'StringState';
+            const wasInStringState = this.ctx.isInString();
+            const wasEscaping = this.ctx.isEscaping();
 
             let result = this.ctx.process(char);
 
-            if (result.endString) {
-                tokens.push(Tokenizer.createToken(this.buffer, true));
-                this.buffer = [];
+            //if (result.endString) {
+            //    tokens.push(Tokenizer.createToken(this.buffer, true));
+            //    this.buffer = [];
+            //}
+
+            let shouldEndString = false;
+
+            if (result.endString && !wasEscaping) {
+                shouldEndString = true;
             }
 
             if (result.emit) {
@@ -1646,25 +1713,34 @@ class Tokenizer {
             }
 
             if (this.ctx.isInString()) {
-                if (
-                    char.type !== CharType.SingleQuote &&
-                    char.type !== CharType.DoubleQuote &&
-                    char.type !== CharType.Backtick
-                ) {
+                const isQuote =
+                    char.type === CharType.SingleQuote ||
+                    char.type === CharType.DoubleQuote ||
+                    char.type === CharType.Backtick;
+
+                if (char.type === CharType.BackSlash) {
+                    continue;
+                }
+
+                if (!isQuote || wasEscaping) {
                     this.buffer.push(char);
                 }
-            } else {
-                if (
-                    this.ctx.isAccepting() &&
-                    char.type !== CharType.EOF
-                ) {
+            }
+            else {
+                if (this.ctx.isAccepting() &&
+                    char.type !== CharType.EOF) {
                     this.buffer.push(char);
                 }
+            }
+
+            if (shouldEndString) {
+                tokens.push(Tokenizer.createToken(this.buffer, true));
+                this.buffer = [];
             }
         }
 
         if (this.buffer.length > 0) {
-            const wasInString = this.ctx.getCurrentState().name === 'StringState';
+            const wasInString = this.ctx.isInString();
             tokens.push(Tokenizer.createToken(this.buffer, wasInString));
             this.buffer = [];
         }
@@ -1684,6 +1760,8 @@ class Tokenizer {
             value += ch.value;
         }
 
+        let token = { value, type: TokenType.OTHER }
+
         const ch = {
             value,
             type: chars[0]!.type,
@@ -1691,10 +1769,16 @@ class Tokenizer {
         };
 
         if (wasInString) {
-            return { value, type: TokenType.STRING };
+            const unescaped = Tokenizer.unescapeString(value);
+            console.log('CREATETOKEN: VALUE:', inspect(value, inspectOptions))
+            return {
+                value: unescaped,
+                type: TokenType.STRING
+            };
+        } else {
+            token = Tokenizer.classify(ch, wasInString);
         }
 
-        const token = Tokenizer.classify(ch);
         return token;
     }
 
@@ -1711,18 +1795,18 @@ class Tokenizer {
         [TokenType.DOT, (type) => type === CharType.Dot],
         [TokenType.COMMA, (type) => type === CharType.Comma],
         [TokenType.SLASH, (type) => type === CharType.Slash],
-        [TokenType.ESCAPE, (type) => type === CharType.BackSlash],
         [TokenType.LPAREN, (type) => type === CharType.LParen],
         [TokenType.RPAREN, (type) => type === CharType.RParen],
         [TokenType.NEWLINE, (type) => type === CharType.NewLine],
         [TokenType.WHITESPACE, (type) => type === CharType.Whitespace],
         [TokenType.EOF, (type) => type === CharType.EOF],
+        [TokenType.OTHER, (type) => type === CharType.Other],
         [TokenType.ERROR, (type) => type === CharType.Error],
     ])
 
-    private static classify: ClassifyTokenFn = (char: Character): Token => {
+    private static classify: ClassifyTokenFn = (char: Character, wasInString: boolean = false): Token => {
         const value = char.value;
-        let result: Token = { value, type: TokenType.ERROR };
+        let result: Token = { value, type: TokenType.OTHER };
 
         if (value.endsWith('%')) {
             char.type = CharType.Percent;
@@ -1740,6 +1824,13 @@ class Tokenizer {
         }
 
         switch (char.type) {
+            case CharType.BackSlash:
+                return {
+                    value,
+                    type: wasInString ? TokenType.ESCAPE : TokenType.SYMBOL
+                };
+
+            case CharType.Unicode:
             case CharType.Tilde:
             case CharType.Exclamation:
             case CharType.At:
@@ -1773,6 +1864,41 @@ class Tokenizer {
 
         return result;
     };
+
+    /**
+     * Converts escaped sequences in a string to their actual characters
+     * Supports: \n, \t, \r, \', \", \\, \uXXXX, \xXX
+     */
+    private static unescapeString(input: string): string {
+        return input.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|[nrt'\"\\])/g, (match, seq) => {
+            switch (true) {
+                // Unicode escape: \uXXXX
+                case /^u[0-9a-fA-F]{4}$/.test(seq):
+                    return String.fromCharCode(parseInt(seq.slice(1), 16));
+
+                // Hex escape: \xXX
+                case /^x[0-9a-fA-F]{2}$/.test(seq):
+                    return String.fromCharCode(parseInt(seq.slice(1), 16));
+
+                // Single-character escapes
+                case seq === 'n':
+                    return '\n';
+                case seq === 'r':
+                    return '\r';
+                case seq === 't':
+                    return '\t';
+                case seq === "'":
+                    return "'";
+                case seq === '"':
+                    return '"';
+                case seq === '\\':
+                    return '\\';
+
+                default:
+                    return seq;
+            }
+        });
+    }
 
 }
 

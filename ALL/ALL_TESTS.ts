@@ -64,102 +64,14 @@ describe('Context string handling', () => {
         ctx.setEscaping(false);
         expect(ctx.isEscaping()).toBe(false);
     });
+
+    it('ignores endString when not in string', () => {
+        const ctx = new Context();
+        expect(() => ctx.endString()).not.toThrow();
+    });
 });
 
 // ==================== End of file: tests/Context.test.ts ====================
-
-
-
-
-
-// @ts-nocheck
-
-
-// ==================== Start of file: tests/index.test.ts ====================
-
-// tests/index.test.ts
-
-import { describe, it, expect } from 'vitest';
-import { Tokenizer, TokenType } from '../src/Tokenizer';
-
-describe('End-to-End Tokenization Tests from index.ts', () => {
-    it('Test 1: should correctly tokenize a mixed string', () => {
-        const tokenizer = new Tokenizer();
-        const tokens = tokenizer.tokenize('67 a b c 1 word 2 3+2-0');
-
-        expect(tokens).toEqual([
-            { value: '67', type: TokenType.NUMBER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: 'a', type: TokenType.IDENTIFIER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: 'b', type: TokenType.IDENTIFIER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: 'c', type: TokenType.IDENTIFIER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '1', type: TokenType.NUMBER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: 'word', type: TokenType.IDENTIFIER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '2', type: TokenType.NUMBER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '3', type: TokenType.NUMBER },
-            { value: '+', type: TokenType.PLUS },
-            { value: '2', type: TokenType.NUMBER },
-            { value: '-', type: TokenType.MINUS },
-            { value: '0', type: TokenType.NUMBER },
-        ]);
-    });
-
-    it('Test 5: should tokenize a CSS rgba color string with spaces', () => {
-        const tokenizer = new Tokenizer();
-        const tokens = tokenizer.tokenize('rgba(100 128 255 / 0.5)');
-        expect(tokens).toEqual([
-            { value: 'rgba', type: TokenType.IDENTIFIER },
-            { value: '(', type: TokenType.LPAREN },
-            { value: '100', type: TokenType.NUMBER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '128', type: TokenType.NUMBER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '255', type: TokenType.NUMBER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '/', type: TokenType.SLASH },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '0', type: TokenType.NUMBER },
-            { value: '.', type: TokenType.SYMBOL },
-            { value: '5', type: TokenType.NUMBER },
-            { value: ')', type: TokenType.RPAREN },
-        ]);
-    });
-
-    it('Test 6: should tokenize a CSS rgba color string with percentages', () => {
-        const tokenizer = new Tokenizer();
-        const tokens = tokenizer.tokenize('rgba(100% 360 220  / 50%)');
-        expect(tokens).toEqual([
-            { value: 'rgba', type: TokenType.IDENTIFIER },
-            { value: '(', type: TokenType.LPAREN },
-            { value: '100%', type: TokenType.PERCENT },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '360', type: TokenType.NUMBER },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '220', type: TokenType.NUMBER },
-            { value: '  ', type: TokenType.WHITESPACE },
-            { value: '/', type: TokenType.SLASH },
-            { value: ' ', type: TokenType.WHITESPACE },
-            { value: '50%', type: TokenType.PERCENT },
-            { value: ')', type: TokenType.RPAREN },
-        ]);
-    });
-
-    it('Test 7: should tokenize a hex color string', () => {
-        const tokenizer = new Tokenizer();
-        const tokens = tokenizer.tokenize('#ff00ff00');
-        expect(tokens).toEqual([
-            { value: '#ff00ff00', type: TokenType.HEXVALUE },
-        ]);
-    });
-});
-
-// ==================== End of file: tests/index.test.ts ====================
 
 
 
@@ -196,6 +108,12 @@ describe('Parser', () => {
         const ast = new Parser(tokens).parse();
 
         expect(ast.body[0].expression.type).toBe(NodeType.GroupExpression);
+    });
+
+    it('throws on invalid binary expression', () => {
+        const tokens = new Tokenizer().tokenize('1 +');
+        
+        expect(() => new Parser(tokens).parse()).toThrow();
     });
 });
 
@@ -234,6 +152,8 @@ describe('State transitions', () => {
 
         expect(t.kind).toBe('EscapeNext');
     });
+
+    
 });
 
 // ==================== End of file: tests/States.test.ts ====================
@@ -249,10 +169,27 @@ describe('State transitions', () => {
 
 import { describe, it, expect } from 'vitest';
 import { Tokenizer, TokenType } from '../src/Tokenizer';
+import { inspect, type InspectOptions } from 'node:util';
+
+const inspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
 
 describe('Tokenizer', () => {
     it('tokenizes identifiers and numbers', () => {
         const tokens = new Tokenizer().tokenize('foo 123');
+
         expect(tokens.map(t => t.type)).toContain(TokenType.IDENTIFIER);
         expect(tokens.map(t => t.type)).toContain(TokenType.NUMBER);
     });
@@ -260,18 +197,63 @@ describe('Tokenizer', () => {
     it('tokenizes strings', () => {
         const tokens = new Tokenizer().tokenize("'abc'");
         const str = tokens.find(t => t.type === TokenType.STRING);
+
         expect(str?.value).toBe('abc');
     });
 
     it('tokenizes hex colors', () => {
         const tokens = new Tokenizer().tokenize('#ff00ff');
+
         expect(tokens[0].type).toBe(TokenType.HEXVALUE);
     });
 
     it('tokenizes percentages and dimensions', () => {
         const tokens = new Tokenizer().tokenize('50% 90deg');
+
         expect(tokens.some(t => t.type === TokenType.PERCENT)).toBe(true);
         expect(tokens.some(t => t.type === TokenType.DIMENSION)).toBe(true);
+    });
+
+    it('classifies unknown characters as Other', () => {
+        const tokens = new Tokenizer().tokenize('©');
+
+        expect(tokens[0].type).toBe(TokenType.SYMBOL);
+    });
+
+    it('rejects escape outside string', () => {
+        const tokens = new Tokenizer().tokenize('\\a');
+
+        expect(tokens[0].type).toBe(TokenType.SYMBOL);
+    });
+
+    it('flushes buffer at EOF', () => {
+        const tokens = new Tokenizer().tokenize('abc');
+
+        expect(tokens.at(0)?.value).toBe('abc');
+    });
+
+    it('reprocesses character after emit', () => {
+        const tokens = new Tokenizer().tokenize('1+2');
+
+        expect(tokens.map(t => t.value)).toContain('+');
+    });
+
+    it('treats backslash as symbol outside string', () => {
+        const tokens = new Tokenizer().tokenize('\\a');
+
+        expect(tokens[0].type).toBe(TokenType.SYMBOL);
+    });
+
+    it('handles escaped quotes in strings', () => {
+        const tokens = new Tokenizer().tokenize("'\\''");
+        console.log(inspect(tokens, inspectOptions));
+        expect(tokens[0].value).toBe("'");
+    });
+
+    it('handles escaped character in strings', () => {
+        const tokens = new Tokenizer().tokenize('"\\""');
+        console.log(inspect(tokens, inspectOptions));
+        expect(tokens[0].value).toBe('"');
     });
 });
 

@@ -22,4 +22,6 @@ describe('State transitions', () => {
 
         expect(t.kind).toBe('EscapeNext');
     });
+
+    
 });

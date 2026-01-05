@@ -5,6 +5,7 @@ type CharTypeFn = (char: string) => boolean;
 type Spec = Map<CharType, CharTypeFn>;
 
 enum CharType {
+    Unicode = 'Unicode',
     Start = 'Start',
     Whitespace = 'Whitespace',
     NewLine = 'NewLine',
@@ -97,54 +98,59 @@ class CharUtility {
     ]);
 
     public static CharSpec: Spec = new Map<CharType, CharTypeFn>([
-        [CharType.EOF,          (char) => char === ''],
-        [CharType.Hash,         (char) => char === '#'],
-        [CharType.Percent,      (char) => char === '%'],
-        [CharType.Slash,        (char) => char === '/'],
-        [CharType.Comma,        (char) => char === ','],
-        [CharType.LParen,       (char) => char === '('],
-        [CharType.RParen,       (char) => char === ')'],
-        [CharType.Plus,         (char) => char === '+'],
-        [CharType.Minus,        (char) => char === '-'],
-        [CharType.Star,         (char) => char === '*'],
-        [CharType.Dot,          (char) => char === '.'],
-        [CharType.Backtick,     (char) => char === '`'],
-        [CharType.SingleQuote,  (char) => char === "'"],
-        [CharType.DoubleQuote,  (char) => char === '"'],
-        [CharType.BackSlash,    (char) => char === '\\'],
-        [CharType.Tilde,        (char) => char === '~'],
-        [CharType.Exclamation,  (char) => char === '!'],
-        [CharType.At,           (char) => char === '@'],
-        [CharType.Dollar,       (char) => char === '$'],
-        [CharType.Question,     (char) => char === '?'],
-        [CharType.Caret,        (char) => char === '^'],
-        [CharType.Ampersand,    (char) => char === '&'],
-        [CharType.LessThan,     (char) => char === '<'],
-        [CharType.GreaterThan,  (char) => char === '>'],
-        [CharType.Underscore,   (char) => char === '_'],
-        [CharType.EqualSign,    (char) => char === '='],
-        [CharType.LBracket,     (char) => char === '['],
-        [CharType.RBracket,     (char) => char === ']'],
-        [CharType.LBrace,       (char) => char === '{'],
-        [CharType.RBrace,       (char) => char === '}'],
-        [CharType.SemiColon,    (char) => char === ';'],
-        [CharType.Colon,        (char) => char === ':'],
-        [CharType.Pipe,         (char) => char === '|'],
-        [CharType.Whitespace,   (char) => CharUtility.Whitespace.has(char)],
-        [CharType.NewLine,      (char) => CharUtility.NewLine.has(char)],
-        [CharType.Letter,       (char) => CharUtility.Letters.has(char)],
-        [CharType.Number,       (char) => CharUtility.Numbers.has(char)],
-        [CharType.Symbol,       (char) => CharUtility.Symbols.has(char)],
+        [CharType.EOF, (char) => char === ''],
+        [CharType.Hash, (char) => char === '#'],
+        [CharType.Percent, (char) => char === '%'],
+        [CharType.Slash, (char) => char === '/'],
+        [CharType.Comma, (char) => char === ','],
+        [CharType.LParen, (char) => char === '('],
+        [CharType.RParen, (char) => char === ')'],
+        [CharType.Plus, (char) => char === '+'],
+        [CharType.Minus, (char) => char === '-'],
+        [CharType.Star, (char) => char === '*'],
+        [CharType.Dot, (char) => char === '.'],
+        [CharType.Backtick, (char) => char === '`'],
+        [CharType.SingleQuote, (char) => char === "'"],
+        [CharType.DoubleQuote, (char) => char === '"'],
+        [CharType.BackSlash, (char) => char === '\\'],
+        [CharType.Tilde, (char) => char === '~'],
+        [CharType.Exclamation, (char) => char === '!'],
+        [CharType.At, (char) => char === '@'],
+        [CharType.Dollar, (char) => char === '$'],
+        [CharType.Question, (char) => char === '?'],
+        [CharType.Caret, (char) => char === '^'],
+        [CharType.Ampersand, (char) => char === '&'],
+        [CharType.LessThan, (char) => char === '<'],
+        [CharType.GreaterThan, (char) => char === '>'],
+        [CharType.Underscore, (char) => char === '_'],
+        [CharType.EqualSign, (char) => char === '='],
+        [CharType.LBracket, (char) => char === '['],
+        [CharType.RBracket, (char) => char === ']'],
+        [CharType.LBrace, (char) => char === '{'],
+        [CharType.RBrace, (char) => char === '}'],
+        [CharType.SemiColon, (char) => char === ';'],
+        [CharType.Colon, (char) => char === ':'],
+        [CharType.Pipe, (char) => char === '|'],
+        [CharType.Symbol, (char) => CharUtility.Symbols.has(char)],
+        //[CharType.Letter,       (char) => CharUtility.Letters.has(char)],
+        //[CharType.Number,       (char) => CharUtility.Numbers.has(char)],
+        //[CharType.Whitespace,   (char) => CharUtility.Whitespace.has(char)],
+        //[CharType.NewLine,      (char) => CharUtility.NewLine.has(char)],
+        [CharType.Letter, (char) => /\p{L}/u.test(char)],
+        [CharType.Number, (char) => /\p{N}/u.test(char)],
+        [CharType.NewLine, (char) => char === '\n' || char === '\r'],
+        [CharType.Whitespace, (char) => /\s/u.test(char)],
+        [CharType.Unicode, (char) => /[^\x00-\x7F]/.test(char)]
     ]);
 
     public static classify: ClassifyFn = (char: string): CharType => {
-        if (!char) return CharType.Other;
+        if (char === '') return CharType.EOF;
 
         for (const [charType, fn] of CharUtility.CharSpec) {
             if (fn(char)) return charType as CharType;
         }
 
-        return CharType.Error;
+        return CharType.Other;
     };
 }
 
@@ -170,7 +176,7 @@ class CharacterStream implements IterableIterator<Character> {
     }
 
     constructor(input: string) {
-        this.source = input;
+        this.source = input.normalize('NFC');
     }
 
     public [Symbol.iterator](): IterableIterator<Character> {
@@ -189,8 +195,9 @@ class CharacterStream implements IterableIterator<Character> {
             };
         }
 
-        this.value = this.source[this.index] as string;
-        
+        const codePoint = this.source.codePointAt(this.index);
+        this.value = String.fromCodePoint(codePoint!);
+
         const char: Character = {
             value: this.value,
             type: CharUtility.classify(this.value),
@@ -202,9 +209,10 @@ class CharacterStream implements IterableIterator<Character> {
     }
 
     public advance(): void {
+        const charLength = this.value.length;
         const newPosition = { ...this.position };
 
-        newPosition.index++;
+        newPosition.index += charLength;
         if (this.value === '\n') {
             newPosition.line++;
             newPosition.column = 1;

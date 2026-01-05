@@ -61,21 +61,21 @@ class Context {
 
     public process(char: Character): { emit: boolean; reprocess: boolean, endString?: boolean } {
         const wasAccepting = this.isAccepting();
-        const transition: Transition = this.getCurrentState().handle(char);
+        const transition: Transition = this.state.handle(char);
+
+        if (this.isEscaping() && transition.kind !== "EscapeNext") {
+            this.setEscaping(false);
+            return { emit: false, reprocess: false };
+        }
 
         if (transition.kind === "EndString" && this.isInString()) {
             if (this.isMatchingQuote(char.type)) {
                 this.endString();
                 this.transitionTo(transition.state);
-                return { emit: true, reprocess: false };
+                return { emit: true, reprocess: false, endString: true };
             } else {
                 return { emit: false, reprocess: false };
             }
-        }
-
-        if (this.isEscaping() && transition.kind !== "EscapeNext") {
-            this.setEscaping(false);
-            return { emit: false, reprocess: false };
         }
 
         switch (transition.kind) {
