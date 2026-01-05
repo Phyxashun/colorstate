@@ -142,7 +142,6 @@ class Tokenizer {
 
         for (const char of stream) {
             const wasInStringState = this.ctx.isInString();
-            const wasEscaping = this.ctx.isEscaping();
 
             // 1. Process the character
             let result = this.ctx.process(char);
@@ -162,12 +161,6 @@ class Tokenizer {
             // 3. Handle Buffer logic
             if (!result.endString && char.type !== CharType.EOF) {
                 if (this.ctx.isInString()) {
-                    // If we are in a string, we add EVERYTHING except the starting quote
-                    // Transition logic: if we just transitioned TO a string, result.emit is false 
-                    // and the state changed.
-
-                    // Simplified: Check if this char is a quote. 
-                    // If it's a quote AND we weren't in a string before this char, it's the opener.
                     const isQuote =
                         char.type === CharType.SingleQuote ||
                         char.type === CharType.DoubleQuote ||

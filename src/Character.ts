@@ -144,6 +144,8 @@ class CharacterStream implements IterableIterator<Character> {
     private line: number = 1;
     private column: number = 1;
 
+    public chars: Character[] = [];
+
     constructor(input: string) {
         this.source = input.normalize('NFC');
     }
@@ -154,31 +156,42 @@ class CharacterStream implements IterableIterator<Character> {
 
     public peek(): Character {
         if (this.isEOF()) return this.atEOF();
-        
+
         const value = String.fromCodePoint(this.source.codePointAt(this.index)!);
-        
-        return {
+
+        const nextChar: Character = {
             value,
             type: CharUtility.classify(value),
-            position: { 
+            position: {
                 index: this.index,
                 line: this.line,
                 column: this.column
             }
         };
+
+        return nextChar;
     }
 
     public next(): IteratorResult<Character> {
         if (this.isEOF()) {
             return {
                 done: true,
-                value: this.atEOF()
+                value: {
+                    value: '',
+                    type: CharType.EOF,
+                    position: {
+                        index: this.index,
+                        line: this.line,
+                        column: this.column
+                    }
+                }
             };
         }
 
-        const char: Character = this.peek();
-        this.advance(char.value);
-        return { done: false, value: char };
+        const nextChar = this.peek();
+        this.advance(nextChar.value);
+        this.chars.push(nextChar);
+        return { done: false, value: nextChar };
     }
 
     public advance(charValue: string): void {
@@ -199,7 +212,7 @@ class CharacterStream implements IterableIterator<Character> {
         return ({
             value: '',
             type: CharType.EOF,
-            position: { 
+            position: {
                 index: this.index,
                 line: this.line,
                 column: this.column
@@ -211,7 +224,7 @@ class CharacterStream implements IterableIterator<Character> {
         return {
             value: 'Error',
             type: CharType.Other,
-            position: { 
+            position: {
                 index: this.index,
                 line: this.line,
                 column: this.column

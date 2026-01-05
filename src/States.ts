@@ -70,6 +70,10 @@ class Initial_State extends State {
             // Hexadecimal
             case CharType.Hash:
                 return Transition.To(HexState);
+            
+            // Percent
+            case CharType.Percent:
+                return Transition.To(PercentState);
 
             // All single-character tokens
             case CharType.Comma:
@@ -85,7 +89,6 @@ class Initial_State extends State {
             case CharType.Minus:
             case CharType.Star:
             case CharType.Slash:
-            case CharType.Percent:
             case CharType.EqualSign:
             case CharType.GreaterThan:
             case CharType.LessThan:
@@ -315,7 +318,7 @@ class Percent_State extends State {
         return this.#instance;
     }
 
-    public handle(char: Character): Transition {
+    public handle(_: Character): Transition {
         return Transition.EmitAndTo(InitialState);
     }
 }
