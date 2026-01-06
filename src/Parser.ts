@@ -17,6 +17,7 @@ import {
     type UnaryExpression,
     type CallExpression,
     type GroupExpression,
+    type ASTNode,
 } from './AST.ts';
 
 /**
@@ -35,6 +36,10 @@ import {
 export class Parser {
     private tokens: Token[];
     private current: number = 0;
+
+    private get nextToken(): Token {
+        return this.peek();
+    } 
 
     constructor(tokens: Token[]) {
         this.tokens = tokens.filter(t =>
@@ -159,12 +164,8 @@ export class Parser {
         let expr = this.primary();
 
         // Only parse call if expr is Identifier
-        /*while (
-            expr &&
-            expr.type === NodeType.Identifier &&
-            this.match(TokenType.LPAREN)
-        ) //*/
         if (
+            expr &&
             expr.type === NodeType.Identifier &&
             this.match(TokenType.LPAREN)
         ) {
@@ -195,13 +196,50 @@ export class Parser {
     }
 
     private primary(): Expression {
+        const token = this.nextToken;
+
         if (this.isAtEnd()) {
-            throw this.error(this.peek(), 'Unexpected end of input');
+            throw this.error(token, 'Unexpected end of input');
         }
 
-        const currentType = this.peek().type;
+        // Check if it's any type of literal
+        if (this.match(
+            TokenType.NUMBER,
+            TokenType.STRING,
+            TokenType.HEXVALUE,
+            TokenType.PERCENT,
+            TokenType.DIMENSION
+        )) {
+            return this.createLiteralNode(this.previous());
+        }
 
-        switch (currentType) {
+        switch (token.type) {
+            case TokenType.IDENTIFIER: {
+                this.advance();
+                const token = this.previous();
+                return {
+                    type: NodeType.Identifier,
+                    name: token.value
+                } as Identifier;
+            }
+
+            case TokenType.LPAREN: {
+                this.advance();
+                const expr = this.expression();
+                this.consume(TokenType.RPAREN, "Expected ')' after expression");
+                return {
+                    type: NodeType.GroupExpression,
+                    expression: expr
+                } as GroupExpression;
+            }
+
+            default:
+                throw this.error(token, `Expected expression, got ${token.type}`);
+        }
+    }
+
+    private createLiteralNode(token: Token): Expression {
+        switch (token.type) {
             case TokenType.STRING: {
                 this.advance();
                 const token = this.previous();
@@ -256,32 +294,13 @@ export class Parser {
                 } as HexLiteral;
             }
 
-            case TokenType.IDENTIFIER: {
-                this.advance();
-                const token = this.previous();
-                return {
-                    type: NodeType.Identifier,
-                    name: token.value
-                } as Identifier;
-            }
-
-            case TokenType.LPAREN: {
-                this.advance();
-                const expr = this.expression();
-                this.consume(TokenType.RPAREN, "Expected ')' after expression");
-                return {
-                    type: NodeType.GroupExpression,
-                    expression: expr
-                } as GroupExpression;
-            }
-
             default:
-                throw this.error(this.peek(), `Expected expression, got ${currentType}`);
+                throw this.error(token, `Expected expression, got ${token.type}`);
         }
     }
 
-
     // ===== Helper Methods =====
+
     private match(...types: TokenType[]): boolean {
         for (const type of types) {
             if (this.check(type)) {
@@ -294,16 +313,24 @@ export class Parser {
 
     private check(type: TokenType): boolean {
         if (this.isAtEnd()) return false;
-        return this.peek().type === type;
+        return this.nextToken.type === type;
     }
 
     private advance(): Token {
-        if (!this.isAtEnd()) this.current++;
+        this.current++;
+        
+        while (!this.isAtEnd() && this.isIgnored(this.nextToken)) {
+            this.current++;
+        }
         return this.previous();
     }
 
+    private isIgnored(token: Token): boolean {
+        return token.type === TokenType.WHITESPACE || token.type === TokenType.NEWLINE;
+    }
+
     private isAtEnd(): boolean {
-        return this.current >= this.tokens.length || this.peek().type === TokenType.EOF;
+        return this.current >= this.tokens.length || this.nextToken.type === TokenType.EOF;
     }
 
     private peek(): Token {
@@ -316,7 +343,7 @@ export class Parser {
 
     private consume(type: TokenType, message: string): Token {
         if (this.check(type)) return this.advance();
-        throw this.error(this.peek(), message);
+        throw this.error(this.nextToken, message);
     }
 
     private error(token: Token, message: string): Error {

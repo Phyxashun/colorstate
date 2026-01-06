@@ -19,7 +19,7 @@ const inspectOptions: InspectOptions = {
     numericSeparator: true,
 };
 
-type ClassifyTokenFn = (char: Character, wasInString: boolean) => Token;
+type ClassifyTokenFn = (char: Character, isInString: boolean) => TokenType;
 type TokenTypeFn = (type: CharType) => boolean;
 type TokenSpec = Map<TokenType, TokenTypeFn>;
 
@@ -76,11 +76,12 @@ class Tokenizer {
         getters: false,
         numericSeparator: true,
     };
+    private ctx = new Context();
     private buffer: Character[] = [];
     private shouldLog: boolean = false;
     private message: string | undefined = undefined;
 
-    constructor(private ctx = new Context()) { }
+    constructor() { }
 
     public withLogging(message?: string): this {
         this.shouldLog = true;
@@ -114,6 +115,7 @@ class Tokenizer {
 
     private logSource(input: TokenizerInput): void {
         if (!this.shouldLog) return;
+        console.log(`TOKENIZER:\n`);
         console.log(`SOURCE:\t'${input}'\n`);
     }
 
@@ -141,44 +143,33 @@ class Tokenizer {
         this.logSource(input);
 
         for (const char of stream) {
-            const wasInStringState = this.ctx.isInString();
-
-            // 1. Process the character
+            const wasInString = this.ctx.isInString();
             let result = this.ctx.process(char);
 
-            // 2. Handle Emitting (Flushing existing buffer)
-            if (result.emit) {
-                if (this.buffer.length > 0) {
-                    tokens.push(Tokenizer.createToken(this.buffer, wasInStringState));
-                    this.buffer = [];
-                }
+            // 1. Handle Emitting (Flush buffer)
+            if (result.emit && this.buffer.length > 0) {
+                tokens.push(Tokenizer.createToken(this.buffer, wasInString));
+                this.buffer = [];
+            }
 
-                if (result.reprocess) {
-                    result = this.ctx.process(char);
+            // 2. Handle Reprocessing (If the char belongs to the next state)
+            if (result.reprocess) {
+                result = this.ctx.process(char);
+                if (result.emit && this.buffer.length > 0) {
+                    tokens.push(Tokenizer.createToken(this.buffer, wasInString));
+                    this.buffer = [];
                 }
             }
 
-            // 3. Handle Buffer logic
-            if (!result.endString && char.type !== CharType.EOF) {
-                if (this.ctx.isInString()) {
-                    const isQuote =
-                        char.type === CharType.SingleQuote ||
-                        char.type === CharType.DoubleQuote ||
-                        char.type === CharType.Backtick;
-
-                    if (!(isQuote && !wasInStringState)) {
-                        this.buffer.push(char);
-                    }
-                } else if (this.ctx.isAccepting()) {
-                    this.buffer.push(char);
-                }
+            // 3. Buffer the character based on the Context's decision
+            if (result.action === 'buffer' && char.type !== CharType.EOF) {
+                this.buffer.push(char);
             }
         }
 
+        // Flush remaining buffer
         if (this.buffer.length > 0) {
-            const wasInString = this.ctx.isInString();
-            tokens.push(Tokenizer.createToken(this.buffer, wasInString));
-            this.buffer = [];
+            tokens.push(Tokenizer.createToken(this.buffer, this.ctx.isInString()));
         }
 
         tokens.push({ value: '', type: TokenType.EOF });
@@ -188,7 +179,7 @@ class Tokenizer {
         return tokens;
     }
 
-    public static createToken(chars: Character[], wasInString: boolean = false): Token {
+    public static createToken(chars: Character[], isInString: boolean = false): Token {
         if (chars.length === 0) throw new Error('Cannot create token from empty buffer');
 
         let value = '';
@@ -196,7 +187,7 @@ class Tokenizer {
             value += ch.value;
         }
 
-        if (wasInString) {
+        if (isInString) {
             const unescaped = Tokenizer.unescapeString(value);
             console.log('CREATETOKEN: VALUE:', inspect(value, inspectOptions))
             return {
@@ -206,17 +197,18 @@ class Tokenizer {
         }
 
         const keywordType = Tokenizer.KEYWORDS[value];
-        if (keywordType) {
-            return { value, type: keywordType };
-        }
+        if (keywordType) return { value, type: keywordType };
 
-        const ch = { 
-            value, 
-            type: chars[0]!.type, 
-            position: chars[0]!.position 
+        const ch = {
+            value,
+            type: chars[0]!.type,
+            position: chars[0]!.position
         };
-        const token = Tokenizer.classify(ch, wasInString);
-        return token;
+        
+        return {
+            value,
+            type: Tokenizer.classify(ch, isInString)
+        };
     }
 
     private static KEYWORDS: Record<string, TokenType> = {
@@ -249,34 +241,29 @@ class Tokenizer {
         [TokenType.ERROR, (type) => type === CharType.Error],
     ])
 
-    private static classify: ClassifyTokenFn = (char: Character, wasInString: boolean = false): Token => {
+    private static classify: ClassifyTokenFn = (char: Character, isInString: boolean = false): TokenType => {
         const value = char.value;
-        let result: Token = { value, type: TokenType.OTHER };
 
+        if (isInString) return TokenType.STRING;
+        
         if (value.endsWith('%')) {
-            char.type = CharType.Percent;
-            result = { value, type: TokenType.PERCENT };
+            return TokenType.PERCENT;
         }
-
-        if (
-            value.endsWith('deg') ||
-            value.endsWith('grad') ||
-            value.endsWith('rad') ||
-            value.endsWith('turn')
-        ) {
-            char.type = CharType.Dimension;
-            result = { value, type: TokenType.DIMENSION };
+        
+        if (value.startsWith('#')) return TokenType.HEXVALUE;
+        
+        if (value.endsWith('deg') || value.endsWith('grad') ||
+            value.endsWith('rad') || value.endsWith('turn')) {
+            return TokenType.DIMENSION;
         }
-
+        
         switch (char.type) {
             case CharType.BackSlash:
-                return {
-                    value,
-                    type: wasInString ? TokenType.ESCAPE : TokenType.SYMBOL
-                };
+                return isInString ? TokenType.ESCAPE : TokenType.SYMBOL;
+
             case CharType.EqualSign:
-                result = { value, type: TokenType.EQUALS }
-                break;
+                return TokenType.EQUALS;
+
             case CharType.Unicode:
             case CharType.Tilde:
             case CharType.Exclamation:
@@ -296,19 +283,17 @@ class Tokenizer {
             case CharType.Colon:
             case CharType.Pipe:
             case CharType.Symbol:
-                result = { value, type: TokenType.SYMBOL }
-                break;
+                return TokenType.SYMBOL;
 
             default:
                 for (const [tokenType, fn] of Tokenizer.TokenSpec) {
                     if (fn(char.type)) {
-                        result = { value, type: tokenType };
+                        return tokenType;
                     }
                 }
                 break;
         }
-
-        return result;
+        return TokenType.OTHER;
     };
 
     /**

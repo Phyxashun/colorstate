@@ -2,6 +2,9 @@
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: .vscode/launch.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
+
+
+
 // @ts-nocheck
 /* eslint-disable */
 
@@ -42,17 +45,20 @@
     ]
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: .vscode/launch.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: .gitignore ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -95,17 +101,20 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 #Dictionary
 cspell.json
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: .gitignore ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: License ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -133,17 +142,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: License ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: README.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -469,17 +481,20 @@ This project was created using `bun init` in bun v1.3.4. [Bun](https://bun.com) 
 Built as an educational project to demonstrate DFA tokenization, state machine design patterns, and TypeScript best practices.
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: README.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/1. Help.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -631,17 +646,20 @@ For a project of this size, you might find it easier to follow if you group by "
 **Would you like me to provide a simplified version of one of these specific files (like the new Functional States approach)?**
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/1. Help.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/2. CharUtility Recommendation.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -730,17 +748,20 @@ Your current version is very, very good. The suggestions above are purely for re
 Based on the code provided, the simplified, broader approach seems more robust and maintainable. But rest assured, you have covered all your bases.
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/2. CharUtility Recommendation.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/2. CharUtility.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -834,17 +855,20 @@ export class CharUtility {
 4. **Consolidated Character Specification**: You no longer need the `CharTypeFn` or `Spec` types, reducing the overall complexity of your codebase.
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/2. CharUtility.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/3. TokenizerBuffer.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -968,17 +992,20 @@ public tokenize(input: string): Token[] {
 * **Consistency**: `EmitAndTo` now consistently marks the "trigger" character as `ignore` for the current token so that it can be correctly picked up by the next `process` call during reprocessing.
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/3. TokenizerBuffer.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/4. FunctionalStates.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1132,17 +1159,20 @@ class Context {
 4. **Extensibility:** Adding a new state is now as simple as adding one key to the `FunctionalStates` object and one entry in the `AcceptingStates` set.
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/4. FunctionalStates.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/5. ParserStructure.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1261,17 +1291,20 @@ private createLiteral(token: Token): Expression {
 * **Scalability**: The `primaryParsers` map makes it trivial to add new literal types (like `true`/`false` or `null`) without making the `primary()` method longer.
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/5. ParserStructure.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/6. NewEfficiencies.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1393,17 +1426,20 @@ private primary(): Expression {
 | **Lookahead** | Reprocess flag | `stream.peek()` |
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/6. NewEfficiencies.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: package.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1436,17 +1472,20 @@ private primary(): Expression {
   }
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: package.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: tsconfig.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1489,17 +1528,20 @@ private primary(): Expression {
   ]
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: tsconfig.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: vitest.config.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1519,11 +1561,11 @@ export default defineConfig({
     }
 })
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: vitest.config.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████

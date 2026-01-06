@@ -66,6 +66,11 @@ const tokenizerTest = () => {
     // Fluent usage
     const tokenizer = new Tokenizer();
 
+    // Test 0
+    tokenizer
+        .withLogging('TEST (0): Direct Tokenization of embedded String')
+        .tokenize(`"67 a, b, c / 1 'word' 2 3+(2-0)"`);
+
     // Test 1
     tokenizer
         .withLogging('TEST (1): Direct Tokenization from String')

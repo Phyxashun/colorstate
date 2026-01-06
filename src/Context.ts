@@ -4,6 +4,14 @@ import { type Character, CharType } from './Character.ts';
 import { InitialState, State } from './States.ts';
 import { Transition } from './Transition.ts';
 
+type Action = 'buffer' | 'ignore';
+
+interface ProcessResult {
+    emit: boolean;      // Should we flush the current buffer into a token?
+    reprocess: boolean; // Should the current char be looked at again by the next state?
+    action: Action;     // Should the current char be added to the buffer?
+}
+
 interface StringContext {
     openingQuoteType: CharType | null;
     isEscaping: boolean;
@@ -11,13 +19,14 @@ interface StringContext {
 }
 
 class Context {
+    private state: State = InitialState;
     private stringContext: StringContext = {
         openingQuoteType: null,
         isEscaping: false,
         nestingLevel: 0,
     };
 
-    constructor(private state: State = InitialState) { }
+    constructor() { }
 
     public transitionTo(state: State): void {
         this.state = state;
@@ -32,19 +41,11 @@ class Context {
         this.stringContext.nestingLevel++;
     }
 
-    public endString(): void {
+    public endString(quoteType: CharType): void {
         this.stringContext.nestingLevel = Math.max(0, this.stringContext.nestingLevel - 1);
         if (this.stringContext.nestingLevel === 0) {
             this.stringContext.openingQuoteType = null;
         }
-    }
-
-    public setEscaping(value: boolean): void {
-        this.stringContext.isEscaping = value;
-    }
-
-    public isEscaping(): boolean {
-        return this.stringContext.isEscaping;
     }
 
     public isInString(): boolean {
@@ -59,67 +60,74 @@ class Context {
         return this.stringContext.openingQuoteType === quoteType;
     }
 
-    public process(char: Character): { emit: boolean; reprocess: boolean, endString?: boolean } {
-        const wasAccepting = this.isAccepting();
+    public setEscaping(value: boolean): void {
+        this.stringContext.isEscaping = value;
+    }
+
+    public isEscaping(): boolean {
+        return this.stringContext.isEscaping;
+    }
+
+    public process(char: Character): ProcessResult {
         const transition: Transition = this.state.handle(char);
-
-        if (this.isEscaping() && transition.kind !== "EscapeNext") {
-            this.setEscaping(false);
-            return { emit: false, reprocess: false };
-        }
-
-        if (transition.kind === "EndString" && this.isInString()) {
-            if (this.isMatchingQuote(char.type)) {
-                this.endString();
-                this.transitionTo(transition.state);
-                return { emit: true, reprocess: false, endString: true };
-            } else {
-                return { emit: false, reprocess: false };
-            }
-        }
+        let emit = false;
+        let reprocess = false;
+        let action: Action = 'buffer';
 
         switch (transition.kind) {
             case "BeginString": {
                 this.beginString(transition.quoteType);
                 this.transitionTo(transition.state);
-                return { emit: false, reprocess: false };
-            }
-
-            case "EscapeNext": {
-                this.setEscaping(true);
-                this.transitionTo(transition.state);
-                return { emit: false, reprocess: false };
+                action = 'ignore'; // Don't put the opening quote in the buffer
+                break;
             }
 
             case "EndString": {
-                this.endString();
+                if (!this.isMatchingQuote(char.type)) break;
+                this.endString(transition.quoteType);
                 this.transitionTo(transition.state);
-                return { emit: true, reprocess: false, endString: true };
-            }
-
-            case "ToContinue": {
-                this.transitionTo(transition.state);
+                action = 'ignore'; // Don't put the closing quote in the buffer
+                emit = true;
                 break;
             }
 
             case "EmitAndTo": {
                 this.transitionTo(transition.state);
-                return { emit: true, reprocess: true };
+                emit = true;
+                reprocess = true;
+                action = 'ignore'; // This char belongs to the NEXT token
+                break;
             }
 
             case "To": {
-                const shouldEmit = wasAccepting;
+                const wasAccepting = this.isAccepting();
                 this.transitionTo(transition.state);
-                if (shouldEmit) return { emit: true, reprocess: false };
+                emit = wasAccepting;
                 break;
             }
 
             case "Stay": {
                 break;
             }
+
+            case "EscapeNext": {
+                this.setEscaping(true);
+                this.transitionTo(transition.state);
+                reprocess = true;
+                action = 'buffer';
+                break;
+            }
+
+            case "ToContinue": {
+                this.transitionTo(transition.state);
+                emit = false;
+                reprocess = false;
+                action = 'buffer';
+                break;
+            }
         }
 
-        return { emit: false, reprocess: false };
+        return { emit, reprocess, action };
     }
 
     public isAccepting(): boolean {
@@ -128,6 +136,8 @@ class Context {
 }
 
 export {
+    type Action,
+    type ProcessResult,
     type StringContext,
     Context
 }

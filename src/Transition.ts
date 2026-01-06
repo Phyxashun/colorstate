@@ -9,7 +9,7 @@ export type Transition =
     | { kind: 'EmitAndTo'; state: State }
     | { kind: 'ToContinue'; state: State }
     | { kind: 'BeginString'; state: State; quoteType: CharType }
-    | { kind: 'EndString'; state: State }
+    | { kind: 'EndString'; state: State; quoteType: CharType }
     | { kind: 'EscapeNext'; state: State };
 
 type TransitionFn =
@@ -18,7 +18,7 @@ type TransitionFn =
     & { EmitAndTo: (state: State) => Transition; }
     & { ToContinue: (state: State) => Transition; }
     & { BeginString: (state: State, quoteType: CharType) => Transition; }
-    & { EndString: (state: State) => Transition; }
+    & { EndString: (state: State, quoteType: CharType) => Transition; }
     & { EscapeNext: (state: State) => Transition; };
 
 export const Transition: TransitionFn = {
@@ -37,8 +37,8 @@ export const Transition: TransitionFn = {
     BeginString: (state: State, quoteType: CharType): Transition =>
         ({ kind: 'BeginString', state, quoteType }),
 
-    EndString: (state: State): Transition =>
-        ({ kind: 'EndString', state }),
+    EndString: (state: State, quoteType: CharType): Transition =>
+        ({ kind: 'EndString', state, quoteType }),
 
     EscapeNext: (state: State): Transition =>
         ({ kind: 'EscapeNext', state }),

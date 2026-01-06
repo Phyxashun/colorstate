@@ -1,7 +1,12 @@
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: tests/Character.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
 // @ts-nocheck
-
-
-// ==================== Start of file: tests/Character.test.ts ====================
+/* eslint-disable */
 
 import { describe, it, expect } from 'vitest';
 import { CharacterStream, CharType } from '../src/Character';
@@ -30,16 +35,24 @@ describe('CharacterStream', () => {
     });
 });
 
-// ==================== End of file: tests/Character.test.ts ====================
 
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: tests/Character.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: tests/Context.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
 
 // @ts-nocheck
-
-
-// ==================== Start of file: tests/Context.test.ts ====================
+/* eslint-disable */
 
 import { describe, it, expect } from 'vitest';
 import { Context } from '../src/Context';
@@ -71,16 +84,24 @@ describe('Context string handling', () => {
     });
 });
 
-// ==================== End of file: tests/Context.test.ts ====================
 
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: tests/Context.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: tests/Parser.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
 
 // @ts-nocheck
-
-
-// ==================== Start of file: tests/Parser.test.ts ====================
+/* eslint-disable */
 
 import { describe, it, expect } from 'vitest';
 import { Tokenizer } from '../src/Tokenizer';
@@ -117,16 +138,24 @@ describe('Parser', () => {
     });
 });
 
-// ==================== End of file: tests/Parser.test.ts ====================
 
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: tests/Parser.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: tests/States.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
 
 // @ts-nocheck
-
-
-// ==================== Start of file: tests/States.test.ts ====================
+/* eslint-disable */
 
 import { describe, it, expect } from 'vitest';
 import { InitialState, StringState } from '../src/States';
@@ -156,16 +185,24 @@ describe('State transitions', () => {
     
 });
 
-// ==================== End of file: tests/States.test.ts ====================
 
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: tests/States.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: tests/Tokenizer.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
 
 // @ts-nocheck
-
-
-// ==================== Start of file: tests/Tokenizer.test.ts ====================
+/* eslint-disable */
 
 import { describe, it, expect } from 'vitest';
 import { Tokenizer, TokenType } from '../src/Tokenizer';
@@ -257,9 +294,12 @@ describe('Tokenizer', () => {
     });
 });
 
-// ==================== End of file: tests/Tokenizer.test.ts ====================
 
 
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: tests/Tokenizer.test.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████

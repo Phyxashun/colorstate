@@ -1,7 +1,12 @@
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: .vscode/launch.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
 // @ts-nocheck
-
-
-// ==================== Start of file: .vscode/launch.json ====================
+/* eslint-disable */
 
 {
     // Use IntelliSense to learn about possible attributes.
@@ -39,88 +44,24 @@
         }
     ]
 }
-// ==================== End of file: .vscode/launch.json ====================
 
 
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: .vscode/launch.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-// @ts-nocheck
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
-// ==================== Start of file: .vscode/settings.json ====================
-
-{
-    "better-comments.tags": [
-        {
-            "tag": "!",
-            "color": "#FF2D00",
-            "strikethrough": false,
-            "underline": false,
-            "backgroundColor": "transparent",
-            "bold": false,
-            "italic": false
-        },
-        {
-            "tag": "?",
-            "color": "#3498DB",
-            "strikethrough": false,
-            "underline": false,
-            "backgroundColor": "transparent",
-            "bold": false,
-            "italic": false
-        },
-        {
-            "tag": "//",
-            "color": "#474747",
-            "strikethrough": true,
-            "underline": false,
-            "backgroundColor": "transparent",
-            "bold": false,
-            "italic": false
-        },
-        {
-            "tag": "todo",
-            "color": "#FF8C00",
-            "strikethrough": false,
-            "underline": false,
-            "backgroundColor": "transparent",
-            "bold": false,
-            "italic": false
-        },
-        {
-            "tag": "*",
-            "color": "#98C379",
-            "strikethrough": false,
-            "underline": false,
-            "backgroundColor": "transparent",
-            "bold": false,
-            "italic": false
-        }
-    ],
-    "cSpell.words": [
-        "CHARACTERSTREAM",
-        "colorstate",
-        "CREATETOKEN",
-        "dotenv",
-        "eslintcache",
-        "HEXVALUE",
-        "LPAREN",
-        "retokenized",
-        "RPAREN",
-        "STRINGSTATE"
-    ]
-}
-// ==================== End of file: .vscode/settings.json ====================
-
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: .gitignore ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
 
 // @ts-nocheck
-
-
-// ==================== Start of file: .gitignore ====================
+/* eslint-disable */
 
 # dependencies (bun install)
 node_modules
@@ -159,125 +100,24 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 #Dictionary
 cspell.json
-// ==================== End of file: .gitignore ====================
 
 
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: .gitignore ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
-// @ts-nocheck
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
-// ==================== Start of file: package.json ====================
-
-{
-  "name": "colorstate",
-  "version": "1.0.0",
-  "license": "MIT",
-  "author": "Dustin Dew, phyxashun@gmail.com",
-  "module": "index.ts",
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^25.0.3",
-    "@vitest/coverage-istanbul": "4.0.16",
-    "@vitest/coverage-v8": "^4.0.16",
-    "figlet": "^1.9.4",
-    "glob": "^13.0.0",
-    "vitest": "^4.0.16"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
-  },
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "start": "bun run ./index.ts",
-    "test": "vitest",
-    "coverage": "vitest --coverage"
-  }
-}
-// ==================== End of file: package.json ====================
-
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: License ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
 
 // @ts-nocheck
-
-
-// ==================== Start of file: tsconfig.json ====================
-
-{
-  "compilerOptions": {
-    // Environment setup & latest features
-    "lib": [
-      "ESNext"
-    ],
-    "target": "ESNext",
-    "module": "Preserve",
-    "moduleDetection": "force",
-    "jsx": "react-jsx",
-    "allowJs": true,
-    // Bundler mode
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "noEmit": true,
-    // Best practices
-    "strict": true,
-    "skipLibCheck": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    // Some stricter flags (disabled by default)
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
-  },
-  "include": [
-    "./src/**/*.ts"
-  ],
-  "exclude": [
-    "ALL/ALL_CONFIGS.ts",
-    "ALL/ALL_FILES.ts",
-    "ALL/ALL_TESTS.ts"
-  ]
-}
-// ==================== End of file: tsconfig.json ====================
-
-
-
-
-
-// @ts-nocheck
-
-
-// ==================== Start of file: vitest.config.ts ====================
-
-// vitest.config.ts
-
-import { defineConfig } from "vitest/config";
-
-export default defineConfig({
-    test: {
-        coverage: {
-            provider: 'istanbul',
-            reporter: ['text', 'json', 'html'],
-            include: ['src/**/*.{ts,tsx}'],
-            exclude: ['**/utils/**/*.ts']
-        }
-    }
-})
-// ==================== End of file: vitest.config.ts ====================
-
-
-
-
-
-// @ts-nocheck
-
-
-// ==================== Start of file: License ====================
+/* eslint-disable */
 
 # MIT License
 
@@ -301,16 +141,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-// ==================== End of file: License ====================
 
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: License ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: README.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
 
 // @ts-nocheck
-
-
-// ==================== Start of file: README.md ====================
+/* eslint-disable */
 
 # ColorState
 
@@ -632,9 +480,1092 @@ This project was created using `bun init` in bun v1.3.4. [Bun](https://bun.com) 
 
 Built as an educational project to demonstrate DFA tokenization, state machine design patterns, and TypeScript best practices.
 
-// ==================== End of file: README.md ====================
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: README.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/1. Help.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# HELP
+
+Your code is a well-structured example of a classic "State Machine" lexer and a "Recursive Descent" parser. However, it currently suffers from **"Boilerplate Overload"**—there are many layers of abstraction (Context, Transition objects, Singleton State classes) that make it harder to see the actual logic.
+
+Here is a review and a set of recommendations to simplify the code while keeping its robust architecture.
+
+---
+
+## 1. Simplify the State Machine (The "Big Win")
+
+Currently, every state is a class with a singleton getter. This is very verbose. In TypeScript, you can represent states as a **Record of functions**.
+
+**Instead of this:**
+
+```typescript
+class Letter_State extends State {
+    static #instance: State;
+    public static get instance() { ... }
+    public handle(char: Character) { ... }
+}
+
+```
+
+**Try this (Functional States):**
+Define your states as a simple object where each key is a state name and the value is a function that returns the next state and action.
+
+```typescript
+const States: Record<string, (char: Character) => Transition> = {
+  Initial: (char) => {
+    if (char.type === CharType.Letter) return { type: 'To', next: 'Letter' };
+    if (char.type === CharType.Number) return { type: 'To', next: 'Number' };
+    // ...
+  },
+  Letter: (char) => {
+    if (char.type === CharType.Letter) return { type: 'Stay' };
+    return { type: 'Emit', next: 'Initial' };
+  }
+};
+
+```
+
+This removes about 200 lines of boilerplate from `States.ts` and makes the transitions readable in one place.
+
+---
+
+### 2. Streamline `CharUtility`
+
+You have large `Set` objects for letters and numbers, but then you use Regex in `CharSpec`. You can consolidate this. Modern JavaScript/TypeScript handles Unicode properties very well.
+
+**Simplified Classification:**
+
+```typescript
+const isLetter = (c: string) => /\p{L}/u.test(c);
+const isDigit = (c: string) => /\d/.test(c);
+const isWhitespace = (c: string) => /\s/.test(c);
+
+// Use a simple lookup for single-char symbols
+const SYMBOLS: Record<string, CharType> = {
+  '#': CharType.Hash,
+  '%': CharType.Percent,
+  '(': CharType.LParen,
+  ')': CharType.RParen,
+  // ...
+};
+
+```
+
+---
+
+### 3. Simplify the `Tokenizer` Buffer Logic
+
+In `Tokenizer.ts`, the logic to decide whether to push a character to the buffer or ignore it (like quotes) is split between `Context` and `Tokenizer`.
+
+**Recommendation:** Let the `process` method return exactly what should happen to the current character.
+
+```typescript
+interface ProcessResult {
+  action: 'buffer' | 'ignore' | 'emit';
+  nextState: StateName;
+}
+
+```
+
+This prevents the "Check if I just entered a string" logic from being scattered.
+
+---
+
+### 4. Improve the `Parser` Structure
+
+Your `Parser.ts` is actually quite clean! One way to make it "easier to follow" is to use a **Binary Expression Helper**. Since Addition and Multiplication look almost identical, you can DRY (Don't Repeat Yourself) that logic.
+
+**Refactored Binary Parser:**
+
+```typescript
+private binaryExpr(builder: () => Expression, ...tokenTypes: TokenType[]): Expression {
+    let expr = builder();
+    while (this.match(...tokenTypes)) {
+        const operator = this.previous().value;
+        const right = builder();
+        expr = { type: NodeType.BinaryExpression, operator, left: expr, right };
+    }
+    return expr;
+}
+
+// Then use it like this:
+private addition() {
+    return this.binaryExpr(() => this.multiplication(), TokenType.PLUS, TokenType.MINUS);
+}
+
+private multiplication() {
+    return this.binaryExpr(() => this.unary(), TokenType.STAR, TokenType.SLASH);
+}
+
+```
+
+---
+
+### 5. Architectural Review: "The Double Classification"
+
+Currently, you classify a character (e.g., `CharType.Hash`), then the state machine processes it, then the Tokenizer classifies it *again* to turn it into a `TokenType.HEXVALUE`.
+
+**Optimization:** The State Machine should know what it's building. When the `NumberState` exits, it should tell the Tokenizer: "I just finished a Number." This removes the need for `Tokenizer.classify` and `TokenSpec`.
+
+---
+
+### 6. Recommended Folder Structure
+
+For a project of this size, you might find it easier to follow if you group by "Phase" rather than "Class":
+
+* `/lexer`
+* `types.ts` (CharType, TokenType)
+* `character-stream.ts`
+* `state-machine.ts` (The simplified transition logic)
+
+* `/parser`
+* `ast.ts`
+* `parser.ts`
+
+## Summary of specific code fixes
+
+1. **In `Parser.ts**`: You have a `// ✅ Fixed: Added STAR` comment. You can also add `%` (Modulo) there since it's in your `BinaryExpression` type definition but missing from the parser logic.
+2. **In `States.ts**`: The `EndString` logic in `String_State` returns `InitialState`. If your input is `'hello'world`, it might fail to tokenize `world` correctly because it emits and resets in one go. Using a `Reprocess` flag (which you have) is good, but ensure it's used consistently for all delimiters.
+3. **In `index.ts**`: The `fourSpaceAST` regex is a clever way to format. You can also achieve this by passing a number to `JSON.stringify(ast, null, 4)` if you convert your AST to a plain object first.
+
+**Would you like me to provide a simplified version of one of these specific files (like the new Functional States approach)?**
 
 
 
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/1. Help.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/2. CharUtility Recommendation.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# CHAT UTILITY RECOMMENDATION
+
+This is an excellent update. Your `CharUtility` is now far more robust, descriptive, and logically sound. You have successfully addressed the biggest ambiguity by replacing the generic `Unicode` type with specific checks for `Punctuation` (`\p{P}`) and `SymbolMark` (`\p{S}`).
+
+To directly answer your question: **No, you are not missing any major character *types*.** Your classification logic now covers virtually every printable character in the Unicode standard in a descriptive way. The `Other` type now correctly serves its purpose as a bucket for non-printable characters like control characters, which is exactly what you want.
+
+However, while you aren't missing any *character types*, there are a couple of small redundancies in your `CharType` **enum** that you could clean up for a truly polished utility.
+
+## ✅ Areas of Redundancy (Enum Cleanup)
+
+You have some overlap between your generic categories and the very specific symbol types.
+
+1. **`Punctuation` vs. Specific Punctuation**:
+    * Your `SYMBOL_MAP` contains entries like `.` (Dot), `,` (Comma), and `;` (SemiColon).
+    * Your `classify` function now has a check for `\p{P}` (Punctuation), which *also* matches these characters.
+    * Because the `SYMBOL_MAP` is checked first, `.` will always be `Dot`, never `Punctuation`. This isn't wrong, but it creates two different ways to classify the same conceptual thing.
+
+2. **`SymbolMark` vs. Specific Symbols**:
+    * Similarly, your `SYMBOL_MAP` has `+`, `<`, `|`, etc.
+    * The `\p{S}` (SymbolMark) check also matches these.
+    * You also have a `Currency` type, which is a subset of `\p{S}`.
+
+## ✨ Recommendation for a Final Polish
+
+For maximum clarity and a single source of truth, you can simplify the `CharType` enum by removing the hyper-specific types and relying on the broader Unicode categories. This makes your utility more general-purpose and easier to maintain.
+
+Here is a revised version that demonstrates this cleanup.
+
+### 1. Simplified `CharType` Enum
+
+We can remove the individual symbol types like `Plus`, `Minus`, `Dot`, etc., because they are all covered by `Punctuation` or `SymbolMark`.
+
+```typescript
+enum CharType {
+    Whitespace = 'Whitespace',
+    NewLine = 'NewLine',
+    Letter = 'Letter',
+    Number = 'Number',
+    Punctuation = 'Punctuation', // Broad category for ., ,, ;, etc.
+    SymbolMark = 'SymbolMark',     // Broad category for +, -, $, €, etc.
+    Other = 'Other',
+    EOF = 'EOF',
+    // Removed specific symbols like Plus, Minus, Comma, Dot, etc.
+}
+```
+
+### 2. Simplified `classify` Function
+
+With a simplified enum, your `classify` function becomes even cleaner. You no longer need the `SYMBOL_MAP` at all, as the regex checks handle everything. This reduces code size and complexity.
+
+```typescript
+class CharUtility {
+    // SYMBOL_MAP is no longer needed
+
+    public static classify: ClassifyFn = (char: string): CharType => {
+        // 1. Handle End-Of-File character
+        if (char === '') return CharType.EOF;
+
+        // 2. Handle Whitespace and Newlines (no change)
+        if (char === '\n' || char === '\r') return CharType.NewLine;
+        if (/\s/u.test(char)) return CharType.Whitespace;
+
+        // 3. Handle major Unicode categories
+        if (/\p{L}/u.test(char)) return CharType.Letter;
+        if (/\p{N}/u.test(char)) return CharType.Number;
+        if (/\p{P}/u.test(char)) return CharType.Punctuation;
+        if (/\p{S}/u.test(char)) return CharType.SymbolMark;
+
+        // 4. All remaining characters fall here
+        return CharType.Other;
+    }
+}
+```
+
+## Conclusion
+
+Your current version is very, very good. The suggestions above are purely for refinement and simplification. Whether you keep the specific symbol types (like `Dot`, `Plus`) or embrace the broader categories (`Punctuation`, `SymbolMark`) depends on your specific use case:
+
+* **Keep Specific Types if:** You are building a parser for a programming language where `.` has a fundamentally different meaning than `;`.
+* **Use Broad Categories if:** You are building a general-purpose text analyzer where you just need to distinguish letters from symbols from punctuation.
+
+Based on the code provided, the simplified, broader approach seems more robust and maintainable. But rest assured, you have covered all your bases.
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/2. CharUtility Recommendation.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/2. CharUtility.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# CHAR UTILITY
+
+To streamline your `CharUtility`, you can remove the large manual `Set` objects and replace the `Map` iteration with a **direct lookup table** for symbols and **Unicode regex** for categories like letters and numbers.
+
+This approach is significantly faster and easier to maintain because it avoids looping through a list of functions for every single character in your source code.
+
+## Refactored `src/Character.ts`
+
+```typescript
+// src/Character.ts
+
+// ... keep CharType enum and interfaces as they are ...
+
+export class CharUtility {
+    /**
+     * Map of single characters to their specific types.
+     * This provides O(1) lookup for common symbols.
+     */
+    private static readonly SYMBOL_MAP: Record<string, CharType> = {
+        '#': CharType.Hash,
+        '%': CharType.Percent,
+        '/': CharType.Slash,
+        ',': CharType.Comma,
+        '(': CharType.LParen,
+        ')': CharType.RParen,
+        '+': CharType.Plus,
+        '-': CharType.Minus,
+        '*': CharType.Star,
+        '.': CharType.Dot,
+        '`': CharType.Backtick,
+        "'": CharType.SingleQuote,
+        '"': CharType.DoubleQuote,
+        '\\': CharType.BackSlash,
+        '~': CharType.Tilde,
+        '!': CharType.Exclamation,
+        '@': CharType.At,
+        '$': CharType.Dollar,
+        '?': CharType.Question,
+        '^': CharType.Caret,
+        '&': CharType.Ampersand,
+        '<': CharType.LessThan,
+        '>': CharType.GreaterThan,
+        '_': CharType.Underscore,
+        '=': CharType.EqualSign,
+        '[': CharType.LBracket,
+        ']': CharType.RBracket,
+        '{': CharType.LBrace,
+        '}': CharType.RBrace,
+        ';': CharType.SemiColon,
+        ':': CharType.Colon,
+        '|': CharType.Pipe,
+    };
+
+    /**
+     * Classifies a character using the symbol map and regex for categories.
+     */
+    public static classify(char: string): CharType {
+        if (char === '') return CharType.EOF;
+
+        // 1. Check the fast-lookup symbol map
+        if (this.SYMBOL_MAP[char]) {
+            return this.SYMBOL_MAP[char];
+        }
+
+        // 2. Handle Whitespace and Newlines
+        if (char === '\n' || char === '\r') return CharType.NewLine;
+        if (/\s/u.test(char)) return CharType.Whitespace;
+
+        // 3. Handle Letters and Numbers (Unicode aware)
+        if (/\p{L}/u.test(char)) return CharType.Letter;
+        if (/\p{N}/u.test(char)) return CharType.Number;
+
+        // 4. Handle non-ASCII Unicode characters
+        if (/[^\x00-\x7F]/.test(char)) return CharType.Unicode;
+
+        return CharType.Other;
+    }
+}
+
+```
+
+## What has changed
+
+1. **Removed 100+ lines of Sets**: You no longer need `Letters`, `Numbers`, `Whitespace`, or `NewLine` sets. Modern JS regex handles these more accurately (e.g., `\p{L}` handles accented characters and non-Latin scripts).
+2. **O(1) Symbol Lookup**: Instead of iterating through a `Map` of functions (`CharSpec`) for every character, we now do a single property check on `SYMBOL_MAP`. This is much more performant for long files.
+3. **Simplified Logic**: The `classify` method is now a flat sequence of "If-Else" checks rather than a loop. This makes it significantly easier to debug and follow.
+4. **Consolidated Character Specification**: You no longer need the `CharTypeFn` or `Spec` types, reducing the overall complexity of your codebase.
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/2. CharUtility.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/3. TokenizerBuffer.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# TOKENIZER BUFFER
+
+To simplify the **Tokenizer buffer logic**, you should move the decision of "what to do with the current character" out of the loop in `Tokenizer.ts` and into the `Context.ts`.
+
+Currently, your `Tokenizer` manually checks if it is inside a string and tries to ignore starting quotes with complex conditional logic. By returning a clear `action` (either `buffer` or `ignore`) from the context, the loop becomes a simple set of instructions.
+
+## 1. Update the `Context` Result
+
+First, modify the `process` return type to include an `action`. This tells the tokenizer exactly what to do with the current character.
+
+```typescript
+// src/Context.ts
+
+export type Action = 'buffer' | 'ignore';
+
+interface ProcessResult {
+    emit: boolean;      // Should we flush the current buffer into a token?
+    reprocess: boolean; // Should the current char be looked at again by the next state?
+    action: Action;     // Should the current char be added to the buffer?
+}
+
+// ... inside Context class ...
+public process(char: Character): ProcessResult {
+    const transition = this.state.handle(char);
+    let action: Action = 'buffer';
+    let emit = false;
+    let reprocess = false;
+
+    switch (transition.kind) {
+        case "BeginString":
+            this.beginString(transition.quoteType);
+            this.transitionTo(transition.state);
+            action = 'ignore'; // Don't put the opening quote in the buffer
+            break;
+
+        case "EndString":
+            this.endString();
+            this.transitionTo(transition.state);
+            action = 'ignore'; // Don't put the closing quote in the buffer
+            emit = true;
+            break;
+
+        case "EmitAndTo":
+            this.transitionTo(transition.state);
+            emit = true;
+            reprocess = true;
+            action = 'ignore'; // This char belongs to the NEXT token
+            break;
+
+        case "To":
+            const wasAccepting = this.isAccepting();
+            this.transitionTo(transition.state);
+            emit = wasAccepting;
+            break;
+            
+        case "Stay":
+            break;
+            
+        // ... handle other cases like EscapeNext ...
+    }
+
+    return { emit, reprocess, action };
+}
+
+```
+
+## 2. Simplify the `Tokenizer` Loop
+
+With the `Context` handling the logic, the `tokenize` method becomes much cleaner. You no longer need to manually check for quotes or string states inside the loop.
+
+```typescript
+// src/Tokenizer.ts
+
+public tokenize(input: string): Token[] {
+    const stream = new CharacterStream(input);
+    const tokens: Token[] = [];
+
+    for (const char of stream) {
+        // Capture whether we were in a string BEFORE processing 
+        // to correctly classify the token being emitted.
+        const wasInString = this.ctx.isInString();
+
+        let result = this.ctx.process(char);
+
+        // 1. Handle Emitting (Flush buffer)
+        if (result.emit && this.buffer.length > 0) {
+            tokens.push(Tokenizer.createToken(this.buffer, wasInString));
+            this.buffer = [];
+        }
+
+        // 2. Handle Reprocessing (If the char belongs to the next state)
+        if (result.reprocess) {
+            result = this.ctx.process(char);
+        }
+
+        // 3. Simple Buffer Logic
+        if (result.action === 'buffer' && char.type !== CharType.EOF) {
+            this.buffer.push(char);
+        }
+    }
+
+    // Flush remaining buffer
+    if (this.buffer.length > 0) {
+        tokens.push(Tokenizer.createToken(this.buffer, this.ctx.isInString()));
+    }
+
+    tokens.push({ value: '', type: TokenType.EOF });
+    return tokens;
+}
+
+```
+
+## Key Benefits of this Refactor
+
+* **Separation of Concerns**: The `Tokenizer` loop only manages the flow (looping and list management), while the `Context` manages the grammar logic (when to stop or ignore characters).
+* **No More Manual Quote Stripping**: Because the `BeginString` and `EndString` transitions return `action: 'ignore'`, the quotes never enter the buffer, so you don't need logic to remove them later.
+* **Consistency**: `EmitAndTo` now consistently marks the "trigger" character as `ignore` for the current token so that it can be correctly picked up by the next `process` call during reprocessing.
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/3. TokenizerBuffer.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/4. FunctionalStates.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# FUNCTIONAL STATES
+
+To simplify your code using a **Functional States** approach, we can replace the verbose singleton classes with a single object (or a set of functions) that maps state names to transition logic. This eliminates the need for `instance` getters and class inheritance for every state.
+
+Here is how you can refactor `src/States.ts` and update the `Context` to handle it.
+
+## 1. Refactored `src/States.ts`
+
+Instead of classes, we use a `Record` where each key is a state name and each value is a function that takes a `Character` and returns a `Transition`.
+
+```typescript
+import { type Character, CharType } from './Character.ts';
+import { Transition } from './Transition.ts';
+
+// Define the available state names as a type for safety
+export type StateName = 
+    | 'Initial' | 'Whitespace' | 'NewLine' | 'Letter' 
+    | 'Number' | 'Dimension' | 'Hex' | 'String' 
+    | 'Percent' | 'SingleChar' | 'Symbol' | 'End';
+
+// Define the functional state handler type
+type StateHandler = (char: Character) => Transition;
+
+export const FunctionalStates: Record<StateName, StateHandler> = {
+    Initial: (char) => {
+        switch (char.type) {
+            case CharType.SingleQuote: return Transition.BeginString('String', CharType.SingleQuote);
+            case CharType.DoubleQuote: return Transition.BeginString('String', CharType.DoubleQuote);
+            case CharType.Backtick:    return Transition.BeginString('String', CharType.Backtick);
+            case CharType.Whitespace:  return Transition.To('Whitespace');
+            case CharType.NewLine:     return Transition.To('NewLine');
+            case CharType.Letter:      return Transition.To('Letter');
+            case CharType.Number:      return Transition.To('Number');
+            case CharType.Hash:        return Transition.To('Hex');
+            
+            case CharType.Comma: case CharType.LParen: case CharType.RParen:
+            case CharType.Plus:  case CharType.Minus:  case CharType.Star:
+            case CharType.Slash: case CharType.Percent:
+                return Transition.To('SingleChar');
+
+            case CharType.EOF:   return Transition.To('End');
+            default:             return Transition.To('SingleChar');
+        }
+    },
+
+    Whitespace: (char) => 
+        char.type === CharType.Whitespace ? Transition.Stay() : Transition.EmitAndTo('Initial'),
+
+    NewLine: (_) => Transition.EmitAndTo('Initial'),
+
+    Letter: (char) => 
+        char.type === CharType.Letter ? Transition.Stay() : Transition.EmitAndTo('Initial'),
+
+    Number: (char) => {
+        if (char.type === CharType.Percent) return Transition.ToContinue('Percent');
+        if (char.type === CharType.Letter)  return Transition.ToContinue('Dimension');
+        if (char.type === CharType.Number || char.type === CharType.Dot) return Transition.Stay();
+        return Transition.EmitAndTo('Initial');
+    },
+
+    Dimension: (char) => 
+        char.type === CharType.Letter ? Transition.Stay() : Transition.EmitAndTo('Initial'),
+
+    Hex: (char) => {
+        const isHex = char.type === CharType.Hash || char.type === CharType.Letter || char.type === CharType.Number;
+        return isHex ? Transition.Stay() : Transition.EmitAndTo('Initial');
+    },
+
+    String: (char) => {
+        if (char.type === CharType.BackSlash) return Transition.EscapeNext('String');
+        if (char.type === CharType.SingleQuote || char.type === CharType.DoubleQuote || char.type === CharType.Backtick) {
+            return Transition.EndString('Initial');
+        }
+        if (char.type === CharType.EOF || char.type === CharType.NewLine) return Transition.EmitAndTo('Initial');
+        return Transition.Stay();
+    },
+
+    Percent: (_) => Transition.EmitAndTo('Initial'),
+
+    SingleChar: (_) => Transition.EmitAndTo('Initial'),
+
+    Symbol: (char) => {
+        const isSym = [CharType.Unicode, CharType.BackSlash, CharType.At, CharType.Symbol].includes(char.type);
+        return isSym ? Transition.Stay() : Transition.EmitAndTo('Initial');
+    },
+
+    End: (_) => Transition.Stay(),
+};
+
+// Define which states are "Accepting" (can produce a token)
+export const AcceptingStates = new Set<StateName>([
+    'Whitespace', 'NewLine', 'Letter', 'Number', 'Dimension', 
+    'Hex', 'String', 'Percent', 'SingleChar', 'Symbol', 'End'
+]);
+
+```
+
+## 2. Update `src/Transition.ts`
+
+Update your `Transition` type to use the `StateName` string instead of the `State` class instance.
+
+```typescript
+export type Transition =
+    | { kind: 'Stay' }
+    | { kind: 'To'; state: StateName }
+    | { kind: 'EmitAndTo'; state: StateName }
+    | { kind: 'ToContinue'; state: StateName }
+    | { kind: 'BeginString'; state: StateName; quoteType: CharType }
+    | { kind: 'EndString'; state: StateName }
+    | { kind: 'EscapeNext'; state: StateName };
+
+```
+
+## 3. Simplify `src/Context.ts`
+
+The `Context` now simply tracks the string name of the state and calls the function from the `FunctionalStates` map.
+
+```typescript
+import { FunctionalStates, AcceptingStates, type StateName } from './States.ts';
+
+class Context {
+    private currentState: StateName = 'Initial';
+    // ... stringContext properties ...
+
+    public process(char: Character) {
+        const wasAccepting = AcceptingStates.has(this.currentState);
+        const transition = FunctionalStates[this.currentState](char);
+
+        // ... existing logic to handle EscapeNext, BeginString, etc. ...
+        
+        // When updating state:
+        if ('state' in transition) {
+            this.currentState = transition.state;
+        }
+
+        // ... return emit/reprocess flags ...
+    }
+}
+
+```
+
+## Why this is better
+
+1. **Readability:** All state transition logic is in one file and visible at a glance. You don't have to jump between ten different files to see how the lexer moves from `Number` to `Dimension`.
+2. **Boilerplate Reduction:** You removed dozens of `static #instance` and `public static get instance()` blocks.
+3. **Memory:** You are no longer creating class instances for every state; you are just looking up a function in a standard object.
+4. **Extensibility:** Adding a new state is now as simple as adding one key to the `FunctionalStates` object and one entry in the `AcceptingStates` set.
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/4. FunctionalStates.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/5. ParserStructure.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# PARSER STRUCTURE
+
+To streamline your `Parser` class, you should focus on reducing the repetitive logic in your binary expression methods and moving the heavy `switch` statement out of `primary` into a more modular dispatcher.
+
+Here are three specific architectural improvements to make the parser cleaner and more extensible.
+
+## 1. DRY Binary Expressions with a Helper
+
+Your `addition` and `multiplication` methods share identical logic: a loop that checks for operators and builds a tree. You can replace both with a single helper method.
+
+```typescript
+// src/Parser.ts
+
+/**
+ * Higher-order helper to handle left-associative binary operations.
+ * @param builder The next higher precedence level (e.g., unary or multiplication)
+ * @param types The token types to match (e.g., PLUS, MINUS)
+ */
+private binaryExpr(builder: () => Expression, ...types: TokenType[]): Expression {
+    let expr = builder();
+
+    while (this.match(...types)) {
+        const operator = this.previous().value as any;
+        const right = builder();
+        expr = {
+            type: NodeType.BinaryExpression,
+            operator,
+            left: expr,
+            right,
+        };
+    }
+
+    return expr;
+}
+
+// Now your grammar methods are one-liners:
+private addition(): Expression {
+    return this.binaryExpr(() => this.multiplication(), TokenType.PLUS, TokenType.MINUS);
+}
+
+private multiplication(): Expression {
+    return this.binaryExpr(() => this.unary(), TokenType.STAR, TokenType.SLASH);
+}
+
+```
+
+## 2. Use a Dispatcher for `primary`
+
+Instead of a giant `switch` statement in `primary`, which becomes hard to read as you add more literals (Booleans, Null, etc.), use a lookup table.
+
+```typescript
+// src/Parser.ts
+
+// Define a type for primary parsing functions
+type PrimaryParser = (token: Token) => Expression;
+
+private readonly primaryParsers: Partial<Record<TokenType, PrimaryParser>> = {
+    [TokenType.STRING]: (t) => ({ type: NodeType.StringLiteral, value: t.value, raw: t.value }),
+    [TokenType.NUMBER]: (t) => ({ type: NodeType.NumericLiteral, value: parseFloat(t.value), raw: t.value }),
+    [TokenType.HEXVALUE]: (t) => ({ type: NodeType.HexLiteral, value: t.value, raw: t.value }),
+    [TokenType.IDENTIFIER]: (t) => ({ type: NodeType.Identifier, name: t.value }),
+    [TokenType.PERCENT]: (t) => ({ 
+        type: NodeType.PercentLiteral, 
+        value: parseFloat(t.value.replace('%', '')), 
+        raw: t.value 
+    }),
+};
+
+private primary(): Expression {
+    if (this.isAtEnd()) throw this.error(this.peek(), 'Unexpected end of input');
+
+    const token = this.peek();
+    const parser = this.primaryParsers[token.type];
+
+    if (parser) {
+        this.advance();
+        return parser(token);
+    }
+
+    // Special case for grouping (since it recurses back to expression)
+    if (this.match(TokenType.LPAREN)) {
+        const expr = this.expression();
+        this.consume(TokenType.RPAREN, "Expected ')' after expression");
+        return { type: NodeType.GroupExpression, expression: expr };
+    }
+
+    throw this.error(token, `Expected expression, got ${token.type}`);
+}
+
+```
+
+## 3. Move AST Creation to Factory Functions
+
+Creating AST objects manually inside the parser methods adds noise. By moving these to a separate utility or static methods, you make the parser's logic purely about "grammar" rather than "object shape."
+
+```typescript
+// Define factories in AST.ts or as private helpers in Parser.ts
+private createBinary(left: Expression, operator: string, right: Expression): BinaryExpression {
+    return { type: NodeType.BinaryExpression, operator: operator as any, left, right };
+}
+
+private createLiteral(token: Token): Expression {
+    // ... logic to return the correct Literal type ...
+}
+
+```
+
+## Summary of Benefits
+
+* **Maintenance**: To add a new operator (like `^` for power), you just add `TokenType.POW` to the `binaryExpr` call in the appropriate precedence level.
+* **Readability**: The grammar levels (`addition`, `multiplication`, `unary`) now look exactly like the BNF grammar rules they represent.
+* **Scalability**: The `primaryParsers` map makes it trivial to add new literal types (like `true`/`false` or `null`) without making the `primary()` method longer.
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/5. ParserStructure.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/6. NewEfficiencies.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# NEW EFFICIENCIES
+
+Beyond the structural refactors already discussed, there are several "logic-level" efficiencies you can implement to remove redundant code and improve performance. Currently, your pipeline performs **double classification**: the `States` classify characters to build tokens, and then the `Tokenizer` re-scans those tokens to determine their final `TokenType`.
+
+Here are the next steps to streamline your compiler.
+
+## 1. State-Driven Token Typing (Removing `Tokenizer.classify`)
+
+Your `States` already "know" what they are building (e.g., the `Hex_State` knows it's building a hex value). You can pass this information through the `Transition` so that the `Tokenizer` doesn't have to perform string-matching logic like `value.endsWith('%')` at the end.
+
+**The Efficiency:** Move the `TokenType` assignment into the `Transition`.
+
+```typescript
+// src/Transition.ts
+export type Transition =
+    | { kind: 'Stay' }
+    | { kind: 'EmitAndTo'; state: StateName; tokenType: TokenType } // Add type here
+    // ... other kinds ...
+
+// src/States.ts
+Number: (char) => {
+    if (char.type === CharType.Percent) return Transition.To('Percent');
+    // ...
+    return Transition.EmitAndTo('Initial', TokenType.NUMBER);
+},
+Percent: (_) => Transition.EmitAndTo('Initial', TokenType.PERCENT),
+
+```
+
+By doing this, you can delete the entire `Tokenizer.classify` method and its 60+ lines of logic.
+
+## 2. Add `peek()` to the `CharacterStream`
+
+Currently, your `States` must "consume" a character to see what it is, which often forces a `reprocess` flag in the `Context`. Adding a `peek()` method allows states to look ahead without advancing the index, which simplifies the `Tokenizer` loop logic.
+
+**The Efficiency:** Reduce loop iterations and "reprocess" complexity.
+
+```typescript
+// src/Character.ts
+class CharacterStream {
+    // ...
+    public peek(): Character {
+        if (this.isEOF()) return this.atEOF();
+        const codePoint = this.source.codePointAt(this.index);
+        const value = String.fromCodePoint(codePoint!);
+        return {
+            value,
+            type: CharUtility.classify(value),
+            position: { ...this.position }
+        };
+    }
+}
+
+```
+
+## 3. Lazy Token Filtering in the Parser
+
+In your `Parser` constructor, you use `tokens.filter(...)` to remove whitespace and newlines. This creates a completely new array in memory. For large files, it is more efficient to keep the original array and have your `advance()` and `peek()` methods simply skip over "ignored" tokens.
+
+**The Efficiency:** Save memory and allow the parser to access whitespace if you ever need to (e.g., for "Automatic Semicolon Insertion" or code formatting).
+
+```typescript
+// src/Parser.ts
+private advance(): Token {
+    this.current++;
+    // Automatically skip tokens we don't care about
+    while (!this.isAtEnd() && this.isIgnored(this.peek())) {
+        this.current++;
+    }
+    return this.previous();
+}
+
+private isIgnored(token: Token): boolean {
+    return token.type === TokenType.WHITESPACE || token.type === TokenType.NEWLINE;
+}
+
+```
+
+## 4. Consolidated String Unescaping
+
+Your `Tokenizer` currently uses a heavy Regex-based `unescapeString` method. If you want to make this faster, you can handle the unescaping **while** you are in the `String_State`.
+
+Instead of buffering the backslash and the 'n', when the state machine sees `\` followed by `n`, it can immediately push the actual newline character `\n` to the buffer.
+
+**The Efficiency:**
+
+* **Original**: Buffer has `['\', 'n']`  Join to `"\\n"`  Regex  `" \n "`.
+* **Optimized**: `EscapeNext` state sees 'n'  Pushes `\n` directly to buffer  Token is already unescaped.
+
+### 5. Unified Literal Parsing
+
+In `src/Parser.ts`, your `primary()` method has separate blocks for `NUMBER`, `HEXVALUE`, `PERCENT`, and `DIMENSION`. These are all effectively "Literals." You can unify these into a single "Literal" check that returns the correct AST node based on the token type.
+
+```typescript
+// src/Parser.ts
+private primary(): Expression {
+    const token = this.peek();
+
+    // Check if it's any type of literal
+    if (this.match(TokenType.NUMBER, TokenType.STRING, TokenType.HEXVALUE, TokenType.PERCENT, TokenType.DIMENSION)) {
+        return this.createLiteralNode(this.previous());
+    }
+    // ... handle identifiers and groups ...
+}
+
+```
+
+## Summary of Cleanup
+
+| Component | Old Way | New Efficiency |
+| --- | --- | --- |
+| **Tokens** | Re-classified by `Tokenizer.classify` | Tagged directly by `States` |
+| **Memory** | Filters token array | Lazy-skips tokens during parsing |
+| **Strings** | Regex post-processing | Unescaped during buffering |
+| **Lookahead** | Reprocess flag | `stream.peek()` |
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/6. NewEfficiencies.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: package.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+{
+  "name": "colorstate",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "Dustin Dew, phyxashun@gmail.com",
+  "module": "index.ts",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^25.0.3",
+    "@vitest/coverage-istanbul": "4.0.16",
+    "@vitest/coverage-v8": "^4.0.16",
+    "figlet": "^1.9.4",
+    "glob": "^13.0.0",
+    "vitest": "^4.0.16"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run ./index.ts",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
+  }
+}
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: package.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: tsconfig.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+{
+  "compilerOptions": {
+    // Environment setup & latest features
+    "lib": [
+      "ESNext"
+    ],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    // Bundler mode
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    // Best practices
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": [
+    "./src/**/*.ts"
+  ],
+  "exclude": [
+    "./ALL/**/*",
+    "./ALL/ALL_CONFIGS.ts",
+    "./ALL/ALL_FILES.ts",
+    "./ALL/ALL_TESTS.ts"
+  ]
+}
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: tsconfig.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: vitest.config.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+// vitest.config.ts
+
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+    test: {
+        coverage: {
+            provider: 'istanbul',
+            reporter: ['text', 'json', 'html'],
+            include: ['src/**/*.{ts,tsx}'],
+            exclude: ['**/utils/**/*.ts']
+        }
+    }
+})
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: vitest.config.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████

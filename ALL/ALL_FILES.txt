@@ -2,6 +2,9 @@
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: Consolidate.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
+
+
+
 // @ts-nocheck
 /* eslint-disable */
 
@@ -52,7 +55,7 @@ namespace Consolidator {
      * @property {string} outputFile - The path to the file where content will be consolidated.
      * @property {string[]} patterns - An array of glob patterns to find files for this job.
      */
-    interface ConsolidationJob {   
+    interface ConsolidationJob {
         name: string;
         outputFile: string;
         patterns: string[];
@@ -78,6 +81,41 @@ namespace Consolidator {
      * @type {ConsolidationJob[]}
      */
     const JOBS: ConsolidationJob[] = [
+        // Project configuration files
+        {
+            name: styleText(['red', 'underline'], 'Configuration'),
+            outputFile: './ALL/ALL_CONFIGS.ts',
+            patterns: [
+                '.vscode/launch.json',
+                '0. NOTES/*.md',
+                '.gitignore',
+                '*.json',
+                '*.config.ts',
+                '*.config.js',
+                'License',
+                'README.md',
+            ],
+        },
+        // Main project source files
+        {
+            name: styleText(['red', 'underline'], 'Typescript'),
+            outputFile: './ALL/ALL_FILES.ts',
+            patterns: [
+                'Consolidate.ts',
+                'index.ts',
+                'src/**/*.ts',
+                'src/**/*.js'
+            ],
+        },
+        // All test files
+        {
+            name: styleText(['red', 'underline'], 'Test'),
+            outputFile: './ALL/ALL_TESTS.ts',
+            patterns: [
+                'tests/**/*.test.ts',
+                'tests/**/*.test.js'
+            ],
+        },
         // Project configuration files
         {
             name: styleText(['red', 'underline'], 'Configuration'),
@@ -132,9 +170,9 @@ namespace Consolidator {
      * @returns {void}
      */
     const printLine = (options: PrintLineOptions = {}): void => {
-        const { preNewLine, postNewLine, width, char } = { 
-            ...defaultPrintLineOptions, 
-            ...options 
+        const { preNewLine, postNewLine, width, char } = {
+            ...defaultPrintLineOptions,
+            ...options
         };
         const pre = preNewLine ? '\n' : '';
         const post = postNewLine ? '\n' : '';
@@ -225,7 +263,7 @@ namespace Consolidator {
      */
     const logComplete = (): void => {
         console.log(styleText(['green', 'bold'], '\nConsolidation complete!!!'));
-        printLine({preNewLine: true, postNewLine: true});
+        printLine({ preNewLine: true, postNewLine: true });
     };
 
     /**
@@ -244,14 +282,14 @@ namespace Consolidator {
      */
     const findFiles = (patterns: string[], outputFile: string): string[] => {
         return globSync(
-            patterns, 
-            { 
+            patterns,
+            {
                 ignore: [
                     'coverage/**',
                     'node_modules/**',
                     'ALL/**',
                     outputFile
-                ] 
+                ]
             }
         );
     };
@@ -266,12 +304,12 @@ namespace Consolidator {
         const endLine = spacer(START_END_NEWLINE, '\n')
         const divider = spacer(100, '█');
 
-        const startFile = `${endLine}//${space} Start of file: ${sourceFile} ${space}${endLine}`;
+        const startFile = `${endLine}//${space} Start of file: ${sourceFile} ${space}${endLine}${endLine}\n`;
         const tsNoCheck = `// @ts-nocheck\n`;
         const eslintDisable = `/* eslint-disable */${endLine}`;
         const content = fs.readFileSync(sourceFile, UTF_8);
-        const endFile = `${endLine}//${space} End of file: ${sourceFile} ${space}${endLine}`;
-        const fileDivider = `${endLine}//${divider}\n`;
+        const endFile = `\n${endLine}${endLine}//${space} End of file: ${sourceFile} ${space}${endLine}\n`;
+        const fileDivider = `//${divider}\n`;
 
         fs.appendFileSync(outputFile, startFile, UTF_8);
         fs.appendFileSync(outputFile, tsNoCheck, UTF_8);
@@ -292,13 +330,13 @@ namespace Consolidator {
 
         logJobStart(name, outputFile);
         prepareOutputFile(outputFile);
-        
+
         findFiles(patterns, outputFile)
-            .forEach(file => {
-                logFileAppend(file);
-                appendFileWithHeaders(outputFile, file);
+            .forEach(sourceFile => {
+                logFileAppend(sourceFile);
+                appendFileWithHeaders(outputFile, sourceFile);
             });
-        
+
         logComplete();
     };
 
@@ -326,17 +364,20 @@ export const Consolidate = Consolidator.main;
 Consolidate();
 
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: Consolidate.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: index.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -409,6 +450,11 @@ const tokenizerTest = () => {
     // Fluent usage
     const tokenizer = new Tokenizer();
 
+    // Test 0
+    tokenizer
+        .withLogging('TEST (0): Direct Tokenization of embedded String')
+        .tokenize(`"67 a, b, c / 1 'word' 2 3+(2-0)"`);
+
     // Test 1
     tokenizer
         .withLogging('TEST (1): Direct Tokenization from String')
@@ -446,32 +492,33 @@ const parserTest = () => {
     // Test cases
     // Commented out cases are not working
     const testCases = [
-        //'1 + 2',
-        //'10 - 5 + 3',
-        //'2 * 3 + 4',
-        //'rgb(255, 0, 0)',
-        //'#ff0000',
-        //'50%',
-        //'(1 + 2) * 3',
-        //'-5 + 10',
-        //'rgba(255, 128, 0, 50%)',
-`const characterStreamTest = () => {
-line();
-console.log('=== CHARACTERSTREAM DEMO ===');
-line();
+        '1 + 2',
+        '10 - 5 + 3',
+        '2 * 3 + 4',
+        'rgb(255, 0, 0)',
+        '#ff0000',
+        '50%',
+        '(1 + 2) * 3',
+        '-5 + 10',
+        'rgba(255, 128, 0, 50%)',
+        'const a = 10;',
+// `const characterStreamTest = () => {
+// line();
+// console.log('=== CHARACTERSTREAM DEMO ===');
+// line();
 
-const input = 'rgb(255, 100, 75)';
+// const input = 'rgb(255, 100, 75)';
 
-const stream = new CharacterStream(input);
+// const stream = new CharacterStream(input);
 
-console.log('INPUT:');
-console.log('RESULT OF CHARACTERSTREAM:');
-for (const char of stream) {
-    console.log(inspect(char, compactInspectOptions));
-}
-console.log();
-line();
-}`
+// console.log('INPUT:');
+// console.log('RESULT OF CHARACTERSTREAM:');
+// for (const char of stream) {
+//     console.log(inspect(char, compactInspectOptions));
+// }
+// console.log();
+// line();
+// }`
     ];
 
 
@@ -498,20 +545,317 @@ line();
 }
 
 //characterStreamTest();
-//tokenizerTest();
-parserTest();
+tokenizerTest();
+//parserTest();
+
+
+
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: index.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
+//████████████████████████████████████████████████████████████████████████████████████████████████████
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/FunctionalStates.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+// src/FunctionalStates.ts
+
+import { inspect, type InspectOptions } from 'node:util';
+import { type Character, CharType } from './Character.ts';
+import { CharacterStream } from './Character.ts';
+import { Tokenizer } from './Tokenizer.ts';
+import { Parser } from './Parser.ts';
+
+export type Transition =
+    | { kind: 'Stay' }
+    | { kind: 'To'; state: StateName }
+    | { kind: 'EmitAndTo'; state: StateName }
+    | { kind: 'ToContinue'; state: StateName }
+    | { kind: 'BeginString'; state: StateName; quoteType: CharType }
+    | { kind: 'EndString'; state: StateName; quoteType: CharType }
+    | { kind: 'EscapeNext'; state: StateName };
+
+type TransitionFn =
+    & { Stay: () => Transition; }
+    & { To: (state: StateName) => Transition; }
+    & { EmitAndTo: (state: StateName) => Transition; }
+    & { ToContinue: (state: StateName) => Transition; }
+    & { BeginString: (state: StateName, quoteType: CharType) => Transition; }
+    & { EndString: (state: StateName, quoteType: CharType) => Transition; }
+    & { EscapeNext: (state: StateName) => Transition; };
+
+export const Transition: TransitionFn = {
+    Stay: (): Transition =>
+        ({ kind: 'Stay' }),
+
+    To: (state: StateName): Transition =>
+        ({ kind: 'To', state }),
+
+    EmitAndTo: (state: StateName): Transition =>
+        ({ kind: 'EmitAndTo', state }),
+
+    ToContinue: (state: StateName): Transition =>
+        ({ kind: 'ToContinue', state }),
+
+    BeginString: (state: StateName, quoteType: CharType): Transition =>
+        ({ kind: 'BeginString', state, quoteType }),
+
+    EndString: (state: StateName, quoteType: CharType): Transition =>
+        ({ kind: 'EndString', state, quoteType }),
+
+    EscapeNext: (state: StateName): Transition =>
+        ({ kind: 'EscapeNext', state }),
+}
+
+// Define the available state names as a type for safety
+export type StateName =
+    | 'Initial' | 'Whitespace' | 'NewLine' | 'Letter'
+    | 'Number' | 'Dimension' | 'Hex' | 'String'
+    | 'Percent' | 'SingleChar' | 'Symbol' | 'End';
+
+enum State {
+    Initial = 'Initial',
+    Whitespace = 'Whitespace',
+    NewLine = 'NewLine',
+    Letter = 'Letter',
+    Number = 'Number',
+    Dimension = 'Dimension',
+    Hex = 'Hex',
+    String = 'String',
+    Percent = 'Percent',
+    SingleChar = 'SingleChar',
+    Symbol = 'Symbol',
+    End = 'End',
+}
+
+// Define the functional state handler type
+type StateHandler = (char: Character) => Transition;
+
+export const FunctionalStates: Record<StateName, StateHandler> = {
+    [State.Initial]: (char) => {
+        switch (char.type) {
+            case CharType.SingleQuote:
+                return Transition.BeginString(State.String, CharType.SingleQuote);
+            case CharType.DoubleQuote:
+                return Transition.BeginString(State.String, CharType.DoubleQuote);
+            case CharType.Backtick:
+                return Transition.BeginString(State.String, CharType.Backtick);
+            case CharType.Whitespace:
+                return Transition.To(State.Whitespace);
+            case CharType.NewLine:
+                return Transition.To(State.NewLine);
+            case CharType.Letter:
+                return Transition.To(State.Letter);
+            case CharType.Number:
+                return Transition.To(State.Number);
+            case CharType.Hash:
+                return Transition.To(State.Hex);
+
+            case CharType.Comma: case CharType.LParen: case CharType.RParen:
+            case CharType.Plus: case CharType.Minus: case CharType.Star:
+            case CharType.Slash: case CharType.Percent:
+                return Transition.To(State.SingleChar);
+
+            case CharType.EOF:
+                return Transition.To(State.End);
+            default:
+                return Transition.To(State.SingleChar);
+        }
+    },
+
+    [State.Whitespace]: (char) =>
+        char.type === CharType.Whitespace
+            ? Transition.Stay()
+            : Transition.EmitAndTo(State.Initial),
+
+    [State.NewLine]: (_) => Transition.EmitAndTo(State.Initial),
+
+    [State.Letter]: (char) =>
+        char.type === CharType.Letter
+            ? Transition.Stay()
+            : Transition.EmitAndTo(State.Initial),
+
+    [State.Number]: (char) => {
+        if (char.type === CharType.Number || char.type === CharType.Dot)
+            return Transition.Stay();
+        
+        if (char.type === CharType.Percent)
+            return Transition.ToContinue(State.Percent);
+
+        if (char.type === CharType.Letter)
+            return Transition.ToContinue(State.Dimension);
+
+        return Transition.EmitAndTo(State.Initial);
+    },
+
+    [State.Dimension]: (char) =>
+        char.type === CharType.Letter
+            ? Transition.Stay()
+            : Transition.EmitAndTo(State.Initial),
+
+    [State.Hex]: (char) => {
+        const isHex =
+            char.type === CharType.Hash ||
+            char.type === CharType.Letter ||
+            char.type === CharType.Number;
+        return isHex ? Transition.Stay() : Transition.EmitAndTo(State.Initial);
+    },
+
+    [State.String]: (char) => {
+        if (char.type === CharType.BackSlash)
+            return Transition.EscapeNext(State.String);
+        if (
+            char.type === CharType.SingleQuote ||
+            char.type === CharType.DoubleQuote ||
+            char.type === CharType.Backtick
+        ) {
+            return Transition.EndString(State.Initial, char.type);
+        }
+
+        if (char.type === CharType.EOF || char.type === CharType.NewLine)
+            return Transition.EmitAndTo(State.Initial);
+        return Transition.Stay();
+    },
+
+    [State.Percent]: (_) => Transition.EmitAndTo(State.Initial),
+
+    [State.SingleChar]: (_) => Transition.EmitAndTo(State.Initial),
+
+    [State.Symbol]: (char) => {
+        const isSym = [
+            CharType.Unicode,
+            CharType.BackSlash,
+            CharType.At,
+            CharType.Symbol
+        ].includes(char.type);
+        return isSym ? Transition.Stay() : Transition.EmitAndTo(State.Initial);
+    },
+
+    [State.End]: (_) => Transition.Stay(),
+}
+
+// Define which states are "Accepting" (can produce a token)
+export const AcceptingStates = new Set<StateName>([
+    State.Whitespace,
+    State.NewLine,
+    State.Letter,
+    State.Number,
+    State.Dimension,
+    State.Hex,
+    State.String,
+    State.Percent,
+    State.SingleChar,
+    State.Symbol,
+    State.End
+]);
+
+// TESTING
+const compactInspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
+
+const inspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: false,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
+
+const line = (newLine: boolean = true, width: number = 80): void => {
+    if (newLine) console.log(`${'─'.repeat(width)}\n`);
+    if (!newLine) console.log(`${'─'.repeat(width)}`);
+}
+
+const characterStreamTest = () => {
+    line();
+    console.log('=== CHARACTERSTREAM DEMO ===\n');
+    line();
+
+    const input = 'rgba(255, 100, 75, 50%)';
+
+    const stream = new CharacterStream(input);
+    let currentState: StateName = State.Initial;
+    
+    console.log(`INPUT: '${input}'\n`);
+    console.log('RESULT OF CHARACTERSTREAM:\n');
+    
+    for (const char of stream) {
+        const ch = { value: char.value, type: char.type };
+        const wasAccepting = AcceptingStates.has(currentState);
+        const transition = FunctionalStates[currentState](char);
+        console.log(inspect(ch, compactInspectOptions));
+        console.log('WAS ACCEPTING:', wasAccepting, inspect(transition, compactInspectOptions));
+        console.log();
+        if ('state' in transition) {
+            currentState = transition.state;
+        }
+    }
+    
+    line();
+    console.log('NEW TEST\n')
+    line();
+
+        // Step 1: Tokenize
+        const tokenizer = new Tokenizer();
+        const tokens = tokenizer
+            .withLogging(`PARSER TEST:\n\nINPUT:\t'${input}'\n\n${'─'.repeat(80)}`)
+            .tokenize(input);
+
+        // Step 2: Parse
+        const parser = new Parser(tokens);
+        const ast = parser.parse();
+
+        // Step 3: Console log the AST
+        console.log('\nAST:\n');
+        const defaultAST = inspect(ast, inspectOptions);
+        const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
+        console.log(fourSpaceAST, '\n');
+        line();
+}
+
+characterStreamTest();
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/FunctionalStates.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/AST.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -718,17 +1062,20 @@ export interface GroupExpression extends ASTNode {
     expression: Expression;
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/AST.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Character.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -879,6 +1226,8 @@ class CharacterStream implements IterableIterator<Character> {
     private line: number = 1;
     private column: number = 1;
 
+    public chars: Character[] = [];
+
     constructor(input: string) {
         this.source = input.normalize('NFC');
     }
@@ -889,31 +1238,42 @@ class CharacterStream implements IterableIterator<Character> {
 
     public peek(): Character {
         if (this.isEOF()) return this.atEOF();
-        
+
         const value = String.fromCodePoint(this.source.codePointAt(this.index)!);
-        
-        return {
+
+        const nextChar: Character = {
             value,
             type: CharUtility.classify(value),
-            position: { 
+            position: {
                 index: this.index,
                 line: this.line,
                 column: this.column
             }
         };
+
+        return nextChar;
     }
 
     public next(): IteratorResult<Character> {
         if (this.isEOF()) {
             return {
                 done: true,
-                value: this.atEOF()
+                value: {
+                    value: '',
+                    type: CharType.EOF,
+                    position: {
+                        index: this.index,
+                        line: this.line,
+                        column: this.column
+                    }
+                }
             };
         }
 
-        const char: Character = this.peek();
-        this.advance(char.value);
-        return { done: false, value: char };
+        const nextChar = this.peek();
+        this.advance(nextChar.value);
+        this.chars.push(nextChar);
+        return { done: false, value: nextChar };
     }
 
     public advance(charValue: string): void {
@@ -934,7 +1294,7 @@ class CharacterStream implements IterableIterator<Character> {
         return ({
             value: '',
             type: CharType.EOF,
-            position: { 
+            position: {
                 index: this.index,
                 line: this.line,
                 column: this.column
@@ -946,7 +1306,7 @@ class CharacterStream implements IterableIterator<Character> {
         return {
             value: 'Error',
             type: CharType.Other,
-            position: { 
+            position: {
                 index: this.index,
                 line: this.line,
                 column: this.column
@@ -962,17 +1322,20 @@ export {
     CharacterStream,
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/Character.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Context.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -983,6 +1346,14 @@ import { type Character, CharType } from './Character.ts';
 import { InitialState, State } from './States.ts';
 import { Transition } from './Transition.ts';
 
+type Action = 'buffer' | 'ignore';
+
+interface ProcessResult {
+    emit: boolean;      // Should we flush the current buffer into a token?
+    reprocess: boolean; // Should the current char be looked at again by the next state?
+    action: Action;     // Should the current char be added to the buffer?
+}
+
 interface StringContext {
     openingQuoteType: CharType | null;
     isEscaping: boolean;
@@ -990,13 +1361,14 @@ interface StringContext {
 }
 
 class Context {
+    private state: State = InitialState;
     private stringContext: StringContext = {
         openingQuoteType: null,
         isEscaping: false,
         nestingLevel: 0,
     };
 
-    constructor(private state: State = InitialState) { }
+    constructor() { }
 
     public transitionTo(state: State): void {
         this.state = state;
@@ -1011,19 +1383,11 @@ class Context {
         this.stringContext.nestingLevel++;
     }
 
-    public endString(): void {
+    public endString(quoteType: CharType): void {
         this.stringContext.nestingLevel = Math.max(0, this.stringContext.nestingLevel - 1);
         if (this.stringContext.nestingLevel === 0) {
             this.stringContext.openingQuoteType = null;
         }
-    }
-
-    public setEscaping(value: boolean): void {
-        this.stringContext.isEscaping = value;
-    }
-
-    public isEscaping(): boolean {
-        return this.stringContext.isEscaping;
     }
 
     public isInString(): boolean {
@@ -1038,67 +1402,74 @@ class Context {
         return this.stringContext.openingQuoteType === quoteType;
     }
 
-    public process(char: Character): { emit: boolean; reprocess: boolean, endString?: boolean } {
-        const wasAccepting = this.isAccepting();
+    public setEscaping(value: boolean): void {
+        this.stringContext.isEscaping = value;
+    }
+
+    public isEscaping(): boolean {
+        return this.stringContext.isEscaping;
+    }
+
+    public process(char: Character): ProcessResult {
         const transition: Transition = this.state.handle(char);
-
-        if (this.isEscaping() && transition.kind !== "EscapeNext") {
-            this.setEscaping(false);
-            return { emit: false, reprocess: false };
-        }
-
-        if (transition.kind === "EndString" && this.isInString()) {
-            if (this.isMatchingQuote(char.type)) {
-                this.endString();
-                this.transitionTo(transition.state);
-                return { emit: true, reprocess: false, endString: true };
-            } else {
-                return { emit: false, reprocess: false };
-            }
-        }
+        let emit = false;
+        let reprocess = false;
+        let action: Action = 'buffer';
 
         switch (transition.kind) {
             case "BeginString": {
                 this.beginString(transition.quoteType);
                 this.transitionTo(transition.state);
-                return { emit: false, reprocess: false };
-            }
-
-            case "EscapeNext": {
-                this.setEscaping(true);
-                this.transitionTo(transition.state);
-                return { emit: false, reprocess: false };
+                action = 'ignore'; // Don't put the opening quote in the buffer
+                break;
             }
 
             case "EndString": {
-                this.endString();
+                if (!this.isMatchingQuote(char.type)) break;
+                this.endString(transition.quoteType);
                 this.transitionTo(transition.state);
-                return { emit: true, reprocess: false, endString: true };
-            }
-
-            case "ToContinue": {
-                this.transitionTo(transition.state);
+                action = 'ignore'; // Don't put the closing quote in the buffer
+                emit = true;
                 break;
             }
 
             case "EmitAndTo": {
                 this.transitionTo(transition.state);
-                return { emit: true, reprocess: true };
+                emit = true;
+                reprocess = true;
+                action = 'ignore'; // This char belongs to the NEXT token
+                break;
             }
 
             case "To": {
-                const shouldEmit = wasAccepting;
+                const wasAccepting = this.isAccepting();
                 this.transitionTo(transition.state);
-                if (shouldEmit) return { emit: true, reprocess: false };
+                emit = wasAccepting;
                 break;
             }
 
             case "Stay": {
                 break;
             }
+
+            case "EscapeNext": {
+                this.setEscaping(true);
+                this.transitionTo(transition.state);
+                reprocess = true;
+                action = 'buffer';
+                break;
+            }
+
+            case "ToContinue": {
+                this.transitionTo(transition.state);
+                emit = false;
+                reprocess = false;
+                action = 'buffer';
+                break;
+            }
         }
 
-        return { emit: false, reprocess: false };
+        return { emit, reprocess, action };
     }
 
     public isAccepting(): boolean {
@@ -1107,21 +1478,26 @@ class Context {
 }
 
 export {
+    type Action,
+    type ProcessResult,
     type StringContext,
     Context
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/Context.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Parser.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1145,6 +1521,7 @@ import {
     type UnaryExpression,
     type CallExpression,
     type GroupExpression,
+    type ASTNode,
 } from './AST.ts';
 
 /**
@@ -1163,6 +1540,10 @@ import {
 export class Parser {
     private tokens: Token[];
     private current: number = 0;
+
+    private get nextToken(): Token {
+        return this.peek();
+    } 
 
     constructor(tokens: Token[]) {
         this.tokens = tokens.filter(t =>
@@ -1287,12 +1668,8 @@ export class Parser {
         let expr = this.primary();
 
         // Only parse call if expr is Identifier
-        /*while (
-            expr &&
-            expr.type === NodeType.Identifier &&
-            this.match(TokenType.LPAREN)
-        ) //*/
         if (
+            expr &&
             expr.type === NodeType.Identifier &&
             this.match(TokenType.LPAREN)
         ) {
@@ -1323,13 +1700,50 @@ export class Parser {
     }
 
     private primary(): Expression {
+        const token = this.nextToken;
+
         if (this.isAtEnd()) {
-            throw this.error(this.peek(), 'Unexpected end of input');
+            throw this.error(token, 'Unexpected end of input');
         }
 
-        const currentType = this.peek().type;
+        // Check if it's any type of literal
+        if (this.match(
+            TokenType.NUMBER,
+            TokenType.STRING,
+            TokenType.HEXVALUE,
+            TokenType.PERCENT,
+            TokenType.DIMENSION
+        )) {
+            return this.createLiteralNode(this.previous());
+        }
 
-        switch (currentType) {
+        switch (token.type) {
+            case TokenType.IDENTIFIER: {
+                this.advance();
+                const token = this.previous();
+                return {
+                    type: NodeType.Identifier,
+                    name: token.value
+                } as Identifier;
+            }
+
+            case TokenType.LPAREN: {
+                this.advance();
+                const expr = this.expression();
+                this.consume(TokenType.RPAREN, "Expected ')' after expression");
+                return {
+                    type: NodeType.GroupExpression,
+                    expression: expr
+                } as GroupExpression;
+            }
+
+            default:
+                throw this.error(token, `Expected expression, got ${token.type}`);
+        }
+    }
+
+    private createLiteralNode(token: Token): Expression {
+        switch (token.type) {
             case TokenType.STRING: {
                 this.advance();
                 const token = this.previous();
@@ -1384,32 +1798,13 @@ export class Parser {
                 } as HexLiteral;
             }
 
-            case TokenType.IDENTIFIER: {
-                this.advance();
-                const token = this.previous();
-                return {
-                    type: NodeType.Identifier,
-                    name: token.value
-                } as Identifier;
-            }
-
-            case TokenType.LPAREN: {
-                this.advance();
-                const expr = this.expression();
-                this.consume(TokenType.RPAREN, "Expected ')' after expression");
-                return {
-                    type: NodeType.GroupExpression,
-                    expression: expr
-                } as GroupExpression;
-            }
-
             default:
-                throw this.error(this.peek(), `Expected expression, got ${currentType}`);
+                throw this.error(token, `Expected expression, got ${token.type}`);
         }
     }
 
-
     // ===== Helper Methods =====
+
     private match(...types: TokenType[]): boolean {
         for (const type of types) {
             if (this.check(type)) {
@@ -1422,16 +1817,24 @@ export class Parser {
 
     private check(type: TokenType): boolean {
         if (this.isAtEnd()) return false;
-        return this.peek().type === type;
+        return this.nextToken.type === type;
     }
 
     private advance(): Token {
-        if (!this.isAtEnd()) this.current++;
+        this.current++;
+        
+        while (!this.isAtEnd() && this.isIgnored(this.nextToken)) {
+            this.current++;
+        }
         return this.previous();
     }
 
+    private isIgnored(token: Token): boolean {
+        return token.type === TokenType.WHITESPACE || token.type === TokenType.NEWLINE;
+    }
+
     private isAtEnd(): boolean {
-        return this.current >= this.tokens.length || this.peek().type === TokenType.EOF;
+        return this.current >= this.tokens.length || this.nextToken.type === TokenType.EOF;
     }
 
     private peek(): Token {
@@ -1444,7 +1847,7 @@ export class Parser {
 
     private consume(type: TokenType, message: string): Token {
         if (this.check(type)) return this.advance();
-        throw this.error(this.peek(), message);
+        throw this.error(this.nextToken, message);
     }
 
     private error(token: Token, message: string): Error {
@@ -1452,17 +1855,20 @@ export class Parser {
     }
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/Parser.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/States.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1516,29 +1922,29 @@ class Initial_State extends State {
         switch (char.type) {
             // String delimiters
             case CharType.SingleQuote:
-                return Transition.BeginString(StringState, CharType.SingleQuote);
+                return Transition.BeginString(String_State.instance, CharType.SingleQuote);
             case CharType.DoubleQuote:
-                return Transition.BeginString(StringState, CharType.DoubleQuote);
+                return Transition.BeginString(String_State.instance, CharType.DoubleQuote);
             case CharType.Backtick:
-                return Transition.BeginString(StringState, CharType.Backtick);
+                return Transition.BeginString(String_State.instance, CharType.Backtick);
 
             // Whitespace
             case CharType.Whitespace:
-                return Transition.To(WhitespaceState);
+                return Transition.To(Whitespace_State.instance);
             case CharType.NewLine:
-                return Transition.To(NewLineState);
+                return Transition.To(NewLine_State.instance);
 
             // Letters
             case CharType.Letter:
-                return Transition.To(LetterState);
+                return Transition.To(Letter_State.instance);
 
             // Numbers
             case CharType.Number:
-                return Transition.To(NumberState);
+                return Transition.To(Number_State.instance);
 
             // Hexadecimal
             case CharType.Hash:
-                return Transition.To(HexState);
+                return Transition.To(Hex_State.instance);
 
             // All single-character tokens
             case CharType.Comma:
@@ -1554,7 +1960,6 @@ class Initial_State extends State {
             case CharType.Minus:
             case CharType.Star:
             case CharType.Slash:
-            case CharType.Percent:
             case CharType.EqualSign:
             case CharType.GreaterThan:
             case CharType.LessThan:
@@ -1569,20 +1974,20 @@ class Initial_State extends State {
             case CharType.Dollar:
             case CharType.Underscore:
             case CharType.Symbol:
-                return Transition.To(SingleCharState);
+                return Transition.To(SingleChar_State.instance);
 
             case CharType.BackSlash:
             case CharType.Unicode:
-                return Transition.To(SymbolState);
+                return Transition.To(Symbol_State.instance);
 
             case CharType.Other:
-                return Transition.To(SingleCharState);
+                return Transition.To(SingleChar_State.instance);
 
             case CharType.EOF:
-                return Transition.To(EndState);
+                return Transition.To(End_State.instance);
 
             case CharType.Error:
-                return Transition.To(EndState);
+                return Transition.To(End_State.instance);
 
             default:
                 return Transition.Stay();
@@ -1609,7 +2014,7 @@ class Whitespace_State extends State {
             case CharType.Whitespace:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -1629,7 +2034,7 @@ class NewLine_State extends State {
     }
 
     public handle(char: Character): Transition {
-        return Transition.EmitAndTo(InitialState);
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 }
 
@@ -1652,7 +2057,7 @@ class Letter_State extends State {
             case CharType.Letter:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -1673,15 +2078,18 @@ class Number_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Percent:
-                return Transition.ToContinue(PercentState);
-            case CharType.Letter:
-                return Transition.ToContinue(DimensionState);
             case CharType.Number:
             case CharType.Dot:
                 return Transition.Stay();
+
+            case CharType.Percent:
+                return Transition.ToContinue(Percent_State.instance);
+
+            case CharType.Letter:
+                return Transition.ToContinue(Dimension_State.instance);
+
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -1705,7 +2113,7 @@ class Dimension_State extends State {
             case CharType.Letter:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -1731,7 +2139,7 @@ class Hex_State extends State {
             case CharType.Number:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -1753,16 +2161,20 @@ class String_State extends State {
     public handle(char: Character): Transition {
         switch (char.type) {
             case CharType.BackSlash:
-                return Transition.EscapeNext(StringState);
+                return Transition.EscapeNext(String_State.instance);
 
             case CharType.SingleQuote:
+                return Transition.EndString(Initial_State.instance, CharType.SingleQuote);
+
             case CharType.DoubleQuote:
+                return Transition.EndString(Initial_State.instance, CharType.DoubleQuote);
+
             case CharType.Backtick:
-                return Transition.EndString(InitialState);
+                return Transition.EndString(Initial_State.instance, CharType.Backtick);
 
             case CharType.EOF:
             case CharType.NewLine:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
 
             default:
                 return Transition.Stay();
@@ -1784,8 +2196,8 @@ class Percent_State extends State {
         return this.#instance;
     }
 
-    public handle(char: Character): Transition {
-        return Transition.EmitAndTo(InitialState);
+    public handle(_: Character): Transition {
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 }
 
@@ -1804,7 +2216,7 @@ class SingleChar_State extends State {
     }
 
     public handle(_: Character): Transition {
-        return Transition.EmitAndTo(InitialState);
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 }
 
@@ -1832,7 +2244,7 @@ class Symbol_State extends State {
             case CharType.Symbol:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -1885,17 +2297,20 @@ export {
     State,
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/States.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Tokenizer.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -1921,7 +2336,7 @@ const inspectOptions: InspectOptions = {
     numericSeparator: true,
 };
 
-type ClassifyTokenFn = (char: Character, wasInString: boolean) => Token;
+type ClassifyTokenFn = (char: Character, isInString: boolean) => TokenType;
 type TokenTypeFn = (type: CharType) => boolean;
 type TokenSpec = Map<TokenType, TokenTypeFn>;
 
@@ -1978,11 +2393,12 @@ class Tokenizer {
         getters: false,
         numericSeparator: true,
     };
+    private ctx = new Context();
     private buffer: Character[] = [];
     private shouldLog: boolean = false;
     private message: string | undefined = undefined;
 
-    constructor(private ctx = new Context()) { }
+    constructor() { }
 
     public withLogging(message?: string): this {
         this.shouldLog = true;
@@ -2016,6 +2432,7 @@ class Tokenizer {
 
     private logSource(input: TokenizerInput): void {
         if (!this.shouldLog) return;
+        console.log(`TOKENIZER:\n`);
         console.log(`SOURCE:\t'${input}'\n`);
     }
 
@@ -2043,51 +2460,33 @@ class Tokenizer {
         this.logSource(input);
 
         for (const char of stream) {
-            const wasInStringState = this.ctx.isInString();
-            const wasEscaping = this.ctx.isEscaping();
-
-            // 1. Process the character
+            const wasInString = this.ctx.isInString();
             let result = this.ctx.process(char);
 
-            // 2. Handle Emitting (Flushing existing buffer)
-            if (result.emit) {
-                if (this.buffer.length > 0) {
-                    tokens.push(Tokenizer.createToken(this.buffer, wasInStringState));
-                    this.buffer = [];
-                }
+            // 1. Handle Emitting (Flush buffer)
+            if (result.emit && this.buffer.length > 0) {
+                tokens.push(Tokenizer.createToken(this.buffer, wasInString));
+                this.buffer = [];
+            }
 
-                if (result.reprocess) {
-                    result = this.ctx.process(char);
+            // 2. Handle Reprocessing (If the char belongs to the next state)
+            if (result.reprocess) {
+                result = this.ctx.process(char);
+                if (result.emit && this.buffer.length > 0) {
+                    tokens.push(Tokenizer.createToken(this.buffer, wasInString));
+                    this.buffer = [];
                 }
             }
 
-            // 3. Handle Buffer logic
-            if (!result.endString && char.type !== CharType.EOF) {
-                if (this.ctx.isInString()) {
-                    // If we are in a string, we add EVERYTHING except the starting quote
-                    // Transition logic: if we just transitioned TO a string, result.emit is false 
-                    // and the state changed.
-
-                    // Simplified: Check if this char is a quote. 
-                    // If it's a quote AND we weren't in a string before this char, it's the opener.
-                    const isQuote =
-                        char.type === CharType.SingleQuote ||
-                        char.type === CharType.DoubleQuote ||
-                        char.type === CharType.Backtick;
-
-                    if (!(isQuote && !wasInStringState)) {
-                        this.buffer.push(char);
-                    }
-                } else if (this.ctx.isAccepting()) {
-                    this.buffer.push(char);
-                }
+            // 3. Buffer the character based on the Context's decision
+            if (result.action === 'buffer' && char.type !== CharType.EOF) {
+                this.buffer.push(char);
             }
         }
 
+        // Flush remaining buffer
         if (this.buffer.length > 0) {
-            const wasInString = this.ctx.isInString();
-            tokens.push(Tokenizer.createToken(this.buffer, wasInString));
-            this.buffer = [];
+            tokens.push(Tokenizer.createToken(this.buffer, this.ctx.isInString()));
         }
 
         tokens.push({ value: '', type: TokenType.EOF });
@@ -2097,7 +2496,7 @@ class Tokenizer {
         return tokens;
     }
 
-    public static createToken(chars: Character[], wasInString: boolean = false): Token {
+    public static createToken(chars: Character[], isInString: boolean = false): Token {
         if (chars.length === 0) throw new Error('Cannot create token from empty buffer');
 
         let value = '';
@@ -2105,7 +2504,7 @@ class Tokenizer {
             value += ch.value;
         }
 
-        if (wasInString) {
+        if (isInString) {
             const unescaped = Tokenizer.unescapeString(value);
             console.log('CREATETOKEN: VALUE:', inspect(value, inspectOptions))
             return {
@@ -2115,17 +2514,18 @@ class Tokenizer {
         }
 
         const keywordType = Tokenizer.KEYWORDS[value];
-        if (keywordType) {
-            return { value, type: keywordType };
-        }
+        if (keywordType) return { value, type: keywordType };
 
-        const ch = { 
-            value, 
-            type: chars[0]!.type, 
-            position: chars[0]!.position 
+        const ch = {
+            value,
+            type: chars[0]!.type,
+            position: chars[0]!.position
         };
-        const token = Tokenizer.classify(ch, wasInString);
-        return token;
+        
+        return {
+            value,
+            type: Tokenizer.classify(ch, isInString)
+        };
     }
 
     private static KEYWORDS: Record<string, TokenType> = {
@@ -2158,34 +2558,29 @@ class Tokenizer {
         [TokenType.ERROR, (type) => type === CharType.Error],
     ])
 
-    private static classify: ClassifyTokenFn = (char: Character, wasInString: boolean = false): Token => {
+    private static classify: ClassifyTokenFn = (char: Character, isInString: boolean = false): TokenType => {
         const value = char.value;
-        let result: Token = { value, type: TokenType.OTHER };
 
+        if (isInString) return TokenType.STRING;
+        
         if (value.endsWith('%')) {
-            char.type = CharType.Percent;
-            result = { value, type: TokenType.PERCENT };
+            return TokenType.PERCENT;
         }
-
-        if (
-            value.endsWith('deg') ||
-            value.endsWith('grad') ||
-            value.endsWith('rad') ||
-            value.endsWith('turn')
-        ) {
-            char.type = CharType.Dimension;
-            result = { value, type: TokenType.DIMENSION };
+        
+        if (value.startsWith('#')) return TokenType.HEXVALUE;
+        
+        if (value.endsWith('deg') || value.endsWith('grad') ||
+            value.endsWith('rad') || value.endsWith('turn')) {
+            return TokenType.DIMENSION;
         }
-
+        
         switch (char.type) {
             case CharType.BackSlash:
-                return {
-                    value,
-                    type: wasInString ? TokenType.ESCAPE : TokenType.SYMBOL
-                };
+                return isInString ? TokenType.ESCAPE : TokenType.SYMBOL;
+
             case CharType.EqualSign:
-                result = { value, type: TokenType.EQUALS }
-                break;
+                return TokenType.EQUALS;
+
             case CharType.Unicode:
             case CharType.Tilde:
             case CharType.Exclamation:
@@ -2205,19 +2600,17 @@ class Tokenizer {
             case CharType.Colon:
             case CharType.Pipe:
             case CharType.Symbol:
-                result = { value, type: TokenType.SYMBOL }
-                break;
+                return TokenType.SYMBOL;
 
             default:
                 for (const [tokenType, fn] of Tokenizer.TokenSpec) {
                     if (fn(char.type)) {
-                        result = { value, type: tokenType };
+                        return tokenType;
                     }
                 }
                 break;
         }
-
-        return result;
+        return TokenType.OTHER;
     };
 
     /**
@@ -2263,17 +2656,20 @@ export {
     Tokenizer
 }
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/Tokenizer.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Transition.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
 
 // @ts-nocheck
 /* eslint-disable */
@@ -2289,7 +2685,7 @@ export type Transition =
     | { kind: 'EmitAndTo'; state: State }
     | { kind: 'ToContinue'; state: State }
     | { kind: 'BeginString'; state: State; quoteType: CharType }
-    | { kind: 'EndString'; state: State }
+    | { kind: 'EndString'; state: State; quoteType: CharType }
     | { kind: 'EscapeNext'; state: State };
 
 type TransitionFn =
@@ -2298,7 +2694,7 @@ type TransitionFn =
     & { EmitAndTo: (state: State) => Transition; }
     & { ToContinue: (state: State) => Transition; }
     & { BeginString: (state: State, quoteType: CharType) => Transition; }
-    & { EndString: (state: State) => Transition; }
+    & { EndString: (state: State, quoteType: CharType) => Transition; }
     & { EscapeNext: (state: State) => Transition; };
 
 export const Transition: TransitionFn = {
@@ -2317,18 +2713,18 @@ export const Transition: TransitionFn = {
     BeginString: (state: State, quoteType: CharType): Transition =>
         ({ kind: 'BeginString', state, quoteType }),
 
-    EndString: (state: State): Transition =>
-        ({ kind: 'EndString', state }),
+    EndString: (state: State, quoteType: CharType): Transition =>
+        ({ kind: 'EndString', state, quoteType }),
 
     EscapeNext: (state: State): Transition =>
         ({ kind: 'EscapeNext', state }),
 };
 
+
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/Transition.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //████████████████████████████████████████████████████████████████████████████████████████████████████

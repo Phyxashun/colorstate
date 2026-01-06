@@ -47,33 +47,29 @@ class Initial_State extends State {
         switch (char.type) {
             // String delimiters
             case CharType.SingleQuote:
-                return Transition.BeginString(StringState, CharType.SingleQuote);
+                return Transition.BeginString(String_State.instance, CharType.SingleQuote);
             case CharType.DoubleQuote:
-                return Transition.BeginString(StringState, CharType.DoubleQuote);
+                return Transition.BeginString(String_State.instance, CharType.DoubleQuote);
             case CharType.Backtick:
-                return Transition.BeginString(StringState, CharType.Backtick);
+                return Transition.BeginString(String_State.instance, CharType.Backtick);
 
             // Whitespace
             case CharType.Whitespace:
-                return Transition.To(WhitespaceState);
+                return Transition.To(Whitespace_State.instance);
             case CharType.NewLine:
-                return Transition.To(NewLineState);
+                return Transition.To(NewLine_State.instance);
 
             // Letters
             case CharType.Letter:
-                return Transition.To(LetterState);
+                return Transition.To(Letter_State.instance);
 
             // Numbers
             case CharType.Number:
-                return Transition.To(NumberState);
+                return Transition.To(Number_State.instance);
 
             // Hexadecimal
             case CharType.Hash:
-                return Transition.To(HexState);
-            
-            // Percent
-            case CharType.Percent:
-                return Transition.To(PercentState);
+                return Transition.To(Hex_State.instance);
 
             // All single-character tokens
             case CharType.Comma:
@@ -103,20 +99,20 @@ class Initial_State extends State {
             case CharType.Dollar:
             case CharType.Underscore:
             case CharType.Symbol:
-                return Transition.To(SingleCharState);
+                return Transition.To(SingleChar_State.instance);
 
             case CharType.BackSlash:
             case CharType.Unicode:
-                return Transition.To(SymbolState);
+                return Transition.To(Symbol_State.instance);
 
             case CharType.Other:
-                return Transition.To(SingleCharState);
+                return Transition.To(SingleChar_State.instance);
 
             case CharType.EOF:
-                return Transition.To(EndState);
+                return Transition.To(End_State.instance);
 
             case CharType.Error:
-                return Transition.To(EndState);
+                return Transition.To(End_State.instance);
 
             default:
                 return Transition.Stay();
@@ -143,7 +139,7 @@ class Whitespace_State extends State {
             case CharType.Whitespace:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -163,7 +159,7 @@ class NewLine_State extends State {
     }
 
     public handle(char: Character): Transition {
-        return Transition.EmitAndTo(InitialState);
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 }
 
@@ -186,7 +182,7 @@ class Letter_State extends State {
             case CharType.Letter:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -207,15 +203,18 @@ class Number_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Percent:
-                return Transition.ToContinue(PercentState);
-            case CharType.Letter:
-                return Transition.ToContinue(DimensionState);
             case CharType.Number:
             case CharType.Dot:
                 return Transition.Stay();
+
+            case CharType.Percent:
+                return Transition.ToContinue(Percent_State.instance);
+
+            case CharType.Letter:
+                return Transition.ToContinue(Dimension_State.instance);
+
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -239,7 +238,7 @@ class Dimension_State extends State {
             case CharType.Letter:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -265,7 +264,7 @@ class Hex_State extends State {
             case CharType.Number:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }
@@ -287,16 +286,20 @@ class String_State extends State {
     public handle(char: Character): Transition {
         switch (char.type) {
             case CharType.BackSlash:
-                return Transition.EscapeNext(StringState);
+                return Transition.EscapeNext(String_State.instance);
 
             case CharType.SingleQuote:
+                return Transition.EndString(Initial_State.instance, CharType.SingleQuote);
+
             case CharType.DoubleQuote:
+                return Transition.EndString(Initial_State.instance, CharType.DoubleQuote);
+
             case CharType.Backtick:
-                return Transition.EndString(InitialState);
+                return Transition.EndString(Initial_State.instance, CharType.Backtick);
 
             case CharType.EOF:
             case CharType.NewLine:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
 
             default:
                 return Transition.Stay();
@@ -319,7 +322,7 @@ class Percent_State extends State {
     }
 
     public handle(_: Character): Transition {
-        return Transition.EmitAndTo(InitialState);
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 }
 
@@ -338,7 +341,7 @@ class SingleChar_State extends State {
     }
 
     public handle(_: Character): Transition {
-        return Transition.EmitAndTo(InitialState);
+        return Transition.EmitAndTo(Initial_State.instance);
     }
 }
 
@@ -366,7 +369,7 @@ class Symbol_State extends State {
             case CharType.Symbol:
                 return Transition.Stay();
             default:
-                return Transition.EmitAndTo(InitialState);
+                return Transition.EmitAndTo(Initial_State.instance);
         }
     }
 }

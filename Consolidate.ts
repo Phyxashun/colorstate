@@ -45,7 +45,7 @@ namespace Consolidator {
      * @property {string} outputFile - The path to the file where content will be consolidated.
      * @property {string[]} patterns - An array of glob patterns to find files for this job.
      */
-    interface ConsolidationJob {   
+    interface ConsolidationJob {
         name: string;
         outputFile: string;
         patterns: string[];
@@ -71,6 +71,41 @@ namespace Consolidator {
      * @type {ConsolidationJob[]}
      */
     const JOBS: ConsolidationJob[] = [
+        // Project configuration files
+        {
+            name: styleText(['red', 'underline'], 'Configuration'),
+            outputFile: './ALL/ALL_CONFIGS.ts',
+            patterns: [
+                '.vscode/launch.json',
+                '0. NOTES/*.md',
+                '.gitignore',
+                '*.json',
+                '*.config.ts',
+                '*.config.js',
+                'License',
+                'README.md',
+            ],
+        },
+        // Main project source files
+        {
+            name: styleText(['red', 'underline'], 'Typescript'),
+            outputFile: './ALL/ALL_FILES.ts',
+            patterns: [
+                'Consolidate.ts',
+                'index.ts',
+                'src/**/*.ts',
+                'src/**/*.js'
+            ],
+        },
+        // All test files
+        {
+            name: styleText(['red', 'underline'], 'Test'),
+            outputFile: './ALL/ALL_TESTS.ts',
+            patterns: [
+                'tests/**/*.test.ts',
+                'tests/**/*.test.js'
+            ],
+        },
         // Project configuration files
         {
             name: styleText(['red', 'underline'], 'Configuration'),
@@ -125,9 +160,9 @@ namespace Consolidator {
      * @returns {void}
      */
     const printLine = (options: PrintLineOptions = {}): void => {
-        const { preNewLine, postNewLine, width, char } = { 
-            ...defaultPrintLineOptions, 
-            ...options 
+        const { preNewLine, postNewLine, width, char } = {
+            ...defaultPrintLineOptions,
+            ...options
         };
         const pre = preNewLine ? '\n' : '';
         const post = postNewLine ? '\n' : '';
@@ -218,7 +253,7 @@ namespace Consolidator {
      */
     const logComplete = (): void => {
         console.log(styleText(['green', 'bold'], '\nConsolidation complete!!!'));
-        printLine({preNewLine: true, postNewLine: true});
+        printLine({ preNewLine: true, postNewLine: true });
     };
 
     /**
@@ -237,14 +272,14 @@ namespace Consolidator {
      */
     const findFiles = (patterns: string[], outputFile: string): string[] => {
         return globSync(
-            patterns, 
-            { 
+            patterns,
+            {
                 ignore: [
                     'coverage/**',
                     'node_modules/**',
                     'ALL/**',
                     outputFile
-                ] 
+                ]
             }
         );
     };
@@ -259,12 +294,12 @@ namespace Consolidator {
         const endLine = spacer(START_END_NEWLINE, '\n')
         const divider = spacer(100, '█');
 
-        const startFile = `${endLine}//${space} Start of file: ${sourceFile} ${space}${endLine}`;
+        const startFile = `${endLine}//${space} Start of file: ${sourceFile} ${space}${endLine}${endLine}\n`;
         const tsNoCheck = `// @ts-nocheck\n`;
         const eslintDisable = `/* eslint-disable */${endLine}`;
         const content = fs.readFileSync(sourceFile, UTF_8);
-        const endFile = `${endLine}//${space} End of file: ${sourceFile} ${space}${endLine}`;
-        const fileDivider = `${endLine}//${divider}\n`;
+        const endFile = `\n${endLine}${endLine}//${space} End of file: ${sourceFile} ${space}${endLine}\n`;
+        const fileDivider = `//${divider}\n`;
 
         fs.appendFileSync(outputFile, startFile, UTF_8);
         fs.appendFileSync(outputFile, tsNoCheck, UTF_8);
@@ -285,13 +320,13 @@ namespace Consolidator {
 
         logJobStart(name, outputFile);
         prepareOutputFile(outputFile);
-        
+
         findFiles(patterns, outputFile)
-            .forEach(file => {
-                logFileAppend(file);
-                appendFileWithHeaders(outputFile, file);
+            .forEach(sourceFile => {
+                logFileAppend(sourceFile);
+                appendFileWithHeaders(outputFile, sourceFile);
             });
-        
+
         logComplete();
     };
 
