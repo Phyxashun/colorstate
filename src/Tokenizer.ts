@@ -1,12 +1,12 @@
 // src/Tokenizer.ts
 
 import { inspect, styleText, type InspectOptions } from 'node:util';
-import { Context } from './Context.ts';
-import Char, { type Character } from './Character.ts';
+import { Context, State } from './Context.ts';
+import { type Character, CharType, CharacterStream } from './Character.ts';
 
 export const MAX_WIDTH: number = 80;
 
-enum Line  {
+enum Line {
     Default = '─',
     Square = '■',
     Bold = '█',
@@ -41,13 +41,10 @@ const inspectOptions: InspectOptions = {
     numericSeparator: true,
 };
 
-type ClassifyTokenFn = (char: Character, isInString: boolean) => TokenType;
-type TokenTypeFn = (type: Char.Type) => boolean;
-type TokenSpec = Map<TokenType, TokenTypeFn>;
-
 enum TokenType {
     START = 'START',
     IDENTIFIER = 'IDENTIFIER',
+    KEYWORD = 'KEYWORD',
     STRING = 'STRING',
     HEXVALUE = 'HEXVALUE',
     NUMBER = 'NUMBER',
@@ -106,39 +103,56 @@ interface Token {
     type: TokenType;
 }
 
-type TokenizerInput = Char.Stream;
-
 class Tokenizer {
-    private inspectOptions: InspectOptions = {
-        showHidden: true,
-        depth: null,
-        colors: true,
-        customInspect: false,
-        showProxy: false,
-        maxArrayLength: null,
-        maxStringLength: null,
-        breakLength: 100,
-        compact: true,
-        sorted: false,
-        getters: false,
-        numericSeparator: true,
-    };
-    private ctx = new Context();
-    private buffer: Character[] = [];
-    private shouldLog: boolean = false;
-    private message: string | undefined = undefined;
+    private inspectOptions: InspectOptions;
+    private ctx;
+    private buffer: Character[];
+    private stream: CharacterStream | null;
+    private shouldLog: boolean;
+    private message: string;
 
-    constructor() { }
+    constructor() {
+        this.ctx = new Context();
+        this.buffer = [];
+        this.stream = null;
+        this.shouldLog = false;
+        this.message = '';
+
+        this.inspectOptions = {
+            showHidden: true,
+            depth: null,
+            colors: true,
+            customInspect: false,
+            showProxy: false,
+            maxArrayLength: null,
+            maxStringLength: null,
+            breakLength: 100,
+            compact: true,
+            sorted: false,
+            getters: false,
+            numericSeparator: true,
+        };
+
+        return this;
+    }
+
+    /**
+     * Resets the tokenizer's internal state for a new run.
+     */
+    private reset(): void {
+        this.ctx.reset(); // Reset the state machine
+        this.buffer = [];   // Clear the character buffer
+    }
 
     public withLogging(message?: string): this {
         this.shouldLog = true;
-        this.message = message || undefined;
+        this.message = message || `TOKENIZATION DEMONSTRATION:`;
         return this;
     }
 
     public withoutLogging(): this {
         this.shouldLog = false;
-        this.message = undefined;
+        this.message = '';
         return this;
     }
 
@@ -162,13 +176,12 @@ class Tokenizer {
     private logHeader(): void {
         if (!this.shouldLog) return;
         this.printLine();
-        this.message = this.message ? this.message : `TOKENIZATION DEMONSTRATION:`;
-        console.log(`TOKENIZER:\n\t${this.message}\n`);
+        console.log(`TOKENIZER:\n\n\t${this.message}\n`);
     }
 
-    private logSource(input: TokenizerInput): void {
+    private logSource(input: CharacterStream): void {
         if (!this.shouldLog) return;
-        console.log(`SOURCE:\t${inspect(input.get(), this.inspectOptions)}\n`);
+        console.log(`\tSOURCE:\n\n\t${inspect(input.get(), this.inspectOptions)}\n`);
         this.printLine();
     }
 
@@ -185,85 +198,17 @@ class Tokenizer {
         this.printLine();
 
         this.shouldLog = false;
-        this.message = undefined;
+        this.message = '';
     }
 
-    public tokenize(stream: Char.Stream): Token[] {
-        const tokens: Token[] = [];
-
-        this.logHeader();
-        this.logSource(stream);
-
-        for (const char of stream) {
-            const wasInString = this.ctx.isInString();
-            let result = this.ctx.process(char);
-
-            // 1. Handle Emitting (Flush buffer)
-            if (result.emit && this.buffer.length > 0) {
-                tokens.push(Tokenizer.createToken(this.buffer, wasInString));
-                this.buffer = [];
-            }
-
-            // 2. Handle Reprocessing (If the char belongs to the next state)
-            if (result.reprocess) {
-                result = this.ctx.process(char);
-                if (result.emit && this.buffer.length > 0) {
-                    tokens.push(Tokenizer.createToken(this.buffer, wasInString));
-                    this.buffer = [];
-                }
-            }
-
-            // 3. Buffer the character based on the Context's decision
-            if (result.action === 'buffer' && char.type !== Char.Type.EOF) {
-                this.buffer.push(char);
-            }
-        }
-
-        // Flush remaining buffer
-        if (this.buffer.length > 0) {
-            tokens.push(Tokenizer.createToken(this.buffer, this.ctx.isInString()));
-        }
-
-        tokens.push({ value: '', type: TokenType.EOF });
-
-        this.buffer = [];
-        this.logResults(tokens);
-        return tokens;
-    }
-
-    public static createToken(chars: Character[], isInString: boolean = false): Token {
-        if (chars.length === 0) throw new Error('Cannot create token from empty buffer');
-
-        let value = '';
-        for (const ch of chars) {
-            value += ch.value;
-        }
-
-        if (isInString) {
-            const unescaped = Tokenizer.unescapeString(value);
-            console.log('CREATETOKEN: VALUE:', inspect(value, inspectOptions))
-            return {
-                value: unescaped,
-                type: TokenType.STRING
-            };
-        }
-
-        const keywordType = Tokenizer.KEYWORDS[value];
-        if (keywordType) return { value, type: keywordType };
-
-        const ch = {
-            value,
-            type: chars[0]!.type,
-            position: chars[0]!.position
-        };
-
-        return {
-            value,
-            type: Tokenizer.classify(ch, isInString)
-        };
-    }
-
-    private static KEYWORDS: Record<string, TokenType> = {
+    /**
+     * A map of recognized keywords. Used to convert IDENTIFIER tokens into KEYWORD tokens.
+     */
+    private static readonly KEYWORDS: Record<string, TokenType> = {
+        'deg':  TokenType.DIMENSION,
+        'grad': TokenType.DIMENSION,
+        'rad': TokenType.DIMENSION,
+        'turn': TokenType.DIMENSION,
         'const': TokenType.CONST,
         'let': TokenType.LET,
         'for': TokenType.FOR,
@@ -271,116 +216,143 @@ class Tokenizer {
         'new': TokenType.NEW,
     };
 
-    private static TokenSpec: TokenSpec = new Map<TokenType, TokenTypeFn>([
-        [TokenType.IDENTIFIER, (type) => type === Char.Type.Letter],
-        [TokenType.HEXVALUE, (type) => type === Char.Type.Hash || type === Char.Type.Hex],
-        [TokenType.NUMBER, (type) => type === Char.Type.Number],
-        [TokenType.PERCENT, (type) => type === Char.Type.Percent],
-        [TokenType.PLUS, (type) => type === Char.Type.Plus],
-        [TokenType.MINUS, (type) => type === Char.Type.Minus],
-        [TokenType.STAR, (type) => type === Char.Type.Star],
-        [TokenType.DOT, (type) => type === Char.Type.Dot],
-        [TokenType.COMMA, (type) => type === Char.Type.Comma],
-        [TokenType.SLASH, (type) => type === Char.Type.Slash],
-        [TokenType.LPAREN, (type) => type === Char.Type.LParen],
-        [TokenType.RPAREN, (type) => type === Char.Type.RParen],
-        [TokenType.NEWLINE, (type) => type === Char.Type.NewLine],
-        [TokenType.WHITESPACE, (type) => type === Char.Type.Whitespace],
-        [TokenType.EOF, (type) => type === Char.Type.EOF],
-        [TokenType.OTHER, (type) => type === Char.Type.Other],
-        [TokenType.ERROR, (type) => type === Char.Type.Error],
-    ])
-
-    private static classify: ClassifyTokenFn = (char: Character, isInString: boolean = false): TokenType => {
-        const value = char.value;
-
-        if (isInString) return TokenType.STRING;
-
-        if (value.endsWith('%')) {
-            return TokenType.PERCENT;
-        }
-
-        if (value.startsWith('#')) return TokenType.HEXVALUE;
-
-        if (value.endsWith('deg') || value.endsWith('grad') ||
-            value.endsWith('rad') || value.endsWith('turn')) {
-            return TokenType.DIMENSION;
-        }
-
-        switch (char.type) {
-            case Char.Type.BackSlash:
-                return isInString ? TokenType.ESCAPE : TokenType.SYMBOL;
-
-            case Char.Type.EqualSign:
-                return TokenType.EQUALS;
-
-            case Char.Type.Unicode:
-            case Char.Type.Tilde:
-            case Char.Type.Exclamation:
-            case Char.Type.At:
-            case Char.Type.Dollar:
-            case Char.Type.Question:
-            case Char.Type.Caret:
-            case Char.Type.Ampersand:
-            case Char.Type.LessThan:
-            case Char.Type.GreaterThan:
-            case Char.Type.Underscore:
-            case Char.Type.LBracket:
-            case Char.Type.RBracket:
-            case Char.Type.LBrace:
-            case Char.Type.RBrace:
-            case Char.Type.SemiColon:
-            case Char.Type.Colon:
-            case Char.Type.Pipe:
-            case Char.Type.Symbol:
-                return TokenType.SYMBOL;
-
-            default:
-                for (const [tokenType, fn] of Tokenizer.TokenSpec) {
-                    if (fn(char.type)) {
-                        return tokenType;
-                    }
-                }
-                break;
-        }
-        return TokenType.OTHER;
+    /**
+     * Maps the first character of a generic SYMBOL token to a specific TokenType.
+     */
+    private static readonly SYMBOL_MAP: Record<string, TokenType> = {
+        '=': TokenType.EQUALS, '+': TokenType.PLUS, '-': TokenType.MINUS,
+        '*': TokenType.STAR, '.': TokenType.DOT, ',': TokenType.COMMA,
+        '/': TokenType.SLASH, '(': TokenType.LPAREN, ')': TokenType.RPAREN,
+        '%': TokenType.PERCENT,
+        // Add other single-character symbols here
     };
 
     /**
-     * Converts escaped sequences in a string to their actual characters
-     * Supports: \n, \t, \r, \', \", \\, \uXXXX, \xXX
+     * Tokenizes a given character stream.
+     * @param {Stream} stream - The input stream to tokenize.
+     * @returns {Token[]} An array of tokens.
      */
-    private static unescapeString(input: string): string {
-        return input.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|[nrt'\"\\])/g, (match, seq) => {
-            switch (true) {
-                // Unicode escape: \uXXXX
-                case /^u[0-9a-fA-F]{4}$/.test(seq):
-                    return String.fromCharCode(parseInt(seq.slice(1), 16));
+    public tokenize(stream: CharacterStream): Token[] {
+        this.reset();
 
-                // Hex escape: \xXX
-                case /^x[0-9a-fA-F]{2}$/.test(seq):
-                    return String.fromCharCode(parseInt(seq.slice(1), 16));
+        this.stream = stream;
+        const tokens: Token[] = [];
+        let reprocess = false;
 
-                // Single-character escapes
-                case seq === 'n':
-                    return '\n';
-                case seq === 'r':
-                    return '\r';
-                case seq === 't':
-                    return '\t';
-                case seq === "'":
-                    return "'";
-                case seq === '"':
-                    return '"';
-                case seq === '\\':
-                    return '\\';
+        this.logHeader();
+        this.logSource(stream);
 
-                default:
-                    return seq;
-            }
-        });
+        for (const char of this.stream) {
+            do {
+                const action = this.ctx.process(char);
+                reprocess = action.reprocess;
+
+                // 1. Handle emitting a token
+                if (action.emit && this.buffer.length > 0) {
+                    const tokenType = this.ctx.getState() === State.INITIAL
+                        ? action.tokenType // Use the type from the action that caused the emit
+                        : this.getTokenTypeFromState(this.ctx.getState()); // Or the state we were in
+
+                    tokens.push(this.createToken(tokenType));
+                    this.buffer = [];
+                }
+
+                // 2. Handle the current character
+                if (!action.ignore && !reprocess) {
+                    this.buffer.push(char);
+                }
+
+            } while (reprocess);
+        }
+
+        // After the loop, flush any remaining characters in the buffer.
+        if (this.buffer.length > 0) {
+            tokens.push(this.createToken(this.getTokenTypeFromState(this.ctx.getState())));
+        }
+
+        tokens.push({ value: '', type: TokenType.EOF });
+        this.logResults(tokens);
+        return tokens;
     }
 
+    /**
+     * Maps the final state of the context to a TokenType.
+     * @param {State} state - The context state.
+     * @returns {TokenType} The corresponding token type.
+     */
+    private getTokenTypeFromState(state: State): TokenType {
+        switch (state) {
+            case State.IN_IDENTIFIER: return TokenType.IDENTIFIER;
+            case State.IN_NUMBER: return TokenType.NUMBER;
+            case State.IN_STRING: return TokenType.STRING;
+            case State.IN_HEXVALUE: return TokenType.HEXVALUE;
+            case State.IN_PERCENT: return TokenType.PERCENT;
+            case State.IN_SYMBOL: return TokenType.SYMBOL;
+            /* v8 ignore next -- @preserve */
+            default: return TokenType.OTHER;
+        }
+    }
+
+    /**
+     * Creates a token from the current buffer and a given type.
+     * This is where keyword checking and string unescaping happens.
+     * @param {TokenType} type - The type of token to create, as determined by the Context.
+     * @returns {Token} The final token.
+     */
+    private createToken(type: TokenType): Token {
+        if (this.buffer.length === 0) {
+            throw new Error('Cannot create token from empty buffer');
+        }
+        const value = this.buffer.map(c => c.value).join('');
+
+        if (type === TokenType.STRING) {
+            return { value: Tokenizer.unescapeString(value), type: TokenType.STRING };
+        }
+
+        if (type === TokenType.IDENTIFIER) {
+            const keywordType = Tokenizer.KEYWORDS[value];
+            if (keywordType) {
+                return { value, type: keywordType };
+            }
+        }
+
+        // If the context identified it as a generic symbol, we now specify it.
+        if (type === TokenType.SYMBOL) {
+            const specificSymbolType = Tokenizer.SYMBOL_MAP[value];
+            if (specificSymbolType) {
+                return { value, type: specificSymbolType };
+            }
+        }
+
+        return { value, type };
+    }
+
+    /**
+     * Converts escaped sequences in a string to their actual characters.
+     * @param {string} input - The raw string content.
+     * @returns {string} The unescaped string.
+     */
+    private static unescapeString(input: string): string {
+        // A map for replacements.
+        const replacements: Record<string, string> = {
+            '\\n': '\n',
+            '\\r': '\r',
+            '\\t': '\t',
+            '\\"': '"',
+            "\\'": "'",
+            '\\\\': '\\'
+        };
+
+        // This regex finds either a simple escape sequence (like \n) or a unicode/hex escape.
+        return input.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|[nrt'"\\])/g, (match, seq) => {
+            if (replacements[match]) return replacements[match];
+            if (seq.startsWith('u') || seq.startsWith('x')) {
+                return String.fromCharCode(parseInt(seq.slice(1), 16));
+            }
+            /* v8 ignore next -- @preserve */
+            return match;
+        });
+    }
 }
 
 export {

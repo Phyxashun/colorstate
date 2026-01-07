@@ -1,9 +1,9 @@
 // ./index.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import { Tokenizer } from './src/Tokenizer.ts';
-import { Parser } from './src/Parser.ts';
-import Char from './src/Character.ts';
+import { Token, Tokenizer } from './src/Tokenizer.ts';
+//import { Parser } from './src/Parser.ts';
+import { CharacterStream } from './src/Character.ts';
 
 /**
  * @TODO Add character, token, and state support for quotes
@@ -47,7 +47,7 @@ const line = (newLine: boolean = true, width: number = 80): void => {
 // TEST CASES
 // Commented out cases are not working
 const testCases: string[] = [
-    `"67 a, b, c / 1 'word' 2 3+(2-0)"`,
+    '"67 a, b, c / 1 \'word\' 2 3+(2-0)"',
     '67 a, b, c / 1 word 2 3+(2-0)',
     'rgba(100 128 255 / 0.5)',
     'rgba(100grad 360 220  / 50%)',
@@ -86,70 +86,85 @@ const testCases: string[] = [
     // }`,
 ];
 
-const characterStreamTest = (str?: string) => {
-    line();
-    console.log('=== CHARACTERSTREAM DEMO ===\n');
-    line();
+const characterStreamTest = () => {
+    for (const test of testCases) {
+        line();
+        console.log('=== CHARACTERSTREAM DEMO ===\n');
+        line();
 
-    const input = str || 'rgb(255, 100, 75)';
-    const stream = new Char.Stream(input);
+        const stream = new CharacterStream(test);
 
-    console.log(`INPUT: '${input}'\n`);
-    console.log('RESULT OF CHARACTERSTREAM:\n');
+        console.log(`INPUT: '${test}'\n`);
+        console.log('RESULT OF CHARACTERSTREAM:\n');
 
-    for (const char of stream) {
-        console.log('\t', inspect(char, compactInspectOptions));
+        for (const char of stream) {
+            console.log('\t', inspect(char, compactInspectOptions));
+        }
+
+        console.log();
+        line();
     }
-
-    console.log();
-    line();
 }
 
 const tokenizerTest = () => {
     // Fluent usage
     const tokenizer = new Tokenizer();
-    const stream = new Char.Stream();
 
     for (const test in testCases) {
-        stream.set(testCases[test]);
-        const tokens = tokenizer
+        const stream = new CharacterStream(testCases[test]);
+        tokenizer
             .withLogging(`TEST (${test}): Direct Tokenization`)
             .tokenize(stream);
     }
 }
 
-const parserTest = () => {
-    console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
+// const parserTest = () => {
+//     console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
 
-    for (const input of testCases) {
-        line();
+//     for (const input of testCases) {
+//         line();
 
-        // Step 1: Character stream
-        const stream = new Char.Stream(input);
+//         // Step 1: Character stream
+//         const stream = new CharacterStream(input);
 
-        // Step 1: Tokenize
-        const tokenizer = new Tokenizer();
-        const tokens = tokenizer
-            .withoutLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
-            .tokenize(stream);
+//         // Step 1: Tokenize
+//         const tokenizer = new Tokenizer();
+//         const tokens = tokenizer
+//             .withoutLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
+//             .tokenize(stream);
 
-        // Step 2: Parse
-        const parser = new Parser(tokens);
-        const ast = parser.parse();
+//         // Step 2: Parse
+//         const parser = new Parser(tokens);
+//         const ast = parser.parse();
 
-        // Step 3: Console log the AST
-        console.log('\nAST:\n');
-        const defaultAST = inspect(ast, inspectOptions);
-        const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
-        console.log(fourSpaceAST, '\n');
-        line();
-    }
+//         // Step 3: Console log the AST
+//         console.log('\nAST:\n');
+//         const defaultAST = inspect(ast, inspectOptions);
+//         const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
+//         console.log(fourSpaceAST, '\n');
+//         line();
+//     }
+// }
+
+const newTokenizerTest = () => {
+    const sourceCode = `let name = "John Doe\\n"; // A comment\nconst value = 123.45;`;
+
+    // 1. Create a stream from the source
+    const stream = new CharacterStream(sourceCode);
+
+    // 2. Create a tokenizer instance
+    const tokenizer = new Tokenizer();
+
+    // 3. Generate tokens
+    const tokens: Token[] = tokenizer
+        .withLogging()
+        .tokenize(stream);
 }
 
 //characterStreamTest();
-for (const test of testCases) {
-    //characterStreamTest(test);
-}
 
 tokenizerTest();
+//newTokenizerTest();
+
 //parserTest();
+

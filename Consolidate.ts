@@ -20,6 +20,9 @@ import standard from "figlet/fonts/Standard";
 import * as fs from 'node:fs';
 import { globSync } from 'glob';
 
+const TEXT_OUTPUT_DIR = './ALL/txt/';
+const TS_OUTPUT_DIR = './ALL/ts/'; 
+
 /**
  * @namespace Consolidator
  * @description Orchestrates the file consolidation process
@@ -71,10 +74,21 @@ namespace Consolidator {
      * @type {ConsolidationJob[]}
      */
     const JOBS: ConsolidationJob[] = [
+        // Main project source files
+        {
+            name: styleText(['red', 'underline'], 'Typescript'),
+            outputFile: TS_OUTPUT_DIR + '1_ALL_FILES.ts',
+            patterns: [
+                'Consolidate.ts',
+                'index.ts',
+                'src/**/*.ts',
+                'src/**/*.js'
+            ],
+        },
         // Project configuration files
         {
             name: styleText(['red', 'underline'], 'Configuration'),
-            outputFile: './ALL/ALL_CONFIGS.ts',
+            outputFile: TS_OUTPUT_DIR + '2_ALL_CONFIGS.ts',
             patterns: [
                 '.vscode/launch.json',
                 '0. NOTES/*.md',
@@ -86,10 +100,35 @@ namespace Consolidator {
                 'README.md',
             ],
         },
+        // All test files
+        {
+            name: styleText(['red', 'underline'], 'Test'),
+            outputFile: TS_OUTPUT_DIR + '3_ALL_TESTS.ts',
+            patterns: [
+                'test/**/*.test.ts',
+                'test/**/*.test.js'
+            ],
+        },
+        // All old files
+        {
+            name: styleText(['red', 'underline'], 'Test'),
+            outputFile: TS_OUTPUT_DIR + '4_ALL_OLD_FILES.ts',
+            patterns: [
+                'test_old/**/*.test.ts',
+                'test_old/**/*.test.js'
+            ],
+        },
+
+        /********************************************************************************
+         * 
+         * CREATE TEXT FILES FOR EASY SHARING
+         * 
+         ********************************************************************************/
+
         // Main project source files
         {
             name: styleText(['red', 'underline'], 'Typescript'),
-            outputFile: './ALL/ALL_FILES.ts',
+            outputFile: TEXT_OUTPUT_DIR + '1_ALL_FILES.txt',
             patterns: [
                 'Consolidate.ts',
                 'index.ts',
@@ -97,19 +136,10 @@ namespace Consolidator {
                 'src/**/*.js'
             ],
         },
-        // All test files
-        {
-            name: styleText(['red', 'underline'], 'Test'),
-            outputFile: './ALL/ALL_TESTS.ts',
-            patterns: [
-                'tests/**/*.test.ts',
-                'tests/**/*.test.js'
-            ],
-        },
         // Project configuration files
         {
             name: styleText(['red', 'underline'], 'Configuration'),
-            outputFile: './ALL/ALL_CONFIGS.txt',
+            outputFile: TEXT_OUTPUT_DIR + '2_ALL_CONFIGS.txt',
             patterns: [
                 '.vscode/launch.json',
                 '0. NOTES/*.md',
@@ -121,24 +151,22 @@ namespace Consolidator {
                 'README.md',
             ],
         },
-        // Main project source files
-        {
-            name: styleText(['red', 'underline'], 'Typescript'),
-            outputFile: './ALL/ALL_FILES.txt',
-            patterns: [
-                'Consolidate.ts',
-                'index.ts',
-                'src/**/*.ts',
-                'src/**/*.js'
-            ],
-        },
         // All test files
         {
             name: styleText(['red', 'underline'], 'Test'),
-            outputFile: './ALL/ALL_TESTS.txt',
+            outputFile: TEXT_OUTPUT_DIR + '3_ALL_TESTS.txt',
             patterns: [
-                'tests/**/*.test.ts',
-                'tests/**/*.test.js'
+                'test/**/*.test.ts',
+                'test/**/*.test.js'
+            ],
+        },
+        // All old files
+        {
+            name: styleText(['red', 'underline'], 'Test'),
+            outputFile: TEXT_OUTPUT_DIR + '4_ALL_OLD_FILES.txt',
+            patterns: [
+                'test_old/**/*.test.ts',
+                'test_old/**/*.test.js'
             ],
         },
     ];
@@ -352,3 +380,4 @@ namespace Consolidator {
 // Executes and exports the script.
 export const Consolidate = Consolidator.main;
 Consolidate();
+

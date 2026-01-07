@@ -1,7 +1,7 @@
 // src/States.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import Char, { type Character } from './Character.ts';
+import Char, { type Character } from '../src/Character.ts';
 import { Transition } from './Transition';
 
 abstract class State {

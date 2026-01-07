@@ -59,5 +59,7 @@
         "retokenized",
         "RPAREN",
         "STRINGSTATE"
-    ]
+    ],
+    "editor.fontFamily": "'Jet Brains Mono', Consolas, monospace",
+    "editor.fontLigatures": true
 }

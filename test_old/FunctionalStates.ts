@@ -1,8 +1,8 @@
 // src/FunctionalStates.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import Char, { type Character } from './Character.ts';
-import { Tokenizer } from './Tokenizer.ts';
+import Char, { type Character } from '../src/Character.ts';
+import { Tokenizer } from '../src/Tokenizer.ts';
 import { Parser } from './Parser.ts';
 
 export type Transition =

@@ -10,8 +10,10 @@
     "@types/node": "^25.0.3",
     "@vitest/coverage-istanbul": "4.0.16",
     "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "4.0.16",
     "figlet": "^1.9.4",
     "glob": "^13.0.0",
+    "typedoc": "^0.28.15",
     "vitest": "^4.0.16"
   },
   "peerDependencies": {
@@ -21,6 +23,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run ./index.ts",
+    "consolidate": "bun run ./Consolidate.ts",
     "test": "vitest",
     "coverage": "vitest --coverage"
   }
