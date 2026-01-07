@@ -3,43 +3,9 @@
 import { inspect, styleText, type InspectOptions } from 'node:util';
 import { Context, State } from './Context.ts';
 import { type Character, CharType, CharacterStream } from './Character.ts';
+import PrintLine, { Divider } from './PrintLine.ts';
 
 export const MAX_WIDTH: number = 80;
-
-enum Line {
-    Default = '─',
-    Square = '■',
-    Bold = '█',
-    Dashed = '-',
-    Underscore = '_',
-    DoubleUnderscore = '‗',
-    Equals = '=',
-    Double = '═',
-    BoldBottom = '▄',
-    BoldTop = '▀',
-    Diaeresis = '¨',
-    Macron = '¯',
-    Section = '§',
-    Interpunct = '·',
-    LightBlock = '░',
-    MediumBlock = '▒',
-    HeavyBlock = '▓',
-};
-
-const inspectOptions: InspectOptions = {
-    showHidden: true,
-    depth: null,
-    colors: true,
-    customInspect: false,
-    showProxy: false,
-    maxArrayLength: null,
-    maxStringLength: null,
-    breakLength: 100,
-    compact: true,
-    sorted: false,
-    getters: false,
-    numericSeparator: true,
-};
 
 enum TokenType {
     START = 'START',
@@ -73,37 +39,13 @@ enum TokenType {
     NEW = 'NEW',
 }
 
-/**
- * @interface PrintLineOptions
- * @description Defines the structure for a printLine options object.
- * @property {boolean} preNewLine - If true, adds a newline before the divider.
- * @property {boolean} postNewLine - If true, adds a newline after the divider.
- * @property {number} width - The width of the line.
- * @property {string} line - The character to use for the line.
- */
-interface PrintLineOptions {
-    preNewLine?: boolean;
-    postNewLine?: boolean;
-    width?: number;
-    line?: Line;
-}
-
-/**
- * @description Default options object for the printLine function.
- */
-const defaultPrintLineOptions: PrintLineOptions = {
-    preNewLine: false,  // No preceding new line
-    postNewLine: false, // No successive new line
-    width: MAX_WIDTH,   // Use global const MAX_WIDTH = 80
-    line: Line.Double,    // Use global const LINE_CHAR = '='          
-};
-
 interface Token {
     value: string;
     type: TokenType;
 }
 
 class Tokenizer {
+    private printLine;
     private inspectOptions: InspectOptions;
     private ctx;
     private buffer: Character[];
@@ -133,6 +75,7 @@ class Tokenizer {
             numericSeparator: true,
         };
 
+        this.printLine = PrintLine;
         return this;
     }
 
@@ -155,23 +98,6 @@ class Tokenizer {
         this.message = '';
         return this;
     }
-
-    /**
-     * @function printLine
-     * @description Prints a styled horizontal line to the console.
-     * @param {PrintLineOptions} [options={}] - Configuration options for the line.
-     * @returns {void}
-     */
-    private printLine = (options: PrintLineOptions = {}): void => {
-        const { preNewLine, postNewLine, width, line } = {
-            ...defaultPrintLineOptions,
-            ...options
-        };
-        const pre = preNewLine ? '\n' : '';
-        const post = postNewLine ? '\n' : '';
-        const styledDivider = styleText(['gray', 'bold'], line!.repeat(width!));
-        console.log(`${pre}${styledDivider}${post}`);
-    };
 
     private logHeader(): void {
         if (!this.shouldLog) return;

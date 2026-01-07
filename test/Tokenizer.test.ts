@@ -50,12 +50,12 @@ describe('Tokenizer', () => {
     describe('Keywords', () => {
         it('should tokenize "let" as a KEYWORD', () => {
             const tokens = tokenizeString('let');
-            expect(tokens).toEqual([{ value: 'let', type: TokenType.KEYWORD }]);
+            expect(tokens).toEqual([{ value: 'let', type: TokenType.LET }]);
         });
 
         it('should tokenize "const" as a KEYWORD', () => {
             const tokens = tokenizeString('const');
-            expect(tokens).toEqual([{ value: 'const', type: TokenType.KEYWORD }]);
+            expect(tokens).toEqual([{ value: 'const', type: TokenType.CONST }]);
         });
 
         it('should differentiate keywords from identifiers', () => {
@@ -138,7 +138,7 @@ describe('Tokenizer', () => {
             const tokens = tokenizeString('let name = "John";');
             // FIX: Expect EQUALS and a generic SYMBOL for the semicolon.
             expect(tokens).toEqual([
-                { value: 'let', type: TokenType.KEYWORD },
+                { value: 'let', type: TokenType.LET },
                 { value: 'name', type: TokenType.IDENTIFIER },
                 { value: '=', type: TokenType.EQUALS },
                 { value: 'John', type: TokenType.STRING },
@@ -150,12 +150,12 @@ describe('Tokenizer', () => {
             const tokens = tokenizeString('const  value=123.45  ;for');
              // FIX: Expect EQUALS and a generic SYMBOL for the semicolon.
             expect(tokens).toEqual([
-                { value: 'const', type: TokenType.KEYWORD },
+                { value: 'const', type: TokenType.CONST },
                 { value: 'value', type: TokenType.IDENTIFIER },
                 { value: '=', type: TokenType.EQUALS },
                 { value: '123.45', type: TokenType.NUMBER },
                 { value: ';', type: TokenType.SYMBOL },
-                { value: 'for', type: TokenType.KEYWORD },
+                { value: 'for', type: TokenType.FOR },
             ]);
         });
 
@@ -163,7 +163,7 @@ describe('Tokenizer', () => {
             const tokens = tokenizeString('let x = 123');
             // FIX: Expect EQUALS instead of SYMBOL.
             expect(tokens).toEqual([
-                { value: 'let', type: TokenType.KEYWORD },
+                { value: 'let', type: TokenType.LET },
                 { value: 'x', type: TokenType.IDENTIFIER },
                 { value: '=', type: TokenType.EQUALS },
                 { value: '123', type: TokenType.NUMBER },
