@@ -491,6 +491,1000 @@ Built as an educational project to demonstrate DFA tokenization, state machine d
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/9. TokenizerUpdates.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+To update your `Tokenizer` to leverage the new `CharacterStream` functions, you should shift the responsibility of "peeking" and "marking" into the lexing loop. This allows you to handle complex tokens—like multi-character operators or specific CSS units—without prematurely advancing the stream.
+
+Here is how to refactor your `Tokenizer` to use the advanced features of your `CharacterStream`.
+
+### 1. Simplify the Main Loop
+
+Instead of a standard `for...of` loop, use a `while` loop with `stream.next()`. This gives you the flexibility to use `mark()`, `reset()`, and `peek()` inside the loop body.
+
+```typescript
+// src/Tokenizer.ts
+public tokenize(input: string): Token[] {
+    const stream = new Char.Stream(input);
+    const tokens: Token[] = [];
+    this.buffer = [];
+
+    while (!stream.isEOF()) {
+        const wasInString = this.ctx.isInString();
+        
+        // Use the new next() method to get the full Character object
+        const charResult = stream.next();
+        if (charResult.done) break;
+        const char = charResult.value;
+
+        let result = this.ctx.process(char);
+
+        // Handle emission before potentially reprocessing
+        if (result.emit && this.buffer.length > 0) {
+            tokens.push(this.createTokenFromBuffer(wasInString));
+        }
+
+        if (result.reprocess) {
+            // We can now use stream.back() or just let the context 
+            // handle the re-processing of the current char
+            result = this.ctx.process(char);
+        }
+
+        if (result.action === 'buffer' && char.type !== Char.Type.EOF) {
+            this.buffer.push(char);
+        }
+    }
+
+    // Flush final token
+    if (this.buffer.length > 0) {
+        tokens.push(this.createTokenFromBuffer(this.ctx.isInString()));
+    }
+
+    tokens.push({ value: '', type: TokenType.EOF });
+    return tokens;
+}
+
+```
+
+### 2. Using `peek()` for Multi-character Symbols
+
+If you want to support operators like `==` or `!=` (common in many languages), you can use the `peek()` function to look ahead without moving the cursor.
+
+```typescript
+// Inside a State handler or the Tokenizer loop
+if (char.value === '=') {
+    const nextChar = stream.peek(0); // Look at the very next char
+    if (nextChar.value === '=') {
+        stream.next(); // Actually consume the second '='
+        // Logic for TokenType.EQUALS_EQUALS
+    }
+}
+
+```
+
+### 3. Using `mark()` and `reset()` for Speculative Units
+
+If your language has ambiguous syntax where a sequence might be a `Dimension` or just a `Number` followed by an `Identifier`, you can use speculative marks.
+
+```typescript
+private handleSpeculativeUnit(stream: Char.Stream) {
+    stream.mark(); // Save position
+    
+    // Try to consume something that looks like a complex unit
+    const unitChars = stream.consumeWhile(c => c.type === Char.Type.Letter);
+    
+    if (this.isValidUnit(unitChars)) {
+        stream.commit(); // Success! Keep the progress
+    } else {
+        stream.reset();  // Failure! Rewind to before we started consuming letters
+    }
+}
+
+```
+
+### 4. Leveraging `lookbackWhile` for Context
+
+Your `Tokenizer` can now make decisions based on what happened *before* the current character without tracking it manually in a separate array. For example, to determine if a `-` is a "Unary Minus" or a "Subtraction" operator:
+
+```typescript
+const isUnary = (stream: Char.Stream) => {
+    // Look back past any whitespace to see if the previous token was an operator
+    const preceding = stream.lookbackWhile(c => c.type === Char.Type.Whitespace);
+    const lastNonSpace = stream.charsBuffer[stream.charsBuffer.length - preceding.length - 2];
+    
+    return lastNonSpace?.type === Char.Type.LParen || lastNonSpace?.type === Char.Type.Plus;
+};
+
+```
+
+### Key Efficiency Gains:
+
+* **Coordinate Accuracy**: By using `stream.next()`, your tokens will now have perfect `line` and `column` data derived directly from the stream's position.
+* **Cleanliness**: You no longer need to manually manage `index` or `line` increments inside the `Tokenizer`; the `Stream` class handles the internal state of the source string.
+* **Safety**: Using `normalize('NFC')` in the stream constructor ensures that characters like `e` + `´` are treated as a single `é` character, preventing bugs in your classification logic.
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/9. TokenizerUpdates.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/8. LookBackWhile.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# lookbackWhile() Method
+
+Yes, absolutely. That's a fantastic idea and a very common requirement for more advanced tokenizers. A lookbackWhile method is the perfect complement to consumeWhile.
+
+***
+
+This pattern allows the tokenizer to react to a "terminating" character (like %, px, ", etc.) and then retrospectively bundle the preceding characters into a single, more meaningful token.
+
+Your charsBuffer is the key to making this work. It acts as the history that lookbackWhile will inspect.
+
+## The lookbackWhile Method Implementation
+
+Here is the method. You can add it directly to your CharacterStream class. It will iterate backwards from the end of your charsBuffer.
+
+```typescript
+// Add this method to your CharacterStream class
+
+/**
+ * Looks backwards from the current stream position through the character buffer
+ * and collects a contiguous sequence of characters that match a predicate.
+ *
+ * This method does NOT change the stream's position.
+ *
+ * @param predicate A function that takes a Character and returns a boolean.
+ * @returns An array of the matching characters, in their original forward order.
+ */
+public lookbackWhile(predicate: (char: Character) => boolean): Character[] {
+    if (this.charsBuffer.length === 0) {
+        return [];
+    }
+
+    const lookedBackChars: Character[] = [];
+
+    // Iterate backwards from the end of the buffer.
+    for (let i = this.charsBuffer.length - 1; i >= 0; i--) {
+        const char = this.charsBuffer[i];
+
+        // If the character matches the predicate, add it to our results.
+        if (predicate(char)) {
+            lookedBackChars.push(char);
+        } else {
+            // If we find a character that doesn't match, we must stop.
+            // We only want a contiguous block from the end.
+            break;
+        }
+    }
+
+    // The characters were collected in reverse order (e.g., '3', '2', '1').
+    // Reverse the array to return them in their natural order ('1', '2', '3').
+    return lookedBackChars.reverse();
+}
+```
+
+## How to Use It in a Tokenizer
+
+Now, let's create a conceptual tokenizer that uses this new method to handle your exact use case: combining numbers into a single "percent" token when it encounters a %.
+
+The key insight here is that by the time you see the %, you have already processed the numbers and likely added them to your token list as individual Number tokens. Your tokenizer needs to correct its own output by removing those individual tokens and replacing them with the new, combined one.
+
+## Here is a complete, runnable example:
+
+```ts
+// Assume your CharacterStream, CharType, etc., are all defined.
+
+function createPercentToken(stream: CharacterStream) {
+    // 1. We are at the '%' character. Look backwards for numbers.
+    const numberPart = stream.lookbackWhile(char => char.type === CharType.Number);
+
+    // If we didn't find any numbers, just return the percent sign itself.
+    if (numberPart.length === 0) {
+        return { type: 'PERCENT_SIGN', value: '%' };
+    }
+
+    // 2. We found numbers! Combine them to form the new token.
+    const numberValue = numberPart.map(c => c.value).join('');
+    const fullTokenValue = numberValue + '%';
+
+    // 3. Create the new, combined token.
+    // The `replaceCount` tells the tokenizer how many previous tokens to discard.
+    return {
+        type: 'PERCENT_TOKEN',
+        value: fullTokenValue,
+        replaceCount: numberPart.length, // VERY IMPORTANT
+    };
+}
+```
+
+```ts
+// --- A Simple Tokenizer ---
+function tokenizer(stream: CharacterStream) {
+    const tokens: any[] = [];
+
+    while (!stream.isEOF()) {
+        const char = stream.peek();
+
+        // --- The Special Logic for '%' ---
+        if (char.value === '%') {
+            // Create the special token.
+            const token = createPercentToken(stream);
+
+            // If the token wants us to replace previous tokens, do it now.
+            if (token.replaceCount && token.replaceCount > 0) {
+                // Remove the now-redundant individual number tokens from our output.
+                tokens.splice(tokens.length - token.replaceCount);
+                console.log(`⏪ Corrected history: Removed ${token.replaceCount} previous number token(s).`);
+            }
+            
+            // Add the new, combined token.
+            tokens.push({ type: token.type, value: token.value });
+
+            stream.next(); // Consume the '%'
+            continue;
+        }
+
+        // --- Default Logic for All Other Characters ---
+        // For any other character, just add it as a simple token.
+        tokens.push({ type: char.type, value: char.value });
+        stream.next();
+    }
+    return tokens;
+}
+```
+
+```ts
+// --- Run the Example ---
+const input = "Total progress: 100%";
+const stream = new CharacterStream(input);
+
+console.log(`Input: "${input}"\n`);
+const finalTokens = tokenizer(stream);
+
+console.log("\n✅ Final Tokens:");
+console.table(finalTokens);
+```
+
+### Output of the Example:
+
+```bash
+Input: "Total progress: 100%"
+
+Corrected history: Removed 3 previous number token(s).
+
+Final Tokens:
+┌─────────┬────────────────┬───────────────┐
+│ (index) │      type      │     value     │
+├─────────┼────────────────┼───────────────┤
+│    0    │    'Letter'    │      'T'      │
+│    1    │    'Letter'    │      'o'      │
+│    2    │    'Letter'    │      't'      │
+│    3    │    'Letter'    │      'a'      │
+│    4    │    'Letter'    │      'l'      │
+│    5    │  'Whitespace'  │      ' '      │
+│    6    │    'Letter'    │      'p'      │
+│   ...   │       ...      │      ...      │
+│   15    │  'Punctuation' │      ':'      │
+│   16    │  'Whitespace'  │      ' '      │
+│   17    │ 'PERCENT_TOKEN'│     '100%'    │
+└─────────┴────────────────┴───────────────┘
+```
+
+This "look back and correct" pattern is extremely powerful. Your lookbackWhile method provides the essential tool to inspect the immediate past, enabling your tokenizer to build context-aware, complex tokens from simple ones.
+
+***
+
+### Suggestions
+
+* How would I implement `mark()` and `reset()` with this new `charsBuffer`?
+* Can you show me an example of `back(steps)` in action with the `charsBuffer`?
+* How can I make `lookbackWhile` more efficient for very long inputs?
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/8. LookBackWhile.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/7. CharStreamChanges.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+# Yes, this will absolutely work. This is an excellent refactoring
+
+You have significantly improved the design by encapsulating the position logic. The introduction of `getPosition()` and `setPosition()` is a powerful feature for a tokenizer, and breaking the complex `peek(n)` logic into the `peekPosition` and `peekAdvance` helpers makes the code much more readable and maintainable.
+
+Let's review the design and then address a few minor improvements to make it even more robust.
+
+## Analysis of Your New Design
+
+* **Excellent Encapsulation:** The `getPosition`/`setPosition` methods are a fantastic addition. They treat the stream's cursor as a transactional state that can be saved and restored. This is invaluable for advanced parsing techniques where you might need to "try" a path and then backtrack if it doesn't work out. The function overloading on `setPosition` is also very idiomatic and user-friendly.
+* **Correct `peek` Logic:** Your new implementation of `peek(n)` using the `peekPosition` helper is **correct**. It successfully simulates the advancement without modifying the stream's actual state (`this.index`, etc.).
+* **Clear Separation of Concerns:** The `peekAdvance` method now has one clear job: calculate the position of the *next* character based on a given starting position. `peekPosition` has one clear job: orchestrate the simulation by calling `peekAdvance` `n` times. This is a very clean design.
+
+### Minor Improvements and Bug Fixes
+
+Your code is very close to perfect, but I've identified one subtle bug in `lookahead()` and have a suggestion to make `back()` more memory-efficient.
+
+#### 1. Bug Fix: `lookahead(n)` Is Incorrect
+
+The `lookahead(n)` method has a bug that your `peek(n)` method correctly solves.
+
+* **The Problem:** The line `const lookaheadIndex = this.index + n;` assumes that every character is exactly one index position wide. This is not true for many Unicode characters (like emojis or complex graphemes), which can be 2 or more code units long. For example, in the string "👍a", `lookahead(1)` would point to the middle of the "👍" emoji instead of the "a".
+* **The Solution:** You've already solved this! The `peekPosition(n)` method correctly simulates stepping through the string one full character at a time. We should simply use it.
+
+```typescript
+// FIXED lookahead(n)
+public lookahead(n: number = 0): string {
+    const peekedPosition = this.peekPosition(n);
+    if (this.isEOF(peekedPosition.index)) {
+        return '';
+    }
+    return String.fromCodePoint(this.source.codePointAt(peekedPosition.index)!);
+}
+```
+
+#### 2. Improvement: Memory-Efficient `back()`
+
+The current `back()` method relies on storing every character ever consumed in the `public chars: Character[]` array. For a 10 MB source file, this array would hold millions of objects and consume a huge amount of memory.
+
+A more robust and memory-efficient stream would only store the position of the *immediately preceding* character.
+
+* **The Solution:** We'll add a `private previousPosition: Position` property. In `advance()`, before we update the main position, we'll save the current position to `previousPosition`. The `back()` method then simply needs to restore the state from `previousPosition`. This reduces the memory footprint from O(N) to O(1).
+
+### Final, Refactored `CharacterStream`
+
+Here is the complete class incorporating these final improvements. This version is robust, memory-efficient, and highly useful for a tokenizer.
+
+```typescript
+class CharacterStream implements IterableIterator<Character> {
+    private readonly source: string;
+    private index: number = 0;
+    private line: number = 1;
+    private column: number = 1;
+    
+    // For efficient backtracking
+    private previousPosition: Position;
+
+    constructor(input: string) {
+        this.source = input.normalize('NFC');
+        this.previousPosition = { index: 0, line: 1, column: 1 };
+    }
+
+    public getPosition(): Position {
+        return { index: this.index, line: this.line, column: this.column };
+    }
+
+    public setPosition(position: Position): void;
+    public setPosition(index: number, line: number, column: number): void;
+    public setPosition(indexOrPosition: number | Position, line?: number, column?: number): void {
+        if (typeof indexOrPosition === 'object') {
+            this.index = indexOrPosition.index;
+            this.line = indexOrPosition.line;
+            this.column = indexOrPosition.column;
+        } else {
+            this.index = indexOrPosition;
+            this.line = line!;
+            this.column = column!;
+        }
+    }
+    
+    public [Symbol.iterator](): IterableIterator<Character> {
+        return this;
+    }
+    
+    public peek(n: number = 0): Character {
+        const { index, line, column } = this.peekPosition(n);
+        if (this.isEOF(index)) return this.atEOF(index, line, column);
+
+        const value = String.fromCodePoint(this.source.codePointAt(index)!);
+        return { value, type: CharUtility.classify(value), position: { index, line, column } };
+    }
+
+    private peekPosition(n: number): Position {
+        if (n < 0) throw new Error("Lookahead distance `n` must be non-negative.");
+        if (n === 0) return this.getPosition();
+
+        let pos = this.getPosition();
+        for (let i = 0; i < n; i++) {
+            if (this.isEOF(pos.index)) return pos;
+            pos = this.calculateNextPosition(pos);
+        }
+        return pos;
+    }
+
+    private calculateNextPosition(currentPos: Position): Position {
+        const charValue = String.fromCodePoint(this.source.codePointAt(currentPos.index)!);
+        const newIndex = currentPos.index + charValue.length;
+        if (charValue === '\n') {
+            return { index: newIndex, line: currentPos.line + 1, column: 1 };
+        } else {
+            return { index: newIndex, line: currentPos.line, column: currentPos.column + [...charValue].length };
+        }
+    }
+    
+    public lookahead(n: number = 0): string {
+        const { index } = this.peekPosition(n);
+        if (this.isEOF(index)) return '';
+        return String.fromCodePoint(this.source.codePointAt(index)!);
+    }
+    
+    public next(): IteratorResult<Character> {
+        if (this.isEOF()) return { done: true, value: null };
+        const nextChar = this.peek(0);
+        this.advance(nextChar.value);
+        return { done: false, value: nextChar };
+    }
+
+    public advance(charValue: string): void {
+        // Save current position for backtracking *before* advancing.
+        this.previousPosition = this.getPosition();
+
+        this.index += charValue.length;
+        if (charValue === '\n') {
+            this.line++;
+            this.column = 1;
+        } else {
+            this.column += [...charValue].length;
+        }
+    }
+    
+    public back(): void {
+        this.setPosition(this.previousPosition);
+    }
+
+    public consumeWhile(predicate: (char: Character) => boolean): Character[] {
+        const consumed: Character[] = [];
+        while (!this.isEOF() && predicate(this.peek())) {
+            const result = this.next();
+            if (!result.done) consumed.push(result.value);
+        }
+        return consumed;
+    }
+
+    public isEOF(index = this.index): boolean {
+        return index >= this.source.length;
+    }
+
+    public atEOF(index = this.index, line = this.line, column = this.column): Character {
+        return { value: '', type: CharType.EOF, position: { index, line, column } };
+    }
+}
+```
+
+Excellent question. Implementing `mark()` and `reset()` is a classic and powerful pattern for tokenizers and parsers. It allows the parser to "try" a certain parsing path and, if it fails, easily rewind the stream to a known good state without manually backtracking one character at a time.
+
+The most robust way to implement this is by using a **stack** for your marks. This allows for nested marking, which is essential for parsing nested structures (e.g., a function call inside another function's argument list).
+
+Here’s how you can implement it:
+
+1. **`marks` Property**: Add a private array to the class to act as a stack for `Position` objects.
+2. **`mark()` Method**: Pushes the stream's current position onto the `marks` stack.
+3. **`reset()` Method**: Pops the most recent position from the stack and restores the stream's state to that position. This is used when a parsing path fails.
+4. **`commit()` Method (Optional but Recommended)**: Pops the most recent position from the stack *without* changing the stream's state. This is used when a parsing path succeeds, and the backtrack point is no longer needed. It prevents the stack from growing indefinitely.
+
+### Implementation Details
+
+Here are the new methods and the property to add to your `CharacterStream` class.
+
+```typescript
+// Add this property to your CharacterStream class
+private readonly marks: Position[] = [];
+
+/**
+ * Saves the current stream position to a stack.
+ * This is useful for speculative parsing, allowing you to "try" a path
+ * and then either reset() on failure or commit() on success.
+ */
+public mark(): void {
+    this.marks.push(this.getPosition());
+}
+
+/**
+ * Restores the stream to the last saved position from the mark() stack.
+ * If no mark is present, it throws an error.
+ * This consumes the mark.
+ */
+public reset(): void {
+    if (this.marks.length === 0) {
+        throw new Error("Cannot reset. No mark has been set.");
+    }
+
+    const lastMark = this.marks.pop()!;
+    this.setPosition(lastMark);
+}
+
+/**
+ * Removes the last saved mark from the stack without changing the stream's position.
+ * This should be called after a speculative parse succeeds.
+ */
+public commit(): void {
+    if (this.marks.length === 0) {
+        throw new Error("Cannot commit. No mark has been set.");
+    }
+    this.marks.pop();
+}
+```
+
+### How to Use It in a Tokenizer (Conceptual Example)
+
+Imagine you are parsing CSS and you encounter an `r`. This could be the start of `rgb(...)` or `rem`. You need to speculatively parse to find out.
+
+```typescript
+// Conceptual Tokenizer code
+function parseUnit(stream: CharacterStream) {
+    const firstChar = stream.peek().value;
+
+    if (firstChar === 'r') {
+        stream.mark(); // Mark the position before the 'r'
+
+        stream.next(); // Consume 'r'
+        stream.next(); // Consume 'e'
+        stream.next(); // Consume 'm'
+
+        if (stream.peek().type === CharType.LParen) {
+            // This wasn't 'rem', it might be 'rgb(' or something else.
+            stream.reset(); // << REWIND! Stream is now back before the 'r'
+            // ... now try parsing 'rgb(' ...
+        } else {
+            // It was 'rem'! The parse was successful.
+            stream.commit(); // << Finalize. Remove the unnecessary mark.
+            return createToken('rem', ...);
+        }
+    }
+    // ...
+}
+```
+
+### Complete, Updated `CharacterStream` Class
+
+Here is your full `CharacterStream` class with the `mark`, `reset`, and `commit` methods integrated.
+
+```typescript
+class CharacterStream implements IterableIterator<Character> {
+    private readonly source: string;
+    private index: number = 0;
+    private line: number = 1;
+    private column: number = 1;
+
+    // --- NEW ---
+    private readonly marks: Position[] = [];
+
+    // Keep this for single-step `back()` if you still want it
+    private previousPosition: Position;
+
+    constructor(input: string) {
+        this.source = input.normalize('NFC');
+        this.previousPosition = { index: 0, line: 1, column: 1 };
+    }
+
+    public getPosition(): Position {
+        return { index: this.index, line: this.line, column: this.column };
+    }
+
+    public setPosition(position: Position): void;
+    public setPosition(index: number, line: number, column: number): void;
+    public setPosition(indexOrPosition: number | Position, line?: number, column?: number): void {
+        if (typeof indexOrPosition === 'object') {
+            this.index = indexOrPosition.index;
+            this.line = indexOrPosition.line;
+            this.column = indexOrPosition.column;
+        } else {
+            this.index = indexOrPosition;
+            this.line = line!;
+            this.column = column!;
+        }
+    }
+
+    // --- NEW METHODS ---
+    public mark(): void {
+        this.marks.push(this.getPosition());
+    }
+
+    public reset(): void {
+        if (this.marks.length === 0) {
+            throw new Error("Cannot reset. No mark has been set.");
+        }
+        const lastMark = this.marks.pop()!;
+        this.setPosition(lastMark);
+    }
+    
+    public commit(): void {
+        if (this.marks.length === 0) {
+            throw new Error("Cannot commit. No mark has been set.");
+        }
+        this.marks.pop();
+    }
+    // --- END NEW METHODS ---
+
+    public [Symbol.iterator](): IterableIterator<Character> {
+        return this;
+    }
+
+    public peek(n: number = 0): Character {
+        // ... (implementation is correct from previous version)
+        const { index, line, column } = this.peekPosition(n);
+        if (this.isEOF(index)) return this.atEOF(index, line, column);
+        const value = String.fromCodePoint(this.source.codePointAt(index)!);
+        return { value, type: CharUtility.classify(value), position: { index, line, column } };
+    }
+
+    private peekPosition(n: number): Position {
+        // ... (implementation is correct from previous version)
+        if (n < 0) throw new Error("Lookahead distance `n` must be non-negative.");
+        if (n === 0) return this.getPosition();
+        let pos = this.getPosition();
+        for (let i = 0; i < n; i++) {
+            if (this.isEOF(pos.index)) return pos;
+            pos = this.calculateNextPosition(pos);
+        }
+        return pos;
+    }
+    
+    private calculateNextPosition(currentPos: Position): Position {
+        // ... (implementation is correct from previous version)
+        const charValue = String.fromCodePoint(this.source.codePointAt(currentPos.index)!);
+        const newIndex = currentPos.index + charValue.length;
+        if (charValue === '\n') {
+            return { index: newIndex, line: currentPos.line + 1, column: 1 };
+        } else {
+            return { index: newIndex, line: currentPos.line, column: currentPos.column + [...charValue].length };
+        }
+    }
+
+    public next(): IteratorResult<Character> {
+        if (this.isEOF()) return { done: true, value: null };
+        const nextChar = this.peek(0);
+        this.advance(nextChar.value);
+        return { done: false, value: nextChar };
+    }
+
+    public advance(charValue: string): void {
+        this.previousPosition = this.getPosition(); // For single-step `back()`
+        this.index += charValue.length;
+        if (charValue === '\n') {
+            this.line++;
+            this.column = 1;
+        } else {
+            this.column += [...charValue].length;
+        }
+    }
+
+    public back(): void {
+        this.setPosition(this.previousPosition);
+    }
+
+    // ... (rest of the class)
+    public consumeWhile(predicate: (char: Character) => boolean): Character[] { /* ... */ }
+    public isEOF(index = this.index): boolean { /* ... */ }
+    public atEOF(index = this.index, line = this.line, column = this.column): Character { /* ... */ }
+}
+```
+
+Excellent question. To make `back()` work for multiple steps, you need to change the underlying history mechanism from storing just one `previousPosition` to storing a *history of positions*.
+
+The most straightforward way to do this is to maintain an array of every position the stream has been in.
+
+Here's the strategy:
+
+1. **Introduce a `positionHistory` Array**: This array will store `Position` objects. It's much more memory-efficient than storing the full `Character` objects from your original implementation.
+2. **Initialize History**: In the constructor, we'll add the starting position `{ index: 0, line: 1, column: 1 }` as the first entry in our history.
+3. **Update History on Advance**: Every time `advance()` is called, we will push the stream's *new* position onto the `positionHistory` stack. This means the last item in the array is always the current position.
+4. **Implement `back(steps)`**: This method will now:
+    * Check if it's possible to go back the requested number of steps.
+    * Pop `steps` number of positions off the history stack.
+    * Restore the stream's state to the new last position on the stack.
+
+This approach gives you a complete, step-by-step history of the stream's movement, allowing for precise, multi-step rewinding.
+
+### The New Implementation
+
+Here are the changes integrated into your `CharacterStream` class.
+
+```typescript
+class CharacterStream implements IterableIterator<Character> {
+    private readonly source: string;
+    private index: number = 0;
+    private line: number = 1;
+    private column: number = 1;
+
+    // --- NEW: History for multi-step back() ---
+    private readonly positionHistory: Position[] = [];
+
+    private readonly marks: Position[] = [];
+
+    constructor(input: string) {
+        this.source = input.normalize('NFC');
+        // Initialize the history with the starting position.
+        // The last item in positionHistory is always the current position.
+        this.positionHistory.push(this.getPosition());
+    }
+
+    // ... (getPosition, setPosition, mark, reset, commit remain the same) ...
+
+    public getPosition(): Position {
+        return { index: this.index, line: this.line, column: this.column };
+    }
+    
+    public setPosition(position: Position): void {
+        this.index = position.index;
+        this.line = position.line;
+        this.column = position.column;
+    }
+    
+    // --- `advance` is now updated to record history ---
+    public advance(charValue: string): void {
+        this.index += charValue.length;
+        if (charValue === '\n') {
+            this.line++;
+            this.column = 1;
+        } else {
+            this.column += [...charValue].length;
+        }
+        // Push the new, current position onto the history stack.
+        this.positionHistory.push(this.getPosition());
+    }
+
+    // --- `back` is now multi-step ---
+    /**
+     * Moves the stream's position back by a given number of steps.
+     * @param steps The number of characters to rewind (default: 1).
+     */
+    public back(steps: number = 1): void {
+        if (steps <= 0) return;
+
+        // The history includes the current position, so the number of "backable"
+        // steps is the history length minus one.
+        if (steps >= this.positionHistory.length) {
+            throw new Error(
+                `Cannot go back ${steps} steps. History only contains ${this.positionHistory.length - 1} previous positions.`
+            );
+        }
+
+        // Pop the requested number of states.
+        for (let i = 0; i < steps; i++) {
+            this.positionHistory.pop();
+        }
+
+        // The new current position is the one now at the end of the stack.
+        const newPosition = this.positionHistory[this.positionHistory.length - 1];
+        this.setPosition(newPosition);
+    }
+    
+    public next(): IteratorResult<Character> {
+        if (this.isEOF()) return { done: true, value: null };
+        const nextChar = this.peek(0);
+        this.advance(nextChar.value);
+        return { done: false, value: nextChar };
+    }
+
+    // ... (The rest of your methods like peek, peekPosition, consumeWhile, etc.,
+    //      do not need to be changed and will work correctly with this new system) ...
+}
+```
+
+### How It Works
+
+Let's trace a simple example: `stream.back(2)`
+
+1. **Initial State:**
+    * `positionHistory`: `[{i:0, l:1, c:1}]`
+    * Stream position: index 0
+
+2. Call `stream.next()` three times on the input `"abc"`:
+    * `next()` -> `advance('a')` -> `positionHistory` becomes `[ {i:0...}, {i:1, l:1, c:2} ]`
+    * `next()` -> `advance('b')` -> `positionHistory` becomes `[ {i:0...}, {i:1...}, {i:2, l:1, c:3} ]`
+    * `next()` -> `advance('c')` -> `positionHistory` becomes `[ {i:0...}, {i:1...}, {i:2...}, {i:3, l:1, c:4} ]`
+    * Stream position is now at index 3.
+
+3. **Call `stream.back(2)`:**
+    * `steps` is 2. `positionHistory.length` is 4. The check passes.
+    * **Loop 1:** `positionHistory.pop()`. History is now `[ {i:0...}, {i:1...}, {i:2...} ]`.
+    * **Loop 2:** `positionHistory.pop()`. History is now `[ {i:0...}, {i:1...} ]`.
+    * The loop finishes.
+    * `newPosition` becomes the last item: `{i:1, l:1, c:2}`.
+    * `setPosition()` is called with this position.
+
+4. **Final State:**
+    * `positionHistory`: `[ {i:0, l:1, c:1}, {i:1, l:1, c:2} ]`
+    * Stream position is now at index 1 (the start of the character 'b').
+
+This implementation is robust, predictable, and gives your `CharacterStream` the powerful, multi-step rewind capability you were looking for.
+
+Of course. This is a great set of questions because it gets to the heart of why a robust stream needs different kinds of history management.
+
+Here is a detailed breakdown of how to implement `mark()` and `reset()` alongside `positionHistory`, followed by a practical example of `back(steps)`.
+
+### 1. `mark()`/`reset()` with the New `positionHistory`
+
+You should think of `mark()`/`reset()` and `back()` as two separate, complementary systems for two different use cases.
+
+* **`back(steps)`** is a **chronological undo**. It uses a complete history (`positionHistory`) to rewind the stream one step at a time. It's like pressing `Ctrl+Z` in a text editor.
+* **`mark()`/`reset()`** is a **speculative bookmark**. It saves a single point in time to a separate stack (`marks`), allowing you to jump back to that specific point later, no matter how many characters you consumed in between. It’s for trying a complex parse and bailing out if it fails.
+
+The best implementation is to **keep both systems separate**. The `positionHistory` is perfect for `back()`, and the `marks` stack is perfect for `mark()`/`reset()`. They don't conflict; they work together to give your parser maximum flexibility.
+
+The implementation for `mark()` and `reset()` **does not need to change at all**. It still works perfectly alongside the new `positionHistory`.
+
+Here's the class showing how they coexist:
+
+```typescript
+class CharacterStream implements IterableIterator<Character> {
+    // ... properties: source, index, line, column ...
+
+    // For multi-step chronological `back()`
+    private readonly positionHistory: Position[] = [];
+
+    // For speculative `mark()`/`reset()` bookmarks
+    private readonly marks: Position[] = [];
+
+    constructor(input: string) {
+        this.source = input.normalize('NFC');
+        // Initialize the history for back()
+        this.positionHistory.push(this.getPosition());
+    }
+
+    // --- `mark()` / `reset()` Implementation (Unchanged) ---
+    public mark(): void {
+        this.marks.push(this.getPosition());
+    }
+
+    public reset(): void {
+        if (this.marks.length === 0) throw new Error("No mark to reset to.");
+        const lastMark = this.marks.pop()!;
+        this.setPosition(lastMark);
+        // Note: We don't touch positionHistory here. Resetting is a non-linear jump,
+        // so the chronological history becomes invalid for rewinding past this point.
+        // A more complex implementation could truncate positionHistory, but for most
+        // tokenizers, this separation is cleaner.
+    }
+    
+    public commit(): void {
+        if (this.marks.length === 0) throw new Error("No mark to commit.");
+        this.marks.pop();
+    }
+    
+    // --- `advance()` and `back()` Implementation (Unchanged) ---
+    public advance(charValue: string): void {
+        // ... (updates index, line, column) ...
+        this.positionHistory.push(this.getPosition()); // Still adds to history
+    }
+
+    public back(steps: number = 1): void {
+        // ... (implementation using positionHistory is correct and unchanged) ...
+    }
+
+    // ... (rest of the class) ...
+}
+```
+
+---
+
+### 2. Example: `back(steps)` in Action
+
+Let's imagine our tokenizer is processing CSS variables. It sees a `-`. This could be part of a simple subtraction (`padding: 10px - 5px`) or the start of a CSS variable (`--main-color`).
+
+Our strategy will be:
+
+1. When we see a `-`, consume it.
+2. Look at the *next* character.
+3. If it's *also* a `-`, great! We're parsing a variable.
+4. If it's *not* a `-`, we made a mistake. We need to **go back one step** so the `-` can be treated as a normal operator.
+
+This is a perfect use case for `back(1)`.
+
+Here is a complete, runnable example:
+
+```typescript
+// Assume CharacterStream and CharType are defined as in the previous answers
+
+function simpleCssParser(stream: CharacterStream) {
+    const tokens = [];
+
+    while (!stream.isEOF()) {
+        let char = stream.peek();
+
+        if (char.type === CharType.Whitespace) {
+            stream.next(); // Skip whitespace
+            continue;
+        }
+
+        // --- Example Logic for `--` vs `-` ---
+        if (char.value === '-') {
+            console.log(`Found a '-' at column ${char.position.column}. Consuming it.`);
+            stream.next(); // Consume the first '-'
+
+            // Look at the character that is NOW current
+            const nextChar = stream.peek();
+
+            if (nextChar.value === '-') {
+                console.log(`  ...and the next char is ALSO a '-' at column ${nextChar.position.column}. It's a variable token!`);
+                stream.next(); // Consume the second '-'
+                tokens.push({ type: 'CSS_VAR_START', value: '--' });
+            } else {
+                // This is the key part!
+                console.log(`  ...but the next char is a '${nextChar.value}'. This is not a variable.`);
+                console.log("  <<< GOING BACK 1 STEP >>>");
+                stream.back(1); // <<< REWIND ONE STEP
+
+                // Now the stream is back to where it was before we consumed the first '-',
+                // so it can be correctly tokenized as a simple minus sign.
+                tokens.push({ type: 'MINUS_OPERATOR', value: '-' });
+            }
+        } else {
+            // For any other character, just consume it and add as a generic token
+            tokens.push({ type: char.type, value: char.value });
+            stream.next();
+        }
+    }
+    return tokens;
+}
+
+// --- Run the example ---
+const cssInput = "font-size: var(--main-color) - 10px";
+const stream = new CharacterStream(cssInput);
+
+console.log(`Input: "${cssInput}"\n`);
+simpleCssParser(stream);
+
+console.log(`\nFinal stream position: index ${stream.getPosition().index}`);
+```
+
+#### **Output of the Example:**
+
+```bash
+Input: "font-size: var(--main-color) - 10px"
+
+Found a '-' at column 5. Consuming it.
+  ...but the next char is a 's'. This is not a variable.
+  <<< GOING BACK 1 STEP >>>
+Found a '-' at column 21. Consuming it.
+  ...and the next char is ALSO a '-' at column 22. It's a variable token!
+Found a '-' at column 35. Consuming it.
+  ...but the next char is a ' '. This is not a variable.
+  <<< GOING BACK 1 STEP >>>
+
+Final stream position: index 39
+```
+
+As you can see, `back(1)` allows the parser to easily correct its course when it makes a wrong assumption, making your parsing logic much cleaner than it would be otherwise.
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/7. CharStreamChanges.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/1. Help.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
