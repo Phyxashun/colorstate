@@ -47,58 +47,26 @@ const line = (newLine: boolean = true, width: number = 80): void => {
 // TEST CASES
 // Commented out cases are not working
 const testCases: string[] = [
-    // Test 0
     `"67 a, b, c / 1 'word' 2 3+(2-0)"`,
-
-    // Test 1
     '67 a, b, c / 1 word 2 3+(2-0)',
-
-    // Test 2
     'rgba(100 128 255 / 0.5)',
-
-    // Test 3
     'rgba(100grad 360 220  / 50%)',
-
-    // Test 4
     '#ff00ff00',
-
-    // Test 5
     '56%',
-
-    // Test 6
     '100grad',
-
-    // Test 7
     '1 + 2',
-
-    // Test 8
     '10 - 5 + 3',
-
-    // Test 9
     '2 * 3 + 4',
-
-    // Test 10
     'rgb(255, 0, 0)',
-
-    // Test 11
     '#ff0000',
-
-    // Test 12
-    '50%',
-
-    // Test 13
+    '100%',
     '(1 + 2) * 3',
-
-    // Test 14
     '-5 + 10',
-
-    // Test 15
     'rgba(255, 128, 0, 50%)',
-
-    // Test 16
     'const a = 10;',
 
     // Big Test
+
     // `const characterStreamTest = () => {
     // line();
     // console.log('=== CHARACTERSTREAM DEMO ===');
@@ -142,47 +110,12 @@ const tokenizerTest = () => {
     const tokenizer = new Tokenizer();
     const stream = new Char.Stream();
 
-    // Test 0
-    stream.set(testCases[0]);
-    tokenizer
-        .withLogging('TEST (0): Direct Tokenization of embedded String')
-        .tokenize(stream);
-
-    // Test 1
-    stream.set(testCases[1]);
-    tokenizer
-        .withLogging('TEST (1): Direct Tokenization from String')
-        .tokenize(stream);
-
-    // Test 2
-    stream.set(testCases[2]);
-    tokenizer
-        .withLogging('TEST (2): Direct Tokenization from CSS Color String')
-        .tokenize(stream);
-
-    // Test 3
-    stream.set(testCases[3]);
-    tokenizer
-        .withLogging('TEST (3): Direct Tokenization from CSS Color String')
-        .tokenize(stream);
-
-    // Test 4
-    stream.set(testCases[4]);
-    tokenizer
-        .withLogging('TEST (4): Direct Tokenization from Hex Color String')
-        .tokenize(stream);
-
-    // Test 5
-    stream.set(testCases[5]);
-    tokenizer
-        .withLogging('TEST (5): Direct Tokenization from percentage')
-        .tokenize(stream);
-
-    // Test 6
-    stream.set(testCases[6]);
-    tokenizer
-        .withLogging('TEST (6): Direct Tokenization from units')
-        .tokenize(stream);
+    for (const test in testCases) {
+        stream.set(testCases[test]);
+        const tokens = tokenizer
+            .withLogging(`TEST (${test}): Direct Tokenization`)
+            .tokenize(stream);
+    }
 }
 
 const parserTest = () => {
@@ -197,7 +130,7 @@ const parserTest = () => {
         // Step 1: Tokenize
         const tokenizer = new Tokenizer();
         const tokens = tokenizer
-            .withLogging(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
+            .withoutLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
             .tokenize(stream);
 
         // Step 2: Parse
@@ -213,10 +146,10 @@ const parserTest = () => {
     }
 }
 
-characterStreamTest();
+//characterStreamTest();
 for (const test of testCases) {
-    characterStreamTest(test);
+    //characterStreamTest(test);
 }
 
-//tokenizerTest();
+tokenizerTest();
 //parserTest();
