@@ -2450,8 +2450,10 @@ private primary(): Expression {
     "@types/node": "^25.0.3",
     "@vitest/coverage-istanbul": "4.0.16",
     "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "4.0.16",
     "figlet": "^1.9.4",
     "glob": "^13.0.0",
+    "typedoc": "^0.28.15",
     "vitest": "^4.0.16"
   },
   "peerDependencies": {
@@ -2461,10 +2463,12 @@ private primary(): Expression {
   "type": "module",
   "scripts": {
     "start": "bun run ./index.ts",
+    "consolidate": "bun run ./Consolidate.ts",
     "test": "vitest",
     "coverage": "vitest --coverage"
   }
 }
+
 
 
 
@@ -2513,7 +2517,7 @@ private primary(): Expression {
   },
   "include": [
     "./src/**/*.ts"
-  ],
+, "test_old/AST.ts", "test_old/Transition.ts"  ],
   "exclude": [
     "./ALL/**/*",
     "./ALL/ALL_CONFIGS.ts",
@@ -2521,6 +2525,8 @@ private primary(): Expression {
     "./ALL/ALL_TESTS.ts"
   ]
 }
+
+
 
 
 
@@ -2542,18 +2548,53 @@ private primary(): Expression {
 
 // vitest.config.ts
 
-import { defineConfig } from "vitest/config";
+//import {inspect, type InspectOptions } from 'node:util';
+
+import { defineConfig, configDefaults } from "vitest/config";
 
 export default defineConfig({
     test: {
+        reporters: ['default', 'html'],
         coverage: {
-            provider: 'istanbul',
+            provider: 'v8',
+            enabled: true,
+            clean: true,
+            reportsDirectory: './coverage',
             reporter: ['text', 'json', 'html'],
             include: ['src/**/*.{ts,tsx}'],
-            exclude: ['**/utils/**/*.ts']
-        }
+            exclude: [ 
+                '**/utils/**/*'
+            ]
+        },
+        exclude: [
+            ...configDefaults.exclude,
+            '**/utils/**/*',
+            'test_old/**/*',
+            '.vscode/**/*',
+            '0.NOTES/**/*',
+            'ALL/**/*'
+        ]
     }
-})
+});
+
+// const inspectOptions: InspectOptions = {
+//     showHidden: true,
+//     depth: null,
+//     colors: true,
+//     customInspect: false,
+//     showProxy: false,
+//     maxArrayLength: null,
+//     maxStringLength: null,
+//     breakLength: 100,
+//     compact: true,
+//     sorted: false,
+//     getters: false,
+//     numericSeparator: true,
+// };
+
+// console.log('VITEST CONFIG DEFAULTS:\n');
+// console.log(inspect(configDefaults, inspectOptions));
+
 
 
 
