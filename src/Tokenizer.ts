@@ -4,6 +4,31 @@ import { inspect, styleText, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
 import { type Character, CharType, CharacterStream } from './Character.ts';
 
+export const MAX_WIDTH: number = 80;
+
+enum Line  {
+    Default = '─',
+    Square = '■',
+    Bold = '█',
+    Dashed = '-',
+    Underscore = '_',
+    DoubleUnderscore = '‗',
+    Equals = '=',
+    Double = '═',
+    BoldBottom = '▄',
+    BoldTop = '▀',
+    Diaeresis = '¨',
+    Macron = '¯',
+    Section = '§',
+    Interpunct = '·',
+    
+    LightBlock = '░',
+    
+    MediumBlock = '▒',
+    
+    HeavyBlock = '▓',
+};
+
 const inspectOptions: InspectOptions = {
     showHidden: true,
     depth: null,
@@ -54,12 +79,37 @@ enum TokenType {
     NEW = 'NEW',
 }
 
+/**
+ * @interface PrintLineOptions
+ * @description Defines the structure for a printLine options object.
+ * @property {boolean} preNewLine - If true, adds a newline before the divider.
+ * @property {boolean} postNewLine - If true, adds a newline after the divider.
+ * @property {number} width - The width of the line.
+ * @property {string} line - The character to use for the line.
+ */
+interface PrintLineOptions {
+    preNewLine?: boolean;
+    postNewLine?: boolean;
+    width?: number;
+    line?: Line;
+}
+
+/**
+ * @description Default options object for the printLine function.
+ */
+const defaultPrintLineOptions: PrintLineOptions = {
+    preNewLine: false,  // No preceding new line
+    postNewLine: false, // No successive new line
+    width: MAX_WIDTH,   // Use global const MAX_WIDTH = 80
+    line: Line.Double,    // Use global const LINE_CHAR = '='          
+};
+
 interface Token {
     value: string;
     type: TokenType;
 }
 
-type TokenizerInput = string;
+type TokenizerInput = CharacterStream;
 
 class Tokenizer {
     private inspectOptions: InspectOptions = {
@@ -95,28 +145,34 @@ class Tokenizer {
         return this;
     }
 
-    private line(newLine: boolean = true, width: number = 80): void {
-        if (newLine) console.log(`${'─'.repeat(width)}\n`);
-        if (!newLine) console.log(`${'─'.repeat(width)}`);
-    }
+    /**
+     * @function printLine
+     * @description Prints a styled horizontal line to the console.
+     * @param {PrintLineOptions} [options={}] - Configuration options for the line.
+     * @returns {void}
+     */
+    private printLine = (options: PrintLineOptions = {}): void => {
+        const { preNewLine, postNewLine, width, line } = {
+            ...defaultPrintLineOptions,
+            ...options
+        };
+        const pre = preNewLine ? '\n' : '';
+        const post = postNewLine ? '\n' : '';
+        const styledDivider = styleText(['gray', 'bold'], line!.repeat(width!));
+        console.log(`${pre}${styledDivider}${post}`);
+    };
 
     private logHeader(): void {
         if (!this.shouldLog) return;
-
-        if (this.message) {
-            console.log(`${this.message}\n`);
-            return;
-        }
-
-        this.line();
-        console.log('TOKENIZATION DEMO:\n');
-        this.line();
+        this.printLine();
+        this.message = this.message ? this.message : `TOKENIZATION DEMONSTRATION:`;
+        console.log(`TOKENIZER:\n\t${this.message}\n`);
     }
 
     private logSource(input: TokenizerInput): void {
         if (!this.shouldLog) return;
-        console.log(`TOKENIZER:\n`);
-        console.log(`SOURCE:\t'${input}'\n`);
+        console.log(`SOURCE:\t${inspect(input.get(), this.inspectOptions)}\n`);
+        this.printLine();
     }
 
     private logResults(result: Token[]): void {
@@ -129,18 +185,17 @@ class Tokenizer {
         }
 
         console.log();
-        this.line();
+        this.printLine();
 
         this.shouldLog = false;
         this.message = undefined;
     }
 
-    public tokenize(input: TokenizerInput): Token[] {
-        const stream = new CharacterStream(input);
+    public tokenize(stream: CharacterStream): Token[] {
         const tokens: Token[] = [];
 
         this.logHeader();
-        this.logSource(input);
+        this.logSource(stream);
 
         for (const char of stream) {
             const wasInString = this.ctx.isInString();
@@ -204,7 +259,7 @@ class Tokenizer {
             type: chars[0]!.type,
             position: chars[0]!.position
         };
-        
+
         return {
             value,
             type: Tokenizer.classify(ch, isInString)
@@ -220,12 +275,10 @@ class Tokenizer {
     };
 
     private static TokenSpec: TokenSpec = new Map<TokenType, TokenTypeFn>([
-        [TokenType.START, (type) => type === CharType.Start],
         [TokenType.IDENTIFIER, (type) => type === CharType.Letter],
-        [TokenType.HEXVALUE, (type) => type === CharType.Hash],
+        [TokenType.HEXVALUE, (type) => type === CharType.Hash || type === CharType.Hex],
         [TokenType.NUMBER, (type) => type === CharType.Number],
         [TokenType.PERCENT, (type) => type === CharType.Percent],
-        [TokenType.DIMENSION, (type) => type === CharType.Dimension],
         [TokenType.PLUS, (type) => type === CharType.Plus],
         [TokenType.MINUS, (type) => type === CharType.Minus],
         [TokenType.STAR, (type) => type === CharType.Star],
@@ -245,18 +298,18 @@ class Tokenizer {
         const value = char.value;
 
         if (isInString) return TokenType.STRING;
-        
+
         if (value.endsWith('%')) {
             return TokenType.PERCENT;
         }
-        
+
         if (value.startsWith('#')) return TokenType.HEXVALUE;
-        
+
         if (value.endsWith('deg') || value.endsWith('grad') ||
             value.endsWith('rad') || value.endsWith('turn')) {
             return TokenType.DIMENSION;
         }
-        
+
         switch (char.type) {
             case CharType.BackSlash:
                 return isInString ? TokenType.ESCAPE : TokenType.SYMBOL;

@@ -260,6 +260,7 @@ class Hex_State extends State {
     public handle(char: Character): Transition {
         switch (char.type) {
             case CharType.Hash:
+            case CharType.Hex:
             case CharType.Letter:
             case CharType.Number:
                 return Transition.Stay();

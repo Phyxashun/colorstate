@@ -128,7 +128,7 @@ export class Parser {
 
         while (
             !this.isAtEnd() &&
-            this.match(TokenType.STAR, TokenType.SLASH)  // ✅ Fixed: Added STAR
+            this.match(TokenType.STAR, TokenType.SLASH)
         ) {
             const operator = this.previous().value as '*' | '/';
             const right = this.unary();
