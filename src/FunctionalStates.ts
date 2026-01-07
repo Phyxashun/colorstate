@@ -254,22 +254,24 @@ const characterStreamTest = () => {
     console.log('NEW TEST\n')
     line();
 
-        // Step 1: Tokenize
-        const tokenizer = new Tokenizer();
-        const tokens = tokenizer
-            .withLogging(`PARSER TEST:\n\nINPUT:\t'${input}'\n\n${'─'.repeat(80)}`)
-            .tokenize(input);
+    stream.set(input);
 
-        // Step 2: Parse
-        const parser = new Parser(tokens);
-        const ast = parser.parse();
+    // Step 1: Tokenize
+    const tokenizer = new Tokenizer();
+    const tokens = tokenizer
+        .withLogging(`PARSER TEST:\n\nINPUT:\t'${input}'\n\n${'─'.repeat(80)}`)
+        .tokenize(stream);
 
-        // Step 3: Console log the AST
-        console.log('\nAST:\n');
-        const defaultAST = inspect(ast, inspectOptions);
-        const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
-        console.log(fourSpaceAST, '\n');
-        line();
+    // Step 2: Parse
+    const parser = new Parser(tokens);
+    const ast = parser.parse();
+
+    // Step 3: Console log the AST
+    console.log('\nAST:\n');
+    const defaultAST = inspect(ast, inspectOptions);
+    const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
+    console.log(fourSpaceAST, '\n');
+    line();
 }
 
 characterStreamTest();

@@ -2,7 +2,7 @@
 
 import { inspect, styleText, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
-import { type Character, CharType, CharacterStream } from './Character.ts';
+import Char, { type Character, type Position } from './Character.ts';
 
 export const MAX_WIDTH: number = 80;
 
@@ -21,11 +21,8 @@ enum Line  {
     Macron = '¯',
     Section = '§',
     Interpunct = '·',
-    
     LightBlock = '░',
-    
     MediumBlock = '▒',
-    
     HeavyBlock = '▓',
 };
 
@@ -45,7 +42,7 @@ const inspectOptions: InspectOptions = {
 };
 
 type ClassifyTokenFn = (char: Character, isInString: boolean) => TokenType;
-type TokenTypeFn = (type: CharType) => boolean;
+type TokenTypeFn = (type: Char.Type) => boolean;
 type TokenSpec = Map<TokenType, TokenTypeFn>;
 
 enum TokenType {
@@ -109,7 +106,7 @@ interface Token {
     type: TokenType;
 }
 
-type TokenizerInput = CharacterStream;
+type TokenizerInput = Char.Stream;
 
 class Tokenizer {
     private inspectOptions: InspectOptions = {
@@ -191,7 +188,7 @@ class Tokenizer {
         this.message = undefined;
     }
 
-    public tokenize(stream: CharacterStream): Token[] {
+    public tokenize(stream: Char.Stream): Token[] {
         const tokens: Token[] = [];
 
         this.logHeader();
@@ -217,7 +214,7 @@ class Tokenizer {
             }
 
             // 3. Buffer the character based on the Context's decision
-            if (result.action === 'buffer' && char.type !== CharType.EOF) {
+            if (result.action === 'buffer' && char.type !== Char.Type.EOF) {
                 this.buffer.push(char);
             }
         }
@@ -275,23 +272,23 @@ class Tokenizer {
     };
 
     private static TokenSpec: TokenSpec = new Map<TokenType, TokenTypeFn>([
-        [TokenType.IDENTIFIER, (type) => type === CharType.Letter],
-        [TokenType.HEXVALUE, (type) => type === CharType.Hash || type === CharType.Hex],
-        [TokenType.NUMBER, (type) => type === CharType.Number],
-        [TokenType.PERCENT, (type) => type === CharType.Percent],
-        [TokenType.PLUS, (type) => type === CharType.Plus],
-        [TokenType.MINUS, (type) => type === CharType.Minus],
-        [TokenType.STAR, (type) => type === CharType.Star],
-        [TokenType.DOT, (type) => type === CharType.Dot],
-        [TokenType.COMMA, (type) => type === CharType.Comma],
-        [TokenType.SLASH, (type) => type === CharType.Slash],
-        [TokenType.LPAREN, (type) => type === CharType.LParen],
-        [TokenType.RPAREN, (type) => type === CharType.RParen],
-        [TokenType.NEWLINE, (type) => type === CharType.NewLine],
-        [TokenType.WHITESPACE, (type) => type === CharType.Whitespace],
-        [TokenType.EOF, (type) => type === CharType.EOF],
-        [TokenType.OTHER, (type) => type === CharType.Other],
-        [TokenType.ERROR, (type) => type === CharType.Error],
+        [TokenType.IDENTIFIER, (type) => type === Char.Type.Letter],
+        [TokenType.HEXVALUE, (type) => type === Char.Type.Hash || type === Char.Type.Hex],
+        [TokenType.NUMBER, (type) => type === Char.Type.Number],
+        [TokenType.PERCENT, (type) => type === Char.Type.Percent],
+        [TokenType.PLUS, (type) => type === Char.Type.Plus],
+        [TokenType.MINUS, (type) => type === Char.Type.Minus],
+        [TokenType.STAR, (type) => type === Char.Type.Star],
+        [TokenType.DOT, (type) => type === Char.Type.Dot],
+        [TokenType.COMMA, (type) => type === Char.Type.Comma],
+        [TokenType.SLASH, (type) => type === Char.Type.Slash],
+        [TokenType.LPAREN, (type) => type === Char.Type.LParen],
+        [TokenType.RPAREN, (type) => type === Char.Type.RParen],
+        [TokenType.NEWLINE, (type) => type === Char.Type.NewLine],
+        [TokenType.WHITESPACE, (type) => type === Char.Type.Whitespace],
+        [TokenType.EOF, (type) => type === Char.Type.EOF],
+        [TokenType.OTHER, (type) => type === Char.Type.Other],
+        [TokenType.ERROR, (type) => type === Char.Type.Error],
     ])
 
     private static classify: ClassifyTokenFn = (char: Character, isInString: boolean = false): TokenType => {
@@ -311,31 +308,31 @@ class Tokenizer {
         }
 
         switch (char.type) {
-            case CharType.BackSlash:
+            case Char.Type.BackSlash:
                 return isInString ? TokenType.ESCAPE : TokenType.SYMBOL;
 
-            case CharType.EqualSign:
+            case Char.Type.EqualSign:
                 return TokenType.EQUALS;
 
-            case CharType.Unicode:
-            case CharType.Tilde:
-            case CharType.Exclamation:
-            case CharType.At:
-            case CharType.Dollar:
-            case CharType.Question:
-            case CharType.Caret:
-            case CharType.Ampersand:
-            case CharType.LessThan:
-            case CharType.GreaterThan:
-            case CharType.Underscore:
-            case CharType.LBracket:
-            case CharType.RBracket:
-            case CharType.LBrace:
-            case CharType.RBrace:
-            case CharType.SemiColon:
-            case CharType.Colon:
-            case CharType.Pipe:
-            case CharType.Symbol:
+            case Char.Type.Unicode:
+            case Char.Type.Tilde:
+            case Char.Type.Exclamation:
+            case Char.Type.At:
+            case Char.Type.Dollar:
+            case Char.Type.Question:
+            case Char.Type.Caret:
+            case Char.Type.Ampersand:
+            case Char.Type.LessThan:
+            case Char.Type.GreaterThan:
+            case Char.Type.Underscore:
+            case Char.Type.LBracket:
+            case Char.Type.RBracket:
+            case Char.Type.LBrace:
+            case Char.Type.RBrace:
+            case Char.Type.SemiColon:
+            case Char.Type.Colon:
+            case Char.Type.Pipe:
+            case Char.Type.Symbol:
                 return TokenType.SYMBOL;
 
             default:
