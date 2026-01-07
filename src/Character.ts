@@ -219,7 +219,7 @@ namespace Char {
         }
 
         public next(): IteratorResult<Character> {
-            if (this.isEOF()) return { done: true, value: null };
+            if (this.isEOF()) return { done: true, value: this.atEOF() };
             const nextChar = this.peek(0);
             this.advance(nextChar.value);
             this.charsBuffer.push(nextChar);
