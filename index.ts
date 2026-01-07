@@ -3,7 +3,7 @@
 import { inspect, type InspectOptions } from 'node:util';
 import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
-import Character from './src/Character.ts';
+import Char from './src/Character.ts';
 
 /**
  * @TODO Add character, token, and state support for quotes
@@ -124,7 +124,7 @@ const characterStreamTest = (str?: string) => {
     line();
 
     const input = str || 'rgb(255, 100, 75)';
-    const stream = new Character.Stream(input);
+    const stream = new Char.Stream(input);
 
     console.log(`INPUT: '${input}'\n`);
     console.log('RESULT OF CHARACTERSTREAM:\n');
@@ -140,7 +140,7 @@ const characterStreamTest = (str?: string) => {
 const tokenizerTest = () => {
     // Fluent usage
     const tokenizer = new Tokenizer();
-    const stream = new Character.Stream();
+    const stream = new Char.Stream();
 
     // Test 0
     stream.set(testCases[0]);
@@ -192,7 +192,7 @@ const parserTest = () => {
         line();
 
         // Step 1: Character stream
-        const stream = new Character.Stream(input);
+        const stream = new Char.Stream(input);
 
         // Step 1: Tokenize
         const tokenizer = new Tokenizer();

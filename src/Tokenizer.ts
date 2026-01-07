@@ -2,7 +2,7 @@
 
 import { inspect, styleText, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
-import Char, { type Character, type Position } from './Character.ts';
+import Char, { type Character } from './Character.ts';
 
 export const MAX_WIDTH: number = 80;
 

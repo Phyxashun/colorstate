@@ -1,7 +1,7 @@
 // src/States.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import { type Character, CharType } from './Character.ts';
+import Char, { type Character } from './Character.ts';
 import { Transition } from './Transition';
 
 abstract class State {
@@ -46,72 +46,72 @@ class Initial_State extends State {
     public handle(char: Character): Transition {
         switch (char.type) {
             // String delimiters
-            case CharType.SingleQuote:
-                return Transition.BeginString(String_State.instance, CharType.SingleQuote);
-            case CharType.DoubleQuote:
-                return Transition.BeginString(String_State.instance, CharType.DoubleQuote);
-            case CharType.Backtick:
-                return Transition.BeginString(String_State.instance, CharType.Backtick);
+            case Char.Type.SingleQuote:
+                return Transition.BeginString(String_State.instance, Char.Type.SingleQuote);
+            case Char.Type.DoubleQuote:
+                return Transition.BeginString(String_State.instance, Char.Type.DoubleQuote);
+            case Char.Type.Backtick:
+                return Transition.BeginString(String_State.instance, Char.Type.Backtick);
 
             // Whitespace
-            case CharType.Whitespace:
+            case Char.Type.Whitespace:
                 return Transition.To(Whitespace_State.instance);
-            case CharType.NewLine:
+            case Char.Type.NewLine:
                 return Transition.To(NewLine_State.instance);
 
             // Letters
-            case CharType.Letter:
+            case Char.Type.Letter:
                 return Transition.To(Letter_State.instance);
 
             // Numbers
-            case CharType.Number:
+            case Char.Type.Number:
                 return Transition.To(Number_State.instance);
 
             // Hexadecimal
-            case CharType.Hash:
+            case Char.Type.Hash:
                 return Transition.To(Hex_State.instance);
 
             // All single-character tokens
-            case CharType.Comma:
-            case CharType.LParen:
-            case CharType.RParen:
-            case CharType.LBracket:
-            case CharType.RBracket:
-            case CharType.LBrace:
-            case CharType.RBrace:
-            case CharType.SemiColon:
-            case CharType.Dot:
-            case CharType.Plus:
-            case CharType.Minus:
-            case CharType.Star:
-            case CharType.Slash:
-            case CharType.EqualSign:
-            case CharType.GreaterThan:
-            case CharType.LessThan:
-            case CharType.Exclamation:
-            case CharType.Question:
-            case CharType.Colon:
-            case CharType.Caret:
-            case CharType.Ampersand:
-            case CharType.Pipe:
-            case CharType.Tilde:
-            case CharType.At:
-            case CharType.Dollar:
-            case CharType.Underscore:
-            case CharType.Symbol:
+            case Char.Type.Comma:
+            case Char.Type.LParen:
+            case Char.Type.RParen:
+            case Char.Type.LBracket:
+            case Char.Type.RBracket:
+            case Char.Type.LBrace:
+            case Char.Type.RBrace:
+            case Char.Type.SemiColon:
+            case Char.Type.Dot:
+            case Char.Type.Plus:
+            case Char.Type.Minus:
+            case Char.Type.Star:
+            case Char.Type.Slash:
+            case Char.Type.EqualSign:
+            case Char.Type.GreaterThan:
+            case Char.Type.LessThan:
+            case Char.Type.Exclamation:
+            case Char.Type.Question:
+            case Char.Type.Colon:
+            case Char.Type.Caret:
+            case Char.Type.Ampersand:
+            case Char.Type.Pipe:
+            case Char.Type.Tilde:
+            case Char.Type.At:
+            case Char.Type.Dollar:
+            case Char.Type.Underscore:
+            case Char.Type.Symbol:
                 return Transition.To(SingleChar_State.instance);
 
-            case CharType.BackSlash:
-            case CharType.Unicode:
+            case Char.Type.BackSlash:
+            case Char.Type.Unicode:
                 return Transition.To(Symbol_State.instance);
 
-            case CharType.Other:
+            case Char.Type.Other:
                 return Transition.To(SingleChar_State.instance);
 
-            case CharType.EOF:
+            case Char.Type.EOF:
                 return Transition.To(End_State.instance);
 
-            case CharType.Error:
+            case Char.Type.Error:
                 return Transition.To(End_State.instance);
 
             default:
@@ -136,7 +136,7 @@ class Whitespace_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Whitespace:
+            case Char.Type.Whitespace:
                 return Transition.Stay();
             default:
                 return Transition.EmitAndTo(Initial_State.instance);
@@ -179,7 +179,7 @@ class Letter_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Letter:
+            case Char.Type.Letter:
                 return Transition.Stay();
             default:
                 return Transition.EmitAndTo(Initial_State.instance);
@@ -203,14 +203,14 @@ class Number_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Number:
-            case CharType.Dot:
+            case Char.Type.Number:
+            case Char.Type.Dot:
                 return Transition.Stay();
 
-            case CharType.Percent:
+            case Char.Type.Percent:
                 return Transition.ToContinue(Percent_State.instance);
 
-            case CharType.Letter:
+            case Char.Type.Letter:
                 return Transition.ToContinue(Dimension_State.instance);
 
             default:
@@ -235,7 +235,7 @@ class Dimension_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Letter:
+            case Char.Type.Letter:
                 return Transition.Stay();
             default:
                 return Transition.EmitAndTo(Initial_State.instance);
@@ -259,10 +259,10 @@ class Hex_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Hash:
-            case CharType.Hex:
-            case CharType.Letter:
-            case CharType.Number:
+            case Char.Type.Hash:
+            case Char.Type.Hex:
+            case Char.Type.Letter:
+            case Char.Type.Number:
                 return Transition.Stay();
             default:
                 return Transition.EmitAndTo(Initial_State.instance);
@@ -286,20 +286,20 @@ class String_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.BackSlash:
+            case Char.Type.BackSlash:
                 return Transition.EscapeNext(String_State.instance);
 
-            case CharType.SingleQuote:
-                return Transition.EndString(Initial_State.instance, CharType.SingleQuote);
+            case Char.Type.SingleQuote:
+                return Transition.EndString(Initial_State.instance, Char.Type.SingleQuote);
 
-            case CharType.DoubleQuote:
-                return Transition.EndString(Initial_State.instance, CharType.DoubleQuote);
+            case Char.Type.DoubleQuote:
+                return Transition.EndString(Initial_State.instance, Char.Type.DoubleQuote);
 
-            case CharType.Backtick:
-                return Transition.EndString(Initial_State.instance, CharType.Backtick);
+            case Char.Type.Backtick:
+                return Transition.EndString(Initial_State.instance, Char.Type.Backtick);
 
-            case CharType.EOF:
-            case CharType.NewLine:
+            case Char.Type.EOF:
+            case Char.Type.NewLine:
                 return Transition.EmitAndTo(Initial_State.instance);
 
             default:
@@ -362,12 +362,12 @@ class Symbol_State extends State {
 
     public handle(char: Character): Transition {
         switch (char.type) {
-            case CharType.Unicode:
-            case CharType.BackSlash:
-            case CharType.At:
-            case CharType.Dollar:
-            case CharType.Underscore:
-            case CharType.Symbol:
+            case Char.Type.Unicode:
+            case Char.Type.BackSlash:
+            case Char.Type.At:
+            case Char.Type.Dollar:
+            case Char.Type.Underscore:
+            case Char.Type.Symbol:
                 return Transition.Stay();
             default:
                 return Transition.EmitAndTo(Initial_State.instance);

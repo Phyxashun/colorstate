@@ -1,8 +1,7 @@
 // src/FunctionalStates.ts
 
 import { inspect, type InspectOptions } from 'node:util';
-import { type Character, CharType } from './Character.ts';
-import { CharacterStream } from './Character.ts';
+import Char, { type Character } from './Character.ts';
 import { Tokenizer } from './Tokenizer.ts';
 import { Parser } from './Parser.ts';
 
@@ -11,8 +10,8 @@ export type Transition =
     | { kind: 'To'; state: StateName }
     | { kind: 'EmitAndTo'; state: StateName }
     | { kind: 'ToContinue'; state: StateName }
-    | { kind: 'BeginString'; state: StateName; quoteType: CharType }
-    | { kind: 'EndString'; state: StateName; quoteType: CharType }
+    | { kind: 'BeginString'; state: StateName; quoteType: Char.Type }
+    | { kind: 'EndString'; state: StateName; quoteType: Char.Type }
     | { kind: 'EscapeNext'; state: StateName };
 
 type TransitionFn =
@@ -20,8 +19,8 @@ type TransitionFn =
     & { To: (state: StateName) => Transition; }
     & { EmitAndTo: (state: StateName) => Transition; }
     & { ToContinue: (state: StateName) => Transition; }
-    & { BeginString: (state: StateName, quoteType: CharType) => Transition; }
-    & { EndString: (state: StateName, quoteType: CharType) => Transition; }
+    & { BeginString: (state: StateName, quoteType: Char.Type) => Transition; }
+    & { EndString: (state: StateName, quoteType: Char.Type) => Transition; }
     & { EscapeNext: (state: StateName) => Transition; };
 
 export const Transition: TransitionFn = {
@@ -37,10 +36,10 @@ export const Transition: TransitionFn = {
     ToContinue: (state: StateName): Transition =>
         ({ kind: 'ToContinue', state }),
 
-    BeginString: (state: StateName, quoteType: CharType): Transition =>
+    BeginString: (state: StateName, quoteType: Char.Type): Transition =>
         ({ kind: 'BeginString', state, quoteType }),
 
-    EndString: (state: StateName, quoteType: CharType): Transition =>
+    EndString: (state: StateName, quoteType: Char.Type): Transition =>
         ({ kind: 'EndString', state, quoteType }),
 
     EscapeNext: (state: StateName): Transition =>
@@ -74,29 +73,29 @@ type StateHandler = (char: Character) => Transition;
 export const FunctionalStates: Record<StateName, StateHandler> = {
     [State.Initial]: (char) => {
         switch (char.type) {
-            case CharType.SingleQuote:
-                return Transition.BeginString(State.String, CharType.SingleQuote);
-            case CharType.DoubleQuote:
-                return Transition.BeginString(State.String, CharType.DoubleQuote);
-            case CharType.Backtick:
-                return Transition.BeginString(State.String, CharType.Backtick);
-            case CharType.Whitespace:
+            case Char.Type.SingleQuote:
+                return Transition.BeginString(State.String, Char.Type.SingleQuote);
+            case Char.Type.DoubleQuote:
+                return Transition.BeginString(State.String, Char.Type.DoubleQuote);
+            case Char.Type.Backtick:
+                return Transition.BeginString(State.String, Char.Type.Backtick);
+            case Char.Type.Whitespace:
                 return Transition.To(State.Whitespace);
-            case CharType.NewLine:
+            case Char.Type.NewLine:
                 return Transition.To(State.NewLine);
-            case CharType.Letter:
+            case Char.Type.Letter:
                 return Transition.To(State.Letter);
-            case CharType.Number:
+            case Char.Type.Number:
                 return Transition.To(State.Number);
-            case CharType.Hash:
+            case Char.Type.Hash:
                 return Transition.To(State.Hex);
 
-            case CharType.Comma: case CharType.LParen: case CharType.RParen:
-            case CharType.Plus: case CharType.Minus: case CharType.Star:
-            case CharType.Slash: case CharType.Percent:
+            case Char.Type.Comma: case Char.Type.LParen: case Char.Type.RParen:
+            case Char.Type.Plus: case Char.Type.Minus: case Char.Type.Star:
+            case Char.Type.Slash: case Char.Type.Percent:
                 return Transition.To(State.SingleChar);
 
-            case CharType.EOF:
+            case Char.Type.EOF:
                 return Transition.To(State.End);
             default:
                 return Transition.To(State.SingleChar);
@@ -104,55 +103,55 @@ export const FunctionalStates: Record<StateName, StateHandler> = {
     },
 
     [State.Whitespace]: (char) =>
-        char.type === CharType.Whitespace
+        char.type === Char.Type.Whitespace
             ? Transition.Stay()
             : Transition.EmitAndTo(State.Initial),
 
     [State.NewLine]: (_) => Transition.EmitAndTo(State.Initial),
 
     [State.Letter]: (char) =>
-        char.type === CharType.Letter
+        char.type === Char.Type.Letter
             ? Transition.Stay()
             : Transition.EmitAndTo(State.Initial),
 
     [State.Number]: (char) => {
-        if (char.type === CharType.Number || char.type === CharType.Dot)
+        if (char.type === Char.Type.Number || char.type === Char.Type.Dot)
             return Transition.Stay();
         
-        if (char.type === CharType.Percent)
+        if (char.type === Char.Type.Percent)
             return Transition.ToContinue(State.Percent);
 
-        if (char.type === CharType.Letter)
+        if (char.type === Char.Type.Letter)
             return Transition.ToContinue(State.Dimension);
 
         return Transition.EmitAndTo(State.Initial);
     },
 
     [State.Dimension]: (char) =>
-        char.type === CharType.Letter
+        char.type === Char.Type.Letter
             ? Transition.Stay()
             : Transition.EmitAndTo(State.Initial),
 
     [State.Hex]: (char) => {
         const isHex =
-            char.type === CharType.Hash ||
-            char.type === CharType.Letter ||
-            char.type === CharType.Number;
+            char.type === Char.Type.Hash ||
+            char.type === Char.Type.Letter ||
+            char.type === Char.Type.Number;
         return isHex ? Transition.Stay() : Transition.EmitAndTo(State.Initial);
     },
 
     [State.String]: (char) => {
-        if (char.type === CharType.BackSlash)
+        if (char.type === Char.Type.BackSlash)
             return Transition.EscapeNext(State.String);
         if (
-            char.type === CharType.SingleQuote ||
-            char.type === CharType.DoubleQuote ||
-            char.type === CharType.Backtick
+            char.type === Char.Type.SingleQuote ||
+            char.type === Char.Type.DoubleQuote ||
+            char.type === Char.Type.Backtick
         ) {
             return Transition.EndString(State.Initial, char.type);
         }
 
-        if (char.type === CharType.EOF || char.type === CharType.NewLine)
+        if (char.type === Char.Type.EOF || char.type === Char.Type.NewLine)
             return Transition.EmitAndTo(State.Initial);
         return Transition.Stay();
     },
@@ -163,10 +162,10 @@ export const FunctionalStates: Record<StateName, StateHandler> = {
 
     [State.Symbol]: (char) => {
         const isSym = [
-            CharType.Unicode,
-            CharType.BackSlash,
-            CharType.At,
-            CharType.Symbol
+            Char.Type.Unicode,
+            Char.Type.BackSlash,
+            Char.Type.At,
+            Char.Type.Symbol
         ].includes(char.type);
         return isSym ? Transition.Stay() : Transition.EmitAndTo(State.Initial);
     },
@@ -227,16 +226,16 @@ const line = (newLine: boolean = true, width: number = 80): void => {
 
 const characterStreamTest = () => {
     line();
-    console.log('=== CHARACTERSTREAM DEMO ===\n');
+    console.log('=== Char.Stream DEMO ===\n');
     line();
 
     const input = 'rgba(255, 100, 75, 50%)';
 
-    const stream = new CharacterStream(input);
+    const stream = new Char.Stream(input);
     let currentState: StateName = State.Initial;
     
     console.log(`INPUT: '${input}'\n`);
-    console.log('RESULT OF CHARACTERSTREAM:\n');
+    console.log('RESULT OF Char.Stream:\n');
     
     for (const char of stream) {
         const ch = { value: char.value, type: char.type };

@@ -1,6 +1,6 @@
 // src/Context.ts
 
-import { type Character, CharType } from './Character.ts';
+import Char, { type Character } from './Character.ts';
 import { InitialState, State } from './States.ts';
 import { Transition } from './Transition.ts';
 
@@ -13,7 +13,7 @@ interface ProcessResult {
 }
 
 interface StringContext {
-    openingQuoteType: CharType | null;
+    openingQuoteType: Char.Type | null;
     isEscaping: boolean;
     nestingLevel: number;
 }
@@ -36,12 +36,12 @@ class Context {
         return this.state;
     }
 
-    public beginString(quoteType: CharType): void {
+    public beginString(quoteType: Char.Type): void {
         this.stringContext.openingQuoteType = quoteType;
         this.stringContext.nestingLevel++;
     }
 
-    public endString(quoteType: CharType): void {
+    public endString(quoteType: Char.Type): void {
         this.stringContext.nestingLevel = Math.max(0, this.stringContext.nestingLevel - 1);
         if (this.stringContext.nestingLevel === 0) {
             this.stringContext.openingQuoteType = null;
@@ -52,11 +52,11 @@ class Context {
         return this.stringContext.nestingLevel > 0;
     }
 
-    public getOpeningQuoteType(): CharType | null {
+    public getOpeningQuoteType(): Char.Type | null {
         return this.stringContext.openingQuoteType;
     }
 
-    public isMatchingQuote(quoteType: CharType): boolean {
+    public isMatchingQuote(quoteType: Char.Type): boolean {
         return this.stringContext.openingQuoteType === quoteType;
     }
 

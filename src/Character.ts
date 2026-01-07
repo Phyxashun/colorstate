@@ -299,6 +299,33 @@ namespace Char {
             return String.fromCodePoint(codePoint);
         }
 
+        /**
+         * Looks backwards from the current stream position through the character buffer
+         * and collects a contiguous sequence of characters that match a predicate.
+         *
+         * This method does NOT change the stream's position.
+         *
+         * @param predicate A function that takes a Character and returns a boolean.
+         * @returns An array of the matching characters, in their original forward order.
+         */
+        public lookbackWhile(predicate: (char: Character) => boolean): Character[] {
+            if (this.charsBuffer.length === 0) return [];
+            const lookedBackChars: Character[] = [];
+
+            for (let i = this.charsBuffer.length - 1; i >= 0; i--) {
+                const char = this.charsBuffer[i]!;
+                if (predicate(char)) {
+                    lookedBackChars.push(char);
+                } else {
+                    break;
+                }
+            }
+
+            // The characters were collected in reverse order (e.g., '3', '2', '1').
+            // Reverse the array to return them in their natural order ('1', '2', '3').
+            return lookedBackChars.reverse();
+        }
+
         public advance(charValue: string): void {
             this.index += charValue.length;
             if (charValue === '\n') {
