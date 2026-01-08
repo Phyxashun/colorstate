@@ -1,37 +1,37 @@
 // src/tests/Character.test.ts
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { type Position, type Character, CharType, CharUtility, CharacterStream } from '../src/Character';
+import CharacterStream, { type Position, type Character, CharType, CHARCLASSIFY  } from '../src/Character';
 
 
 // Tests for Char.CharUtility (from your test run)
 describe('Char.CharUtility', () => {
     describe('classify', () => {
         it('should classify stream-specific types', () => {
-            expect(CharUtility.classify('')).toBe(CharType.EOF);
-            expect(CharUtility.classify(null as any)).toBe(CharType.Error);
+            expect(CHARCLASSIFY('')).toBe(CharType.EOF);
+            expect(CHARCLASSIFY(null as any)).toBe(CharType.Error);
         });
 
         it('should classify specific named types from the SymbolMap', () => {
-            expect(CharUtility.classify('(')).toBe(CharType.LParen);
-            expect(CharUtility.classify('#')).toBe(CharType.Hash);
-            expect(CharUtility.classify('$')).toBe(CharType.Dollar);
+            expect(CHARCLASSIFY('(')).toBe(CharType.LParen);
+            expect(CHARCLASSIFY('#')).toBe(CharType.Hash);
+            expect(CHARCLASSIFY('$')).toBe(CharType.Dollar);
         });
 
         it('should classify general categories for characters not in the SymbolMap', () => {
-            expect(CharUtility.classify('a')).toBe(CharType.Letter);
-            expect(CharUtility.classify('1')).toBe(CharType.Number);
-            expect(CharUtility.classify(' ')).toBe(CharType.Whitespace);
-            expect(CharUtility.classify('\n')).toBe(CharType.NewLine);
-            expect(CharUtility.classify('¡')).toBe(CharType.Punctuation);
-            expect(CharUtility.classify('€')).toBe(CharType.Currency);
-            expect(CharUtility.classify('👍')).toBe(CharType.Emoji);
-            expect(CharUtility.classify('©')).toBe(CharType.Symbol);
+            expect(CHARCLASSIFY('a')).toBe(CharType.Letter);
+            expect(CHARCLASSIFY('1')).toBe(CharType.Number);
+            expect(CHARCLASSIFY(' ')).toBe(CharType.Whitespace);
+            expect(CHARCLASSIFY('\n')).toBe(CharType.NewLine);
+            expect(CHARCLASSIFY('¡')).toBe(CharType.Punctuation);
+            expect(CHARCLASSIFY('€')).toBe(CharType.Currency);
+            expect(CHARCLASSIFY('👍')).toBe(CharType.Emoji);
+            expect(CHARCLASSIFY('©')).toBe(CharType.Symbol);
         });
 
         it('should classify unknown/control characters as Other', () => {
             const controlChar = String.fromCharCode(1);
-            expect(CharUtility.classify(controlChar)).toBe(CharType.Other);
+            expect(CHARCLASSIFY(controlChar)).toBe(CharType.Other);
         });
     });
 });
@@ -55,10 +55,16 @@ describe('CharacterStream', () => {
         const emptyStream = new CharacterStream();
         expect(emptyStream.get()).toBe('');
         expect(emptyStream.isEOF()).toBe(true);
+    });
 
-        emptyStream.set('10');
-        expect(emptyStream.get()).toBe('10');
-        expect(emptyStream.isEOF()).toBe(false);
+    it('should set the position using a position and then just an index', () => {
+        const newPosition: Position = {
+            index: 5,
+            line: 2,
+            column: 3
+        }
+        stream.setPosition(newPosition);
+        expect(stream.getPosition()).toEqual({ index: 5, line: 2, column: 3 });
     });
 
     // Covers the 'else' branch of setPosition
@@ -211,6 +217,3 @@ describe('CharacterStream', () => {
         expect(newStream.peek().value).toBe('a');
     });
 });
-
-
-

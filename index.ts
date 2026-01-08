@@ -3,26 +3,11 @@
 import { inspect, type InspectOptions } from 'node:util';
 import { Token, Tokenizer } from './src/Tokenizer.ts';
 //import { Parser } from './src/Parser.ts';
-import { CharacterStream } from './src/Character.ts';
+import CharacterStream from './src/Character.ts';
 
 /**
  * @TODO Add character, token, and state support for quotes
  */
-
-const compactInspectOptions: InspectOptions = {
-    showHidden: true,
-    depth: null,
-    colors: true,
-    customInspect: false,
-    showProxy: false,
-    maxArrayLength: null,
-    maxStringLength: null,
-    breakLength: 100,
-    compact: true,
-    sorted: false,
-    getters: false,
-    numericSeparator: true,
-};
 
 const inspectOptions: InspectOptions = {
     showHidden: true,
@@ -33,7 +18,7 @@ const inspectOptions: InspectOptions = {
     maxArrayLength: null,
     maxStringLength: null,
     breakLength: 100,
-    compact: false,
+    compact: true,
     sorted: false,
     getters: false,
     numericSeparator: true,
@@ -88,21 +73,14 @@ const testCases: string[] = [
 
 const characterStreamTest = () => {
     for (const test of testCases) {
-        line();
-        console.log('=== CHARACTERSTREAM DEMO ===\n');
-        line();
-
-        const stream = new CharacterStream(test);
-
-        console.log(`INPUT: '${test}'\n`);
-        console.log('RESULT OF CHARACTERSTREAM:\n');
-
+        const stream = new CharacterStream();
+        stream
+            .set(test)
+            .withLogging();
+        
         for (const char of stream) {
-            console.log('\t', inspect(char, compactInspectOptions));
+            
         }
-
-        console.log();
-        line();
     }
 }
 
@@ -146,25 +124,30 @@ const tokenizerTest = () => {
 //     }
 // }
 
-const newTokenizerTest = () => {
-    const sourceCode = `let name = "John Doe\\n"; // A comment\nconst value = 123.45;`;
+const tokenizerCommentsTest = () => {
+    const testCode = [
+        `let name = "John Doe\\n"; // A comment\nconst value = 123.45;`,
+        'let x = 1; // Comment with a \\ backslash',
+        '/* Comment */ let name = "Jane Doe"; // Another comment\nconst pay = 750.00;'
+    ];
 
-    // 1. Create a stream from the source
-    const stream = new CharacterStream(sourceCode);
+    for (const test of testCode) {
+        // 1. Create a stream from the source
+        const stream = new CharacterStream(test);
 
-    // 2. Create a tokenizer instance
-    const tokenizer = new Tokenizer();
+        // 2. Create a tokenizer instance
+        const tokenizer = new Tokenizer();
 
-    // 3. Generate tokens
-    const tokens: Token[] = tokenizer
-        .withLogging()
-        .tokenize(stream);
+        // 3. Generate tokens
+        const tokens: Token[] = tokenizer
+            .withLogging()
+            .tokenize(stream);
+    }
 }
 
 //characterStreamTest();
 
-tokenizerTest();
-//newTokenizerTest();
+//tokenizerTest();
+tokenizerCommentsTest();
 
 //parserTest();
-

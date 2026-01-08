@@ -1,0 +1,2381 @@
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: index.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+// ./index.ts
+
+import { inspect, type InspectOptions } from 'node:util';
+import { Token, Tokenizer } from './src/Tokenizer.ts';
+//import { Parser } from './src/Parser.ts';
+import CharacterStream from './src/Character.ts';
+
+/**
+ * @TODO Add character, token, and state support for quotes
+ */
+
+const inspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
+
+const line = (newLine: boolean = true, width: number = 80): void => {
+    if (newLine) console.log(`${'─'.repeat(width)}\n`);
+    if (!newLine) console.log(`${'─'.repeat(width)}`);
+}
+
+// TEST CASES
+// Commented out cases are not working
+const testCases: string[] = [
+    '"67 a, b, c / 1 \'word\' 2 3+(2-0)"',
+    '67 a, b, c / 1 word 2 3+(2-0)',
+    'rgba(100 128 255 / 0.5)',
+    'rgba(100grad 360 220  / 50%)',
+    '#ff00ff00',
+    '56%',
+    '100grad',
+    '1 + 2',
+    '10 - 5 + 3',
+    '2 * 3 + 4',
+    'rgb(255, 0, 0)',
+    '#ff0000',
+    '100%',
+    '(1 + 2) * 3',
+    '-5 + 10',
+    'rgba(255, 128, 0, 50%)',
+    'const a = 10;',
+
+    // Big Test
+
+    // `const characterStreamTest = () => {
+    // line();
+    // console.log('=== CHARACTERSTREAM DEMO ===');
+    // line();
+
+    // const input = 'rgb(255, 100, 75)';
+
+    // const stream = new CharacterStream(input);
+
+    // console.log('INPUT:');
+    // console.log('RESULT OF CHARACTERSTREAM:');
+    // for (const char of stream) {
+    //     console.log(inspect(char, compactInspectOptions));
+    // }
+    // console.log();
+    // line();
+    // }`,
+];
+
+const characterStreamTest = () => {
+    for (const test of testCases) {
+        const stream = new CharacterStream();
+        stream
+            .set(test)
+            .withLogging();
+        
+        for (const char of stream) {
+            
+        }
+    }
+}
+
+const tokenizerTest = () => {
+    // Fluent usage
+    const tokenizer = new Tokenizer();
+
+    for (const test in testCases) {
+        const stream = new CharacterStream(testCases[test]);
+        tokenizer
+            .withLogging(`TEST (${test}): Direct Tokenization`)
+            .tokenize(stream);
+    }
+}
+
+// const parserTest = () => {
+//     console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
+
+//     for (const input of testCases) {
+//         line();
+
+//         // Step 1: Character stream
+//         const stream = new CharacterStream(input);
+
+//         // Step 1: Tokenize
+//         const tokenizer = new Tokenizer();
+//         const tokens = tokenizer
+//             .withoutLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
+//             .tokenize(stream);
+
+//         // Step 2: Parse
+//         const parser = new Parser(tokens);
+//         const ast = parser.parse();
+
+//         // Step 3: Console log the AST
+//         console.log('\nAST:\n');
+//         const defaultAST = inspect(ast, inspectOptions);
+//         const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
+//         console.log(fourSpaceAST, '\n');
+//         line();
+//     }
+// }
+
+const tokenizerCommentsTest = () => {
+    const testCode = [
+        `let name = "John Doe\\n"; // A comment\nconst value = 123.45;`,
+        'let x = 1; // Comment with a \\ backslash',
+        '/* Comment */ let name = "Jane Doe"; // Another comment\nconst pay = 750.00;'
+    ];
+
+    for (const test of testCode) {
+        // 1. Create a stream from the source
+        const stream = new CharacterStream(test);
+
+        // 2. Create a tokenizer instance
+        const tokenizer = new Tokenizer();
+
+        // 3. Generate tokens
+        const tokens: Token[] = tokenizer
+            .withLogging()
+            .tokenize(stream);
+    }
+}
+
+//characterStreamTest();
+
+//tokenizerTest();
+tokenizerCommentsTest();
+
+//parserTest();
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: index.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: Consolidate.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+// ./Consolidate.ts
+
+/**
+ * @file Consolidate.ts
+ * @description A utility script to consolidate project files into single, 
+ *              combined output files. The script is organized into logical 
+ *              namespaces:
+ *              - `config`: Defines the consolidation jobs.
+ *              - `ui`: Handles all console output and user interface elements.
+ *              - `fileSystem`: Provides low-level functions for file system interactions.
+ *              - `consolidator`: Orchestrates the consolidation process using the other namespaces.
+ * @copyright 2026 Dustin Dew
+ * @license MIT
+ * @author Dustin Dew <phyxashun@gmail.com>
+ */
+
+import { styleText } from 'node:util';
+import figlet from 'figlet';
+import standard from "figlet/fonts/Standard";
+import * as fs from 'node:fs';
+import { globSync } from 'glob';
+
+/**
+ * Constants
+ */
+const TEXT_OUTPUT_DIR = './ALL/txt/';
+const TS_OUTPUT_DIR = './ALL/ts/';
+const MAX_WIDTH: number = 80;
+const LINE_CHAR = '█';
+const TAB_WIDTH = 4;
+const SPACE = ' ';
+const START_END_SPACER = 30;
+const START_END_NEWLINE = 2;
+const UTF_8 = 'utf-8';
+const FIGLET_FONT = 'Standard';
+figlet.parseFont(FIGLET_FONT, standard);
+
+const SOURCE_DEFINITIONS = [
+    { 
+        name: 'Typescript', 
+        patterns: [
+            'src/**/*.ts', 
+            'index.ts',
+            'Consolidate.ts',
+        ] 
+    },
+    { 
+        name: 'Configuration', 
+        patterns: [
+            '.vscode/launch.json', 
+            '0. NOTES/*.md', 
+            '.gitignore', 
+            '*.json', 
+            '*.config.ts', 
+            'License', 
+            'README.md'
+        ] 
+    },
+    { 
+        name: 'Test', 
+        patterns: [
+            'test/**/*.test.ts', 
+        ] 
+    },
+    { 
+        name: 'Old Test', 
+        patterns: [
+            'test_old/**/*.ts',
+            'test_old/**/*.test.ts',
+        ], 
+        jobName: 'Test' 
+    }, //
+];
+
+/**
+ * @interface ConsolidationJob
+ * @description Defines the structure for a single consolidation task.
+ * @property {string} name - A descriptive name for the job, used in logging.
+ * @property {string} outputFile - The path to the file where content will be consolidated.
+ * @property {string[]} patterns - An array of glob patterns to find files for this job.
+ */
+interface ConsolidationJob {
+    name: string;
+    outputFile: string;
+    patterns: string[];
+}
+
+/**
+ * @interface PrintLineOptions
+ * @description Defines the structure for a printLine options object.
+ * @property {boolean} preNewLine - If true, adds a newline before the divider.
+ * @property {boolean} postNewLine - If true, adds a newline after the divider.
+ * @property {number} width - The width of the line.
+ * @property {string} char - The character to use for the line.
+ */
+interface PrintLineOptions {
+    preNewLine?: boolean;
+    postNewLine?: boolean;
+    width?: number;
+    char?: string;
+}
+
+/**
+ * @description Generates an array of all consolidation jobs to be executed by the script.
+ * @returns {ConsolidationJob[]}
+ */
+const generateJobsForType = (outputDir: string, extension: string): ConsolidationJob[] => {
+    return SOURCE_DEFINITIONS.map((definition, index) => ({
+        name: styleText(['red', 'underline'], definition.jobName ?? definition.name),
+        outputFile: `${outputDir}${index + 1}_ALL_${definition.name.toUpperCase().replace(' ', '_')}.${extension}`,
+        patterns: definition.patterns,
+    }));
+};
+
+/**
+ * @description An array of all consolidation jobs to be executed by the script.
+ * @type {ConsolidationJob[]}
+ */
+const JOBS: ConsolidationJob[] = [
+    ...generateJobsForType(TS_OUTPUT_DIR, 'ts'),
+    ...generateJobsForType(TEXT_OUTPUT_DIR, 'txt'),
+];
+
+/**
+ * @description Default options object for the printLine function.
+ */
+const defaultPrintLineOptions: PrintLineOptions = {
+    preNewLine: false,  // No preceding new line
+    postNewLine: false, // No successive new line
+    width: MAX_WIDTH,   // Use global const MAX_WIDTH = 80
+    char: LINE_CHAR,    // Use global const LINE_CHAR = '='          
+};
+
+/**
+ * @function printLine
+ * @description Prints a styled horizontal line to the console.
+ * @param {PrintLineOptions} [options={}] - Configuration options for the line.
+ * @returns {void}
+ */
+const printLine = (options: PrintLineOptions = {}): void => {
+    const { preNewLine, postNewLine, width, char } = {
+        ...defaultPrintLineOptions,
+        ...options
+    };
+    const pre = preNewLine ? '\n' : '';
+    const post = postNewLine ? '\n' : '';
+    const styledDivider = styleText(['gray', 'bold'], char!.repeat(width!));
+    console.log(`${pre}${styledDivider}${post}`);
+};
+
+/**
+ * @function spacer
+ * @description Creates a string of repeated characters, useful for padding.
+ * @param {number} [width=TAB_WIDTH] - Number of characters to repeat.
+ * @param {string} [char=SPACE] - The character to repeat.
+ * @returns {string} A string of repeated characters.
+ */
+const spacer = (width: number = TAB_WIDTH, char: string = SPACE): string => char.repeat(width);
+
+/**
+ * @function centerText
+ * @description Centers a line of text within a given width by adding padding.
+ * @param {string} text - The text to center.
+ * @param {number} [width=MAX_WIDTH] - The total width to center within.
+ * @returns {string} The centered text string.
+ * @requires spacer - Function that return a string for spacing.
+ */
+const centerText = (text: string, width: number = MAX_WIDTH): string => {
+    // Remove any existing styling for accurate length calculation
+    const unstyledText = text.replace(/\x1b\[[0-9;]*m/g, '');
+    const padding = Math.max(0, Math.floor((width - unstyledText.length) / 2));
+    return `${spacer(padding)}${text}`;
+};
+
+/**
+ * @function centeredFiglet
+ * @description Generates and centers multi-line FIGlet (ASCII) text.
+ * @param {string} text - The text to convert to ASCII art.
+ * @param {number} [width=MAX_WIDTH] - The total width to center the art within.
+ * @returns {string} The centered, multi-line ASCII art as a single string.
+ * @requires centerText
+ */
+const centeredFiglet = (text: string, width: number = MAX_WIDTH): string => {
+    const rawFiglet = figlet.textSync(text, {
+        font: FIGLET_FONT,
+        width: width,
+        whitespaceBreak: true
+    });
+
+    return rawFiglet.split('\n')
+        .map(line => centerText(line, width))
+        .join('\n');
+}
+
+/**
+ * @function displayHeader
+ * @description Renders the main application header, including title and subtitle.
+ * @returns {void}
+ * @requires printLine
+ * @requires centeredFiglet
+ * @requires styleText
+ * @requires centerText
+ */
+const displayHeader = async (): Promise<void> => {
+    printLine({ preNewLine: true });
+    console.log(styleText(['yellowBright', 'bold'], centeredFiglet(`Consolidate!!!`)));
+    console.log(centerText(styleText(['magentaBright', 'bold'], '*** PROJECT FILE CONSOLIDATOR SCRIPT ***')));
+    printLine({ preNewLine: true, postNewLine: true });
+};
+
+/**
+ * Logs the start of a new consolidation job.
+ * @param {string} jobName - The name of the job being processed.
+ * @param {string} outputFile - The path of the output file for the job.
+ */
+const logJobStart = (jobName: string, outputFile: string): void => {
+    const styledJob = styleText('cyan', `Consolidating all project ${jobName} files into`)
+    console.log(styledJob, `${outputFile}...\n`);
+};
+
+/**
+ * Logs the path of a file being appended to an output file.
+ * @param {string} filePath - The path of the file being appended.
+ */
+const logFileAppend = (filePath: string): void => {
+    console.log(styleText('blue', `\tAppending:`), `${filePath}`);
+};
+
+/**
+ * Logs a successful completion message for a job.
+ */
+const logComplete = (): void => {
+    console.log(styleText(['green', 'bold'], '\nConsolidation complete!!!'));
+    printLine({ preNewLine: true, postNewLine: true });
+};
+
+/**
+ * Ensures an output file is empty by deleting it if it already exists.
+ * @param {string} filePath - The path to the output file to prepare.
+ */
+const prepareOutputFile = (filePath: string): void => {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+};
+
+/**
+ * Finds all file paths matching an array of glob patterns.
+ * @param {string[]} patterns - The glob patterns to search for.
+ * @param {string} outputFile - The path of the output file, to be excluded from the search.
+ * @returns {string[]} An array of found file paths.
+ */
+const findFiles = (patterns: string[], outputFile: string): string[] => {
+    return globSync(
+        patterns,
+        {
+            ignore: [
+                'coverage/**',
+                'node_modules/**',
+                'ALL/**',
+                outputFile
+            ]
+        }
+    );
+};
+
+/**
+ * Appends the content of a source file to an output file, wrapped with header and footer comments.
+ * @param {string} outputFile - The path to the destination file.
+ * @param {string} sourceFile - The path of the source file to append.
+ */
+const appendFileWithHeaders = (outputFile: string, sourceFile: string): void => {
+    const space = spacer(START_END_SPACER, '■');
+    const endLine = spacer(START_END_NEWLINE, '\n')
+    const divider = spacer(100, '█');
+
+    const startFile = `${endLine}//${space} Start of file: ${sourceFile} ${space}${endLine}${endLine}\n`;
+    const tsNoCheck = `// @ts-nocheck\n`;
+    const eslintDisable = `/* eslint-disable */${endLine}`;
+    const content = fs.readFileSync(sourceFile, UTF_8);
+    const endFile = `\n${endLine}${endLine}//${space} End of file: ${sourceFile} ${space}${endLine}\n`;
+    const fileDivider = `//${divider}\n`;
+
+    fs.appendFileSync(outputFile, startFile, UTF_8);
+    fs.appendFileSync(outputFile, tsNoCheck, UTF_8);
+    fs.appendFileSync(outputFile, eslintDisable, UTF_8);
+    fs.appendFileSync(outputFile, content, UTF_8);
+    fs.appendFileSync(outputFile, endFile, UTF_8);
+    fs.appendFileSync(outputFile, fileDivider, UTF_8);
+    fs.appendFileSync(outputFile, fileDivider, UTF_8);
+};
+
+/**
+ * Processes a single consolidation job from start to finish.
+ * @param {config.ConsolidationJob} job - The consolidation job to execute.
+ * @private
+ */
+const processJob = (job: ConsolidationJob): void => {
+    const { name, outputFile, patterns } = job;
+
+    logJobStart(name, outputFile);
+    prepareOutputFile(outputFile);
+
+    findFiles(patterns, outputFile)
+        .forEach(sourceFile => {
+            logFileAppend(sourceFile);
+            appendFileWithHeaders(outputFile, sourceFile);
+        });
+
+    logComplete();
+};
+
+/**
+ * Runs all consolidation jobs defined in the configuration.
+ * @param {config.ConsolidationJob[]} jobs - An array of consolidation jobs to execute.
+ */
+const run = (jobs: ConsolidationJob[]): void => {
+    jobs.forEach(processJob);
+};
+
+/**
+ * @function main
+ * @description The main entry point for the script. Initializes the UI and 
+ *              starts the consolidation process.
+ */
+export const main = (): void => {
+    displayHeader();
+    run(JOBS);
+};
+
+
+// Executes and exports the script.
+export const Consolidate = main;
+
+Consolidate();
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: Consolidate.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src\Tokenizer.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+// src/Tokenizer.ts
+
+import { styleText, inspect, type InspectOptions } from 'node:util';
+import { Context, State } from './Context.ts';
+import CharacterStream, { type Character } from './Character.ts';
+import PrintLine, { Spacer, CenterText, BoxText } from './PrintLine.ts';
+
+enum TokenType {
+    // State Control Tokens
+    START = 'START',
+    OTHER = 'OTHER',
+    ERROR = 'ERROR',
+    END = 'END',
+
+    // Whitespace and Formatting Tokens
+    WHITESPACE = 'WHITESPACE',
+    NEWLINE = 'NEWLINE',
+
+    // Primary Tokens
+    IDENTIFIER = 'IDENTIFIER',
+    NUMBER = 'NUMBER',
+    HEXVALUE = 'HEXVALUE',
+    SYMBOL = 'SYMBOL',
+
+    // Context Specific Identifier Literals
+    KEYWORD = 'KEYWORD',
+    FUNCTION = 'FUNCTION',
+
+    // Context Specific Numeric Literals
+    PERCENT = 'PERCENT',
+    DIMENSION = 'DIMENSION',
+
+    // Context Specific String Literals
+    STRING = 'STRING',
+    ESCAPE = 'ESCAPE',
+    COMMENT = 'COMMENT',
+
+    // Context Specific Symbol Literals
+    EQUALS = 'EQUALS',
+    PLUS = 'PLUS',
+    MINUS = 'MINUS',
+    STAR = 'STAR',
+    DOT = 'DOT',
+
+    // Context Specific Delimiter Tokens
+    COMMA = 'COMMA',
+    SLASH = 'SLASH',
+    LPAREN = 'LPAREN',
+    RPAREN = 'RPAREN',
+}
+
+interface Token {
+    value: string;
+    type: TokenType;
+}
+
+type CreateTokenFn = (value: string, type?: TokenType) => Token;
+
+class Tokenizer {
+    private inspectOptions: InspectOptions = {
+        showHidden: true,
+        depth: null,
+        colors: true,
+        customInspect: false,
+        showProxy: false,
+        maxArrayLength: null,
+        maxStringLength: null,
+        breakLength: 100,
+        compact: true,
+        sorted: false,
+        getters: false,
+        numericSeparator: true,
+    };
+
+    private ctx = new Context();
+    private buffer: Character[] = [];
+    private shouldLog: boolean = false;
+    private message = 'TOKENIZATION DEMONSTRATION:';
+
+    constructor() {
+        return this.reset();
+    }
+
+    private get state(): State {
+        return this.ctx.state;
+    }
+
+    /**
+     * Resets the tokenizer's internal state for a new run.
+     */
+    private reset(): this {
+        this.ctx.reset();
+        this.buffer = [];
+        return this;
+    }
+
+    /**
+     * A map of recognized keywords. Used to convert IDENTIFIER tokens into KEYWORD tokens.
+     */
+    private static readonly KEYWORDS: Record<string, TokenType> = {
+        'rgb': TokenType.FUNCTION,
+        'rgba': TokenType.FUNCTION,
+        'hsl': TokenType.FUNCTION,
+        'hsla': TokenType.FUNCTION,
+        'hwb': TokenType.FUNCTION,
+        'lch': TokenType.FUNCTION,
+        'lab': TokenType.FUNCTION,
+        'oklch': TokenType.FUNCTION,
+        'oklab': TokenType.FUNCTION,
+        'alpha': TokenType.FUNCTION,
+        'color': TokenType.FUNCTION,
+        'from': TokenType.FUNCTION,
+        'deg': TokenType.DIMENSION,
+        'grad': TokenType.DIMENSION,
+        'rad': TokenType.DIMENSION,
+        'turn': TokenType.DIMENSION,
+        'const': TokenType.KEYWORD,
+        'let': TokenType.KEYWORD,
+        'for': TokenType.KEYWORD,
+        'of': TokenType.KEYWORD,
+        'new': TokenType.KEYWORD,
+        'red': TokenType.KEYWORD,
+        'green': TokenType.KEYWORD,
+        'blue': TokenType.KEYWORD,
+    };
+
+    /**
+     * Maps the first character of a generic SYMBOL token to a specific TokenType.
+     */
+    private static readonly SYMBOLS: Record<string, TokenType> = {
+        '=': TokenType.EQUALS,
+        '+': TokenType.PLUS,
+        '-': TokenType.MINUS,
+        '*': TokenType.STAR,
+        '.': TokenType.DOT,
+        ',': TokenType.COMMA,
+        '/': TokenType.SLASH,
+        '(': TokenType.LPAREN,
+        ')': TokenType.RPAREN,
+        '%': TokenType.PERCENT,
+        // Add other single-character symbols here
+    };
+
+    /**
+     * Maps the final state of the context to a TokenType.
+     * @param {State} state - The context state.
+     * @returns {TokenType} The corresponding token type.
+     */
+    private static readonly STATETOKEN_MAP: Partial<Record<State, TokenType>> = {
+        [State.IN_IDENTIFIER]: TokenType.IDENTIFIER,
+        [State.IN_NUMBER]: TokenType.NUMBER,
+        [State.IN_STRING]: TokenType.STRING,
+        [State.IN_HEXVALUE]: TokenType.HEXVALUE,
+        [State.IN_DIMENSION]: TokenType.DIMENSION,
+        [State.IN_PERCENT]: TokenType.PERCENT,
+        [State.IN_SYMBOL]: TokenType.SYMBOL,
+        [State.IN_SINGLE_LINE_COMMENT]: TokenType.COMMENT,
+        [State.IN_MULTI_LINE_COMMENT]: TokenType.COMMENT,
+        [State.IN_MULTI_LINE_COMMENT_SAW_STAR]: TokenType.COMMENT,
+    };
+
+    /**
+     * Tokenizes a given character stream.
+     * @param {Stream} stream - The input stream to tokenize.
+     * @returns {Token[]} An array of tokens.
+     */
+    public tokenize(stream: CharacterStream): Token[] {
+        this.reset();
+        const tokens: Token[] = [];
+        let reprocess = false;
+        this.logHeader(stream);
+
+        for (const CHAR of stream) {
+            do {
+                const ACTION = this.ctx.process(CHAR);
+                reprocess = ACTION.reprocess;
+
+                // 1. Handle emitting a token
+                if (ACTION.emit && this.buffer.length > 0) {
+                    const tokenType = (this.state === State.INITIAL)
+                        ? ACTION.tokenType
+                        : Tokenizer.STATETOKEN_MAP[this.state] ?? TokenType.OTHER;
+
+                    tokens.push(this.createToken(tokenType));
+                    this.buffer = [];
+                }
+
+                // 2. Handle the current character
+                if (!ACTION.ignore && !reprocess) this.buffer.push(CHAR);
+
+            } while (reprocess);
+        }
+
+        // After the loop, flush any remaining characters in the buffer.
+        if (this.buffer.length > 0) {
+            const newState = Tokenizer.STATETOKEN_MAP[this.state] ?? TokenType.OTHER;
+            tokens.push(this.createToken(newState));
+        }
+
+        tokens.push({ value: '', type: TokenType.END });
+        this.logResults(tokens);
+        return tokens;
+    }
+
+    private static readonly TOKENMAP: Partial<Record<TokenType, CreateTokenFn>> = {
+        [TokenType.STRING]: (value) => {
+            return { value: Tokenizer.unescapeString(value), type: TokenType.STRING };
+        },
+        [TokenType.IDENTIFIER]: (value) => {
+            return { value, type: Tokenizer.KEYWORDS[value] ?? TokenType.IDENTIFIER };
+        },
+        [TokenType.SYMBOL]: (value) => {
+            return { value, type: Tokenizer.SYMBOLS[value] ?? TokenType.SYMBOL };
+        },
+        [TokenType.COMMENT]: (value) => {
+            return { value, type: TokenType.COMMENT };
+        }
+    }
+
+    /**
+     * Creates a token from the current buffer and a given type.
+     * This is where keyword checking and string unescaping happens.
+     * @param {TokenType} tokenType - The type of token to create, as determined by the Context.
+     * @returns {Token} The final token.
+     */
+    private createToken(tokenType: TokenType): Token {
+        if (this.buffer.length === 0) throw new Error('Cannot create token from empty buffer');
+        let value = this.buffer.map(c => c.value).join('');
+
+        // For a multi-line comment, manually add the closing slash
+        // that was consumed by the state machine.
+        if (tokenType === TokenType.COMMENT && value.startsWith('/*')) {
+            value += '/';
+        }
+
+        const otherToken: CreateTokenFn = (newValue: string, newType?: TokenType) => {
+            return { value: newValue, type: newType ?? TokenType.OTHER };
+        }
+
+        const tokenFn = Tokenizer.TOKENMAP[tokenType] ?? otherToken;
+        return tokenFn(value, tokenType);
+    }
+
+    /**
+     * Converts escaped sequences in a string to their actual characters.
+     * @param {string} input - The raw string content.
+     * @returns {string} The unescaped string.
+     */
+    private static unescapeString(input: string): string {
+        // A map for replacements.
+        const replacements: Record<string, string> = {
+            '\\n': '\n',
+            '\\r': '\r',
+            '\\t': '\t',
+            '\\"': '"',
+            "\\'": "'",
+            '\\\\': '\\'
+        };
+
+        // This regex finds either a simple escape sequence (like \n) or a unicode/hex escape.
+        return input.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|[nrt'"\\])/g, (match, seq) => {
+            if (replacements[match]) return replacements[match];
+            if (seq.startsWith('u') || seq.startsWith('x')) {
+                return String.fromCharCode(parseInt(seq.slice(1), 16));
+            }
+            /* v8 ignore next -- @preserve */
+            return match;
+        });
+    }
+
+    public withLogging(message?: string): this {
+        this.shouldLog = true;
+        if (message) this.message = message;
+        return this;
+    }
+
+    public withoutLogging(): this {
+        this.shouldLog = false;
+        this.message = '';
+        return this;
+    }
+
+    private logHeader(stream: CharacterStream): void {
+        if (!this.shouldLog) return;
+        PrintLine({
+            preNewLine: false,
+            postNewLine: true,
+            color: 'red',
+            textColor: 'magenta',
+            text: this.message,
+        });
+        console.log(CenterText(styleText('yellow', 'SOURCE:\n')));
+        BoxText(stream.get(), {
+            width: 'max',
+            boxStyle: 'single', // Or any style you prefer
+            preNewLine: false,
+            postNewLine: true,
+            color: 'cyan',
+        });
+        //console.log(CenterText(`${inspect(stream.get(), this.inspectOptions)}`));
+        PrintLine({ preNewLine: true, postNewLine: true });
+    }
+
+    private logResults(tokens: Token[]): void {
+        if (!this.shouldLog) return;
+
+        console.log(styleText('yellow', 'RESULT (TOKENS):'));
+
+        for (const token of tokens) {
+            console.log(`${Spacer(3)}${inspect(token, this.inspectOptions)}`);
+        }
+
+        PrintLine({ preNewLine: true, postNewLine: false, color: 'red' });
+        this.shouldLog = false;
+        this.message = '';
+    }
+}
+
+export {
+    type Token,
+    TokenType,
+    Tokenizer
+}
+
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src\Tokenizer.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src\PrintLine.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+// src/PrintLine.ts
+
+import { styleText, type InspectColor } from 'node:util';
+import figlet from 'figlet';
+import standard from "figlet/fonts/Standard";
+
+const MAX_WIDTH: number = 80;
+const TAB_WIDTH: number = 4;
+const SPACE: string = ' ';
+const FIGLET_FONT = 'Standard';
+figlet.parseFont(FIGLET_FONT, standard);
+
+enum LineType {
+    Default = '─',
+    Square = '■',
+    Bold = '█',
+    Dashed = '-',
+    Underscore = '_',
+    DoubleUnderscore = '‗',
+    Equals = '=',
+    Double = '═',
+    BoldBottom = '▄',
+    BoldTop = '▀',
+    Diaeresis = '¨',
+    Macron = '¯',
+    Section = '§',
+    Interpunct = '·',
+    LightBlock = '░',
+    MediumBlock = '▒',
+    HeavyBlock = '▓',
+};
+
+const BOX_STYLES = {
+    single: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
+    double: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' },
+    light:  { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
+    medium: { tl: '▒', t: '▒', tr: '▒', l: '▒', r: '▒', bl: '▒', b: '▒', br: '▒' },
+    heavy:  { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
+    bold:   { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
+} as const;
+
+type BoxStyle = keyof typeof BOX_STYLES;
+
+const THEMES = {
+    success: { color: 'green', line: LineType.Default, styles: ['bold'] },
+    error: { color: 'red', line: LineType.Bold },
+    warning: { color: 'yellow', line: LineType.Dashed },
+    info: { color: 'cyan', line: LineType.Default },
+} as const;
+
+/**
+ * @function Spacer
+ * @description Creates a string of repeated characters, useful for padding.
+ * @param {number} [width=TAB_WIDTH] - Number of characters to repeat.
+ * @param {string} [char=SPACE] - The character to repeat.
+ * @returns {string} A string of repeated characters.
+ */
+const Spacer = (width: number = TAB_WIDTH, char: string = SPACE): string => char.repeat(width);
+
+/**
+ * @function CenterText
+ * @description Centers a line of text within a given width by adding padding.
+ * @param {string} text - The text to center.
+ * @param {number} [width=MAX_WIDTH] - The total width to center within.
+ * @returns {string} The centered text string.
+ * @requires spacer - Function that return a string for spacing.
+ */
+const CenterText = (text: string, width: number = MAX_WIDTH): string => {
+    // Remove any existing styling for accurate length calculation
+    const unstyledText = text.replace(/\x1b\[[0-9;]*m/g, '');
+    const padding = Math.max(0, Math.floor((width - unstyledText.length) / 2));
+    return `${Spacer(padding)}${text}`;
+};
+
+/**
+ * @function CenteredFiglet
+ * @description Generates and centers multi-line FIGlet (ASCII) text.
+ * @param {string} text - The text to convert to ASCII art.
+ * @param {number} [width=MAX_WIDTH] - The total width to center the art within.
+ * @returns {string} The centered, multi-line ASCII art as a single string.
+ * @requires centerText
+ */
+const CenteredFiglet = (text: string, width: number = MAX_WIDTH): string => {
+    const rawFiglet = figlet.textSync(text, {
+        font: FIGLET_FONT,
+        width: width,
+        whitespaceBreak: true
+    });
+
+    return rawFiglet.split('\n')
+        .map(line => CenterText(line, width))
+        .join('\n');
+}
+
+/**
+ * @interface PrintLineOptions
+ * @description Defines the structure for a printLine options object.
+ * @property {boolean} preNewLine - If true, adds a newline before the divider.
+ * @property {boolean} postNewLine - If true, adds a newline after the divider.
+ * @property {number} width - The width of the line.
+ * @property {string | LineType} line - The character to use for the line.
+ * @property {InspectColor | InspectColor[]} color - The default foreground color
+ * @property {InspectColor | InspectColor[]} bgColor - the default backgound color
+ */
+interface PrintLineOptions {
+    preNewLine?: boolean;
+    postNewLine?: boolean;
+    width?: number;
+    line?: LineType;
+    theme?: keyof typeof THEMES;
+    color?: InspectColor | InspectColor[];
+    bgColor?: InspectColor | InspectColor[];
+    gradient?: [InspectColor, InspectColor];
+    styles?: ('bold' | 'italic' | 'underline' | 'inverse')[];
+    text?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    textColor?: InspectColor | InspectColor[];
+}
+
+/**
+ * @description Default options object for the printLine function.
+ */
+const DefaultOptions: PrintLineOptions = {
+    preNewLine: false,      // No preceding new line
+    postNewLine: false,     // No successive new line
+    width: MAX_WIDTH,       // Use global const MAX_WIDTH = 80
+    line: LineType.Double,  // Use global line enum
+    color: ['gray', 'bold'] // styleText formatting         
+} as const;
+
+/**
+ * @function PrintLine
+ * @description Outputs a styled horizontal line to the console.
+ * @param {PrintLineOptions} [options={}] - Configuration options for the line.
+ * @returns {void}
+ */
+const PrintLine = (options: PrintLineOptions = {}): void => {
+    const themeOptions = options.theme ? THEMES[options.theme] : {};
+    const mergedOptions = {
+        ...DefaultOptions,
+        ...themeOptions,
+        ...options
+    };
+    const { 
+        preNewLine, 
+        postNewLine, 
+        width, 
+        line, 
+        color, 
+        bgColor,
+        gradient, 
+        styles, 
+        text, 
+        textAlign = 'center',
+        textColor 
+    } = mergedOptions;
+
+    const colorStyles = color ? (Array.isArray(color) ? color : [color]) : [];
+    const bgColorStyles = bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : [];
+    const otherStyles = styles || [];
+    const lineStyles = [...colorStyles, ...bgColorStyles, ...otherStyles];
+    const textStyles = textColor ? (Array.isArray(textColor) ? textColor : [textColor]) : lineStyles;
+    const newLine = '\n';
+    const pre = preNewLine ? newLine : '';
+    const post = postNewLine ? newLine : '';
+    let finalOutput: string;
+
+    if (gradient) {
+        const [startColor, endColor] = gradient;
+        const halfWidth = Math.floor(width! / 2);
+        
+        const startSegment = styleText([startColor], line!.repeat(halfWidth));
+        const endSegment = styleText([endColor], line!.repeat(width! - halfWidth));
+        
+        const styledDivider = startSegment + endSegment;
+        
+        console.log(`${pre}${styledDivider}${post}`);
+        return; // Exit early
+    }
+
+
+    if (!text) {
+        // Simple case: No text, just style the whole line as before.
+        finalOutput = styleText(lineStyles, line!.repeat(width!));
+    } else {
+        // Advanced case: Text exists, so build the line in pieces.
+        const paddedText = ` ${text} `; // Add padding
+        
+        // Style the text separately
+        const styledText = styleText(textStyles, paddedText);
+
+        const lineCharCount = width! - paddedText.length;
+        if (lineCharCount < 0) {
+            // If the text is too long, just print the styled text.
+            finalOutput = styledText;
+        } else {
+            // Otherwise, calculate and style the line segments.
+            switch (textAlign) {
+                case 'left': {
+                    const rightLine = styleText(lineStyles, line!.repeat(lineCharCount));
+                    finalOutput = styledText + rightLine;
+                    break;
+                }
+                case 'right': {
+                    const leftLine = styleText(lineStyles, line!.repeat(lineCharCount));
+                    finalOutput = leftLine + styledText;
+                    break;
+                }
+                case 'center':
+                default: {
+                    const leftCount = Math.floor(lineCharCount / 2);
+                    const rightCount = lineCharCount - leftCount;
+                    const leftLine = styleText(lineStyles, line!.repeat(leftCount));
+                    const rightLine = styleText(lineStyles, line!.repeat(rightCount));
+                    finalOutput = leftLine + styledText + rightLine;
+                    break;
+                }
+            }
+        }
+    }
+
+    // 5. Log the final constructed string
+    console.log(`${pre}${finalOutput}${post}`);
+};
+
+interface BoxTextOptions {
+    preNewLine?: boolean;
+    postNewLine?: boolean;
+    width?: 'tight' | 'max';
+    boxStyle?: BoxStyle;
+    color?: InspectColor | InspectColor[];
+    bgColor?: InspectColor | InspectColor[];
+    styles?: ('bold' | 'italic' | 'underline')[];
+}
+
+/**
+ * @function BoxText
+ * @description Draws a styled ASCII box around a given text string and prints it to the console.
+ * @param {string} text - The text to be enclosed in the box.
+ * @param {BoxTextOptions} [options={}] - Configuration options for the box.
+ * @returns {void}
+ */
+const BoxText = (text: string, options: BoxTextOptions = {}): void => {
+    // --- 1. Set Defaults and Merge Options ---
+    const {
+        preNewLine = false,
+        postNewLine = false,
+        width = 'tight',
+        boxStyle = 'single',
+        color,
+        bgColor,
+        styles,
+    } = options;
+
+    const boxChars = BOX_STYLES[boxStyle];
+
+    // --- 2. Prepare Styles ---
+    const finalStyles = [
+        ...(color ? (Array.isArray(color) ? color : [color]) : []),
+        ...(bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : []),
+        ...(styles || []),
+    ];
+
+    // --- 3. Process Text and Determine Dimensions ---
+    let innerWidth: number;
+    let textLines: string[];
+
+    if (width === 'max') {
+        innerWidth = MAX_WIDTH - 4; // 80 - 2 for borders - 2 for padding
+        
+        // Word wrapping algorithm
+        const words = text.split(/\s+/);
+        textLines = words.reduce((lines, word) => {
+            if (lines.length === 0) return [word];
+            
+            let lastLine = lines[lines.length - 1]!;
+            if ((lastLine.length + word.length + 1) > innerWidth) {
+                lines.push(word); // Start a new line
+            } else {
+                lines[lines.length - 1] = lastLine + ' ' + word; // Add to current line
+            }
+            return lines;
+        }, [] as string[]);
+
+    } else { // 'tight' width
+        textLines = text.split('\n');
+        innerWidth = Math.max(...textLines.map(line => line.length));
+    }
+
+    // Pad each line to match the determined inner width
+    const paddedLines = textLines.map(line => line.padEnd(innerWidth));
+
+    // --- 4. Construct the Box String ---
+    const topBorder = boxChars.tl + boxChars.t.repeat(innerWidth + 2) + boxChars.tr;
+    const bottomBorder = boxChars.bl + boxChars.b.repeat(innerWidth + 2) + boxChars.br;
+    
+    const contentLines = paddedLines.map(line => 
+        `${boxChars.l} ${line} ${boxChars.r}`
+    );
+
+    const fullBoxString = [topBorder, ...contentLines, bottomBorder].join('\n');
+
+    // --- 5. Style and Print ---
+    const styledBox = styleText(finalStyles, fullBoxString);
+    const pre = preNewLine ? '\n' : '';
+    const post = postNewLine ? '\n' : '';
+
+    console.log(`${pre}${styledBox}${post}`);
+};
+
+export default PrintLine;
+
+export {
+    LineType,
+    THEMES,
+    type PrintLineOptions,
+    Spacer,
+    CenterText,
+    CenteredFiglet,
+    BoxText,
+    type BoxTextOptions,
+    type BoxStyle,
+}
+
+/**
+    ### Usage Examples
+
+    You can now do things like this:
+
+    ```typescript
+    // A success message with bold green text on a default gray line
+    PrintLine({ 
+        text: 'Operation Successful', 
+        textColor: ['green', 'bold'] 
+    });
+    // Output: ═══════════ Operation Successful ═══════════  (text is green/bold, line is gray)
+
+    // An error message with white text on a red background
+    PrintLine({
+        line: LineType.Bold,
+        color: 'red',
+        text: 'FATAL ERROR',
+        textColor: ['white', 'bgRed', 'bold']
+    });
+    // Output: █████████████ FATAL ERROR ██████████████ (text is white on a red background)
+
+    // A themed line with custom text color
+    PrintLine({
+        theme: 'warning', // Sets line color to yellow and style to dashed
+        text: 'Deprecation Notice',
+        textColor: 'white' // Overrides text color to be white
+    });
+    // Output: ----------- Deprecation Notice ----------- (line is yellow, text is white)
+    ```
+
+    This makes your `PrintLine` utility incredibly versatile and professional-looking.
+*/
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src\PrintLine.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src\Context.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+// src/Context.ts
+
+import { type Character, CharType } from './Character.ts';
+import { TokenType } from './Tokenizer.ts';
+
+enum State {
+    INITIAL = 'INITIAL',
+    IN_IDENTIFIER = 'IN_IDENTIFIER',
+    IN_STRING = 'IN_STRING',
+    SEEN_SLASH = 'SEEN_SLASH',
+    IN_SINGLE_LINE_COMMENT = 'IN_SINGLE_LINE_COMMENT',
+    IN_MULTI_LINE_COMMENT = 'IN_MULTI_LINE_COMMENT',
+    IN_MULTI_LINE_COMMENT_SAW_STAR = 'IN_MULTI_LINE_COMMENT_SAW_STAR',
+    IN_HEXVALUE = 'IN_HEXVALUE',
+    IN_NUMBER = 'IN_NUMBER',
+    IN_PERCENT = 'IN_PERCENT',
+    IN_DIMENSION = 'IN_DIMENSION',
+    IN_EQUALS = 'IN_EQUALS',
+    IN_PLUS = 'IN_PLUS',
+    IN_MINUS = 'IN_MINUS',
+    IN_STAR = 'IN_STAR',
+    IN_DOT = 'IN_DOT',
+    IN_COMMA = 'IN_COMMA',
+    IN_SLASH = 'IN_SLASH',
+    IN_LPAREN = 'IN_LPAREN',
+    IN_RPAREN = 'IN_RPAREN',
+    IN_ESCAPE = 'IN_ESCAPE',
+    IN_SYMBOL = 'IN_SYMBOL',
+    IN_NEWLINE = 'IN_NEWLINE',
+    IN_WHITESPACE = 'IN_WHITESPACE',
+    IN_EOF = 'IN_EOF',
+    IN_OTHER = 'IN_OTHER',
+    IN_ERROR = 'IN_ERROR',
+    END = 'END',
+}
+
+// The instructions the Context gives back to the Tokenizer.
+interface ContextAction {
+    emit: boolean;        // Should the current buffer be emitted as a token?
+    reprocess: boolean;   // Should the current character be re-processed in the new state?
+    ignore: boolean;      // Should the current character be ignored and not buffered?
+    tokenType: TokenType; // What type of token should be emitted?
+}
+
+type QuoteType = CharType.Backtick | CharType.SingleQuote | CharType.DoubleQuote;
+
+/**
+ * The Context class is a state machine that tracks the current tokenizing state.
+ * It receives characters one by one and tells the Tokenizer how to handle them.
+ */
+class Context {
+    private _state: State = State.INITIAL;
+    private quoteType: QuoteType | null = null;
+
+    /**
+     * Resets the context to its initial clean state.
+     */
+    public reset(): void {
+        this.state = State.INITIAL;
+        this.quoteType = null;
+    }
+
+    /**
+     * Gets the current state of the context.
+     * @returns {State} The current state.
+     */
+    public get state(): State {
+        return this._state;
+    }
+
+    /**
+     * Sets the current state of the context.
+     * @param {State} value The new current state.
+     */
+    public set state(value: State) {
+        this._state = value ?? State.INITIAL;
+    }
+
+    /**
+     * Transitions the current state of the context.
+     * @param {State} value The new current state.
+     */
+    public transitionTo(value: State): void {
+        this._state = value ?? State.INITIAL;
+    }
+
+    private readonly STATEPROCESS_MAP: Partial<Record<State, (char: Character) => ContextAction>> = {
+        [State.INITIAL]: (char) => this.processInitial(char),
+        [State.IN_IDENTIFIER]: (char) => this.processIdentifier(char),
+        [State.IN_HEXVALUE]: (char) => this.processHex(char),
+        [State.IN_NUMBER]: (char) => this.processNumber(char),
+        [State.IN_DIMENSION]: (char) => this.processDimension(char),
+        [State.IN_PERCENT]: (char) => this.processPercent(char),
+        [State.IN_STRING]: (char) => this.processString(char),
+        [State.IN_ESCAPE]: (char) => this.processEscape(char),
+        [State.IN_SYMBOL]: (char) => this.processSymbol(char),
+        [State.SEEN_SLASH]:                     (char) => this.processSeenSlash(char),
+        [State.IN_SINGLE_LINE_COMMENT]:         (char) => this.processSingleLineComment(char),
+        [State.IN_MULTI_LINE_COMMENT]:          (char) => this.processMultiLineComment(char),
+        [State.IN_MULTI_LINE_COMMENT_SAW_STAR]: (char) => this.processMultiLineCommentSawStar(char),
+    };
+
+    /**
+     * The core processing logic of the state machine.
+     * @param char The character to process.
+     * @returns {ContextAction} The action for the Tokenizer to take.
+     */
+    public process(char: Character): ContextAction {
+        const processFn = this.STATEPROCESS_MAP[this.state];
+        if (processFn) return processFn(char);
+
+        this.transitionTo(State.INITIAL);
+        return { emit: false, reprocess: true, ignore: true, tokenType: TokenType.OTHER };
+    }
+
+    // Handles characters when in the initial state (between tokens).
+    private processInitial(char: Character): ContextAction {
+        switch (char.type) {
+            case CharType.Letter:
+                this.transitionTo(State.IN_IDENTIFIER);
+                return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.IDENTIFIER };
+
+            case CharType.Number:
+                this.transitionTo(State.IN_NUMBER);
+                return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.NUMBER };
+
+            case CharType.Hash:
+                this.transitionTo(State.IN_HEXVALUE);
+                return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.HEXVALUE };
+
+            case CharType.Slash:
+                this.transitionTo(State.SEEN_SLASH);
+                return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.COMMENT };
+
+            case CharType.Backtick:
+            case CharType.SingleQuote:
+            case CharType.DoubleQuote:
+                this.quoteType = char.type as QuoteType;
+                this.transitionTo(State.IN_STRING);
+                return { emit: false, reprocess: false, ignore: true, tokenType: TokenType.STRING };
+
+            case CharType.Whitespace:
+            case CharType.NewLine:
+            case CharType.EOF:
+                return { emit: false, reprocess: false, ignore: true, tokenType: TokenType.OTHER };
+
+            default:
+                this.transitionTo(State.IN_SYMBOL);
+                return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.SYMBOL };
+        }
+    }
+
+    // Handles characters when building an identifier.
+    private processIdentifier(char: Character): ContextAction {
+        if (char.type === CharType.Letter || char.type === CharType.Number) {
+            // Continue building the identifier.
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.IDENTIFIER };
+        }
+        // End of identifier. Emit it and reprocess the current char in the INITIAL state.
+        this.transitionTo(State.INITIAL);
+        return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.IDENTIFIER };
+    }
+
+    // Handles characters when building a number.
+    private processNumber(char: Character): ContextAction {
+        // If we see a number or a dot, continue building the NUMBER.
+        if (char.type === CharType.Number || char.type === CharType.Dot) {
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.NUMBER };
+        }
+
+        // Transition to IN_DIMENSION if a letter is found
+        if (char.type === CharType.Letter) {
+            this.transitionTo(State.IN_DIMENSION);
+            // Continue buffering this character as part of the new dimension token.
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.DIMENSION };
+        }
+
+        // If we see a percent sign, transition to the IN_PERCENTAGE state.
+        if (char.type === CharType.Percent) {
+            this.transitionTo(State.IN_PERCENT);
+            // Tell the tokenizer to keep buffering, as this '%' is part of our token.
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.PERCENT };
+        }
+
+        // For any other character, the number is finished.
+        this.transitionTo(State.INITIAL);
+        return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.NUMBER };
+    }
+
+    // Handles the token when a dimension arrives.
+    private processDimension(char: Character): ContextAction {
+        // Continue consuming as long as we see letters.
+        if (char.type === CharType.Letter) {
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.DIMENSION };
+        }
+        // Any other character ends the dimension. Emit and reprocess.
+        this.transitionTo(State.INITIAL);
+        return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.DIMENSION };
+    }
+
+    // Handles the token when the character *after* the '%' arrives.
+    private processPercent(char: Character): ContextAction {
+        // The percentage token is complete as soon as we see any new character.
+        this.transitionTo(State.INITIAL);
+        // Emit the buffered "56%" and reprocess the new character.
+        return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.PERCENT };
+    }
+
+    // Handles characters when building a hex value.
+    private processHex(char: Character): ContextAction {
+        // FIX: The regex was incorrect. It should not contain extra brackets.
+        if (char.type === CharType.Number ||
+            (char.type === CharType.Letter && /^[0-9a-fA-F]$/i.test(char.value))) {
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.HEXVALUE };
+        }
+
+        // Any other character ends the hex value. Emit and reprocess.
+        this.transitionTo(State.INITIAL);
+        return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.HEXVALUE };
+    }
+
+    // Handles characters when inside a string.
+    private processString(char: Character): ContextAction {
+        // If we see a backslash, set the escape flag for the *next* character.
+        if (char.type === CharType.BackSlash) {
+            this.transitionTo(State.IN_ESCAPE);
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.STRING };
+        }
+
+        // If we see the matching closing quote (and it was not escaped), the string ends.
+        if (char.type === this.quoteType) {
+            this.transitionTo(State.INITIAL);
+            this.quoteType = null;
+            return { emit: true, reprocess: false, ignore: true, tokenType: TokenType.STRING };
+        }
+
+        // Any other character is just content to be buffered.
+        return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.STRING };
+    }
+
+    // Handles the character AFTER a '/'
+    private processSeenSlash(char: Character): ContextAction {
+        if (char.type === CharType.Slash) {
+            // It's a single-line comment. Keep consuming.
+            this.transitionTo(State.IN_SINGLE_LINE_COMMENT);
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.COMMENT };
+        }
+        if (char.type === CharType.Star) {
+            // It's a multi-line comment. Keep consuming.
+            this.transitionTo(State.IN_MULTI_LINE_COMMENT);
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.COMMENT };
+        }
+
+        // It was a false alarm. The previous '/' was just a division operator.
+        this.transitionTo(State.INITIAL);
+        // Emit the buffered '/' as a SLASH token, then reprocess the current character.
+        return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.SLASH };
+    }
+
+    // Handles '//' comments
+    private processSingleLineComment(char: Character): ContextAction {
+        if (char.type === CharType.NewLine || char.type === CharType.EOF) {
+            // Comment ends at a newline.
+            this.transitionTo(State.INITIAL);
+            // Emit the comment, then reprocess the newline/EOF so it can be handled properly (usually ignored).
+            return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.COMMENT };
+        }
+        // Otherwise, keep consuming characters as part of the comment.
+        return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.COMMENT };
+    }
+
+    // Handles '/*' comments
+    private processMultiLineComment(char: Character): ContextAction {
+        if (char.type === CharType.Star) {
+            // We might be at the end of the comment. Transition to check the next character.
+            this.transitionTo(State.IN_MULTI_LINE_COMMENT_SAW_STAR);
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.COMMENT };
+        }
+        // Keep consuming any other character.
+        return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.COMMENT };
+    }
+
+    // Handles when we've just seen a '*' inside a '/*' comment
+    private processMultiLineCommentSawStar(char: Character): ContextAction {
+        if (char.type === CharType.Slash) {
+            // This is the closing '*/'. The comment is finished.
+            this.transitionTo(State.INITIAL);
+            // Buffer this final '/', then emit the whole comment token.
+            return { emit: true, reprocess: false, ignore: true, tokenType: TokenType.COMMENT };
+        }
+        if (char.type === CharType.Star) {
+            // We saw another star, like in `/**`. Stay in this state.
+            return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.COMMENT };
+        }
+
+        // False alarm. The '*' was just part of the comment text. Go back to the general multi-line state.
+        this.transitionTo(State.IN_MULTI_LINE_COMMENT);
+        return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.COMMENT };
+    }
+
+    // Handles escaped characters inside of a string.
+    private processEscape(char: Character): ContextAction {
+        // After processing an escaped character, we must return to the IN_STRING state,
+        this.transitionTo(State.IN_STRING);
+        return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.STRING };
+    }
+
+    // Handles emitting single-character symbols.
+    private processSymbol(char: Character): ContextAction {
+        // Any new character means the single symbol is complete.
+        this.transitionTo(State.INITIAL);
+        return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.SYMBOL };
+    }
+}
+
+export {
+    State,
+    type ContextAction,
+    Context
+}
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src\Context.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src\Character.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// @ts-nocheck
+/* eslint-disable */
+
+// src/Character.ts
+import { inspect, type InspectOptions } from 'node:util';
+import PrintLine from './PrintLine.ts';
+
+/**
+ * Represents a specific location within the source string, tracked by index,
+ * line number, and column number.
+ */
+interface Position {
+    /** The zero-based index of the character in the overall string. */
+    index: number;
+    /** The one-based line number where the character appears. */
+    line: number;
+    /** The one-based column number of the character on its line. */
+    column: number;
+}
+
+/**
+ * Represents a single character processed from the stream, containing its
+ * value, classified type, and original position.
+ */
+interface Character {
+    /** The string value of the character. May be multi-byte. */
+    value: string;
+    /** The type of the character, as classified by the CharUtility class. */
+    type: CharType;
+    /** The position of the character in the source string. */
+    position: Position;
+}
+
+/**
+ * A detailed enumeration of all possible character types recognized by the classifier.
+ * This includes stream control types, general categories, and specific, common symbols.
+ */
+enum CharType {
+    // CharacterStream Control
+    EOF = 'EOF',
+    Error = 'Error',
+    Other = 'Other',
+
+    // Whitespace & Formatting
+    Whitespace = 'Whitespace',
+    NewLine = 'NewLine',
+
+    // Primary Literals
+    Letter = 'Letter',
+    Number = 'Number',
+    Hex = 'Hex',
+
+    // Quotes & Strings
+    SingleQuote = 'SingleQuote',
+    DoubleQuote = 'DoubleQuote',
+    Backtick = 'Backtick',
+
+    // Brackets & Enclosures
+    LParen = 'LParen',
+    RParen = 'RParen',
+    LBracket = 'LBracket',
+    RBracket = 'RBracket',
+    LBrace = 'LBrace',
+    RBrace = 'RBrace',
+
+    // Common Operators & Mathematical
+    Plus = 'Plus',
+    Minus = 'Minus',
+    Star = 'Star',
+    Slash = 'Slash',
+    BackSlash = 'BackSlash',
+    EqualSign = 'EqualSign',
+    Percent = 'Percent',
+    Caret = 'Caret',
+    Tilde = 'Tilde',
+    Pipe = 'Pipe',
+    LessThan = 'LessThan',
+    GreaterThan = 'GreaterThan',
+
+    // Punctuation & Delimiters
+    Dot = 'Dot',
+    Comma = 'Comma',
+    Colon = 'Colon',
+    SemiColon = 'SemiColon',
+    Exclamation = 'Exclamation',
+    Question = 'Question',
+    Punctuation = 'Punctuation',
+
+    // Special Symbols & Identifiers
+    Hash = 'Hash',
+    At = 'At',
+    Ampersand = 'Ampersand',
+    Dollar = 'Dollar',
+    Underscore = 'Underscore',
+    Currency = 'Currency',
+    Symbol = 'Symbol',
+
+    // International / Multi-byte
+    Emoji = 'Emoji',
+    Unicode = 'Unicode',
+}
+
+/**
+ * An ordered list of regular expression rules used as a fallback mechanism
+ * for characters not found in the `CHARSYMBOL_MAP`. The order is critical for
+ * correct classification, testing for more specific categories (like Emoji)
+ * before more general ones (like Symbol).
+ */
+const CHARREGEX_MAP: [CharType, (char: string) => boolean][] = [
+    /**
+     ** ASCII Whitespace Checks
+        */
+    [CharType.NewLine, (char: string) => /[\n\r]/.test(char)],
+    [CharType.Whitespace, (char: string) => /^\s+$/.test(char)],
+
+    /**
+     * UNICODE LETTERS
+     * 
+     ** L	Letter (includes):
+        *      Lu	Uppercase Letter
+        *      Ll	Lowercase Letter
+        *      Lt	Titlecase Letter
+        *      Lm	Modifier Letter
+        *      Lo	Other Letter
+        */
+    [CharType.Letter, (char: string) => /\p{L}/u.test(char)],
+
+    /**
+     * UNICODE NUMBERS
+     * 
+     ** N	Number (includes):
+        *      Nd	Decimal Digit Number
+        *      Nl	Letter Number
+        *      No	Other Number
+        */
+    [CharType.Number, (char: string) => /\p{N}/u.test(char)],
+
+    [CharType.Emoji, (char: string) => /\p{Emoji_Presentation}/v.test(char)],
+    [CharType.Currency, (char: string) => /\p{Sc}/u.test(char)],
+    [CharType.Punctuation, (char: string) => /\p{P}/u.test(char)],
+
+    /**
+     * UNICODE SYMBOLS
+     * 
+     ** S	Symbol (includes):
+        *      Sm	Math Symbol
+        *      Sc	Currency Symbol
+        *      Sk	Modifier Symbol
+        *      So	Other Symbol
+        */
+    [CharType.Symbol, (char: string) => /\p{S}/u.test(char)],
+
+    /**
+     * UNICODE
+     * 
+     ** ASCII (includes):
+        *      all ASCII characters ([\u{0}-\u{7F}])
+        */
+    [CharType.Unicode, (char: string) => /\P{ASCII}/u.test(char)],
+
+    /**
+     * UNICODE
+     * 
+     * Not Currently, Directly Implemented:
+     * 
+     ** M	Mark (includes):
+        *      Mn	Non-Spacing Mark
+        *      Mc	Spacing Combining Mark
+        *      Me	Enclosing Mark
+        * 
+        ** P	Punctuation (includes):
+        *      Pc	Connector Punctuation
+        *      Pd	Dash Punctuation
+        *      Ps	Open Punctuation
+        *      Pe	Close Punctuation
+        *      Pi	Initial Punctuation
+        *      Pf	Final Punctuation
+        *      Po	Other Punctuation
+        * 
+        ** Z	Separator (includes):
+        *      Zs	Space Separator
+        *      Zl	Line Separator
+        *      Zp	Paragraph Separator
+        * 
+        ** C	Other (includes):
+        *      Cc	Control
+        *      Cf	Format
+        *      Cs	Surrogate
+        *      Co	Private Use
+        *      Cn	Unassigned
+        **      -	*Any
+        **      -	*Assigned
+        **      -	*ASCII (implemented above)
+        * 
+        ** *Any (includes):
+        *      all code points ([\u{0}-\u{10FFFF}])
+        * 
+        ** *Assigned (includes):
+        *      all assigned characters (\P{Cn})
+        */
+
+    /**
+     * OTHER UNICODE CHARACTER PROPERTIES TO CONSIDER:
+     * 
+     *      GENERAL	                        CASE	                        SHAPING AND RENDERING
+     *      Name (Name_Alias)	            Uppercase	                    Join_Control
+     *      Block	                        Lowercase	                    Joining_Group
+     *      Age	                            Simple_Lowercase_Mapping	    Joining_CharType
+     *      General_Category	            Simple_Titlecase_Mapping	    Vertical_Orientation
+     *      Script (Script_Extensions)	    Simple_Uppercase_Mapping	    Line_Break
+     *      White_Space	                    Simple_Case_Folding	            Grapheme_Cluster_Break
+     *      Alphabetic	                    Soft_Dotted	                    Sentence_Break
+     *      Hangul_Syllable_CharType	        Cased	                        Word_Break
+     *      Noncharacter_Code_Point	        Case_Ignorable	                East_Asian_Width
+     *      Default_Ignorable_Code_Point	Changes_When_Lowercased	        Prepended_Concatenation_Mark
+     *      Deprecated	                    Changes_When_Uppercased	 
+     *      Logical_Order_Exception	        Changes_When_Titlecased	        BIDIRECTIONAL
+     *      Variation_Selector	            Changes_When_Casefolded	        Bidi_Class
+     *                                      Changes_When_Casemapped	        Bidi_Control
+     *      NUMERIC	 	                                                    Bidi_Mirrored
+     *      Numeric_Value	                NORMALIZATION	                Bidi_Mirroring_Glyph
+     *      Numeric_CharType	                Canonical_Combining_Class	    Bidi_Paired_Bracket
+     *      Hex_Digit	                    Decomposition_CharType	            Bidi_Paired_Bracket_CharType
+     *      ASCII_Hex_Digit	                NFC_Quick_Check	 
+     *                                      NFKC_Quick_Check	            MISCELLANEOUS
+     *      IDENTIFIERS	                    NFD_Quick_Check	                Math
+     *      ID_Continue	                    NFKD_Quick_Check	            Quotation_Mark
+     *      ID_Start	                    NFKC_Casefold	                Dash
+     *      XID_Continue	                Changes_When_NFKC_Casefolded	Sentence_Terminal
+     *      XID_Start	 	                                                Terminal_Punctuation
+     *      Pattern_Syntax	                EMOJI	                        Diacritic
+     *      Pattern_White_Space	            Emoji	                        Extender
+     *      Identifier_Status	            Emoji_Presentation	            Grapheme_Base
+     *      Identifier_CharType	                Emoji_Modifier	                Grapheme_Extend
+     *                                      Emoji_Modifier_Base	            Regional_Indicator
+     *      CJK	                            Emoji_Component	 
+     *      Ideographic	                    Extended_Pictographic	 
+     *      Unified_Ideograph	            Basic_Emoji*	 
+     *      Radical	                        Emoji_Keycap_Sequence*	 
+     *      IDS_Binary_Operator	            RGI_Emoji_Modifier_Sequence*	 
+     *      IDS_Trinary_Operator	        RGI_Emoji_Flag_Sequence*	 
+     *      Equivalent_Unified_Ideograph	RGI_Emoji_Tag_Sequence*	 
+     *      RGI_Emoji_ZWJ_Sequence*	 
+     *      RGI_Emoji*	 
+     */
+
+    /**
+     ** Table 12. General_Category Values
+        * 
+        *      ABBR    LONG	                    DESCRIPTION
+        *--------------------------------------------------------------------------------------------------------------
+        *      Lu  	Uppercase_Letter	        an uppercase letter
+        *      Ll  	Lowercase_Letter	        a lowercase letter
+        *      Lt  	Titlecase_Letter	        a digraph encoded as a single character, with first part uppercase
+        *      LC  	Cased_Letter	            Lu | Ll | Lt
+        *      Lm  	Modifier_Letter	            a modifier letter
+        *      Lo  	Other_Letter	            other letters, including syllables and ideographs
+        *      L   	Letter	                    Lu | Ll | Lt | Lm | Lo
+        *      Mn  	Nonspacing_Mark	            a nonspacing combining mark (zero advance width)
+        *      Mc  	Spacing_Mark	            a spacing combining mark (positive advance width)
+        *      Me  	Enclosing_Mark	            an enclosing combining mark
+        *      M   	Mark	                    Mn | Mc | Me
+        *      Nd  	Decimal_Number	            a decimal digit
+        *      Nl  	Letter_Number	            a letterlike numeric character
+        *      No  	Other_Number	            a numeric character of other type
+        *      N   	Number	                    Nd | Nl | No
+        *      Pc  	Connector_Punctuation       a connecting punctuation mark, like a tie
+        *      Pd  	Dash_Punctuation	        a dash or hyphen punctuation mark
+        *      Ps  	Open_Punctuation	        an opening punctuation mark (of a pair)
+        *      Pe  	Close_Punctuation	        a closing punctuation mark (of a pair)
+        *      Pi  	Initial_Punctuation	        an initial quotation mark
+        *      Pf  	Final_Punctuation	        a final quotation mark
+        *      Po  	Other_Punctuation	        a punctuation mark of other type
+        *      P   	Punctuation	                Pc | Pd | Ps | Pe | Pi | Pf | Po
+        *      Sm  	Math_Symbol	                a symbol of mathematical use
+        *      Sc  	Currency_Symbol	            a currency sign
+        *      Sk  	Modifier_Symbol	            a non-letterlike modifier symbol
+        *      So  	Other_Symbol	            a symbol of other type
+        *      S   	Symbol	                    Sm | Sc | Sk | So
+        *      Zs  	Space_Separator	            a space character (of various non-zero widths)
+        *      Zl  	Line_Separator	            U+2028 LINE SEPARATOR only
+        *      Zp  	Paragraph_Separator	        U+2029 PARAGRAPH SEPARATOR only
+        *      Z   	Separator	                Zs | Zl | Zp
+        *      Cc  	Control	                    a C0 or C1 control code
+        *      Cf  	Format	                    a format control character
+        *      Cs  	Surrogate	                a surrogate code point
+        *      Co  	Private_Use	                a private-use character
+        *      Cn  	Unassigned	                a reserved unassigned code point or a noncharacter
+        *      C   	Other	                    Cc | Cf | Cs | Co | Cn
+        */
+] as const;
+
+/**
+ * A map of common single characters to their specific types.
+ * This provides an O(1) fast-path lookup, avoiding more expensive
+ * regex checks for the most frequent ASCII symbols.
+ */
+const CHARSYMBOL_MAP: Record<string, CharType> = {
+    '#': CharType.Hash,
+    '%': CharType.Percent,
+    '/': CharType.Slash,
+    ',': CharType.Comma,
+    '(': CharType.LParen,
+    ')': CharType.RParen,
+    '+': CharType.Plus,
+    '-': CharType.Minus,
+    '*': CharType.Star,
+    '.': CharType.Dot,
+    '`': CharType.Backtick,
+    "'": CharType.SingleQuote,
+    '"': CharType.DoubleQuote,
+    '\\': CharType.BackSlash,
+    '~': CharType.Tilde,
+    '!': CharType.Exclamation,
+    '@': CharType.At,
+    '$': CharType.Dollar,
+    '?': CharType.Question,
+    '^': CharType.Caret,
+    '&': CharType.Ampersand,
+    '<': CharType.LessThan,
+    '>': CharType.GreaterThan,
+    '_': CharType.Underscore,
+    '=': CharType.EqualSign,
+    '[': CharType.LBracket,
+    ']': CharType.RBracket,
+    '{': CharType.LBrace,
+    '}': CharType.RBrace,
+    ';': CharType.SemiColon,
+    ':': CharType.Colon,
+    '|': CharType.Pipe,
+} as const;
+
+/**
+ * Classifies a character using a multi-step, stateless process.
+ * The algorithm is:
+ * 1. Handle stream control cases (EOF, null).
+ * 2. Attempt a fast O(1) lookup in `CHARSYMBOL_MAP`.
+ * 3. If not found, iterate through the ordered `CHARREGEX_MAP`.
+ * 4. If no rule matches, return a fallback `CharType`.
+ * @param char The character string to classify.
+ * @returns The classified `CharType` of the character.
+ */
+const CHARCLASSIFY = (char: string): CharType => {
+    // 1. Handle EOF
+    if (char === '') return CharType.EOF;
+
+    // 2. Handle undefined and null
+    if (char === undefined || char === null) return CharType.Error;
+
+    // 3. Handle characters in the symbol map (fast path)
+    if (CHARSYMBOL_MAP[char]) return CHARSYMBOL_MAP[char];
+
+    // 4. Loop through the ordered classification rules (fallback).
+    for (const [type, predicate] of CHARREGEX_MAP) {
+        if (predicate(char)) return type;
+    }
+
+    // 5. Fallback type
+    return CharType.Other;
+}
+
+/**
+ * Provides a stateful, iterable stream of `Character` objects from a source string.
+ * It supports Unicode, peeking, backtracking, and speculative parsing via marks.
+ */
+class CharacterStream implements IterableIterator<Character> {
+    // The Unicode-normalized (NFC) source string being processed.
+    private source: string = ''.normalize('NFC');
+    // The current byte index of the cursor in the source string.
+    private index: number = 0;
+    // The current 1-based line number of the cursor.
+    private line: number = 1;
+    // The current 1-based column number of the cursor.
+    private column: number = 1;
+    private shouldLog: boolean = false;
+    private isLoggingActive: boolean = false;
+    private logMessage = 'CHARACTER STREAM DEMONSTRATION:';
+    private inspectOptions: InspectOptions = {
+        showHidden: true,
+        depth: null,
+        colors: true,
+        customInspect: false,
+        showProxy: false,
+        maxArrayLength: null,
+        maxStringLength: null,
+        breakLength: 100,
+        compact: true,
+        sorted: false,
+        getters: false,
+        numericSeparator: true,
+    };
+
+    /**
+     * A buffer of all previously processed `Character` objects. This serves as the
+     * stream's history, enabling backtracking (`back()`) and lookbehind (`lookbackWhile()`).
+     * Using the full `Character` object is a design choice to retain type and
+     * position info, not just the raw value.
+     */
+    private charsBuffer: Character[] = [];
+
+    /** 
+     * A stack storing the lengths of `charsBuffer` at points where `mark()` was called. 
+     */
+    private marks: number[] = [];
+
+    /**
+     * Initializes a new character stream.
+     * @param {string} [input] - The optional initial source string. It will be normalized to NFC.
+     */
+    constructor(input?: string) {
+        this.source = (input || '').normalize('NFC');
+        this.index = 0;
+        this.line = 1;
+        this.column = 1;
+        this.charsBuffer = [];
+        this.marks = [];
+        return this;
+    }
+
+    /**
+     * Gets the current source string of the stream.
+     * @returns {string} The source string.
+     */
+    public get(): string {
+        return this.source;
+    }
+
+    /**
+     * Sets the current source string of the stream.
+     * @param {string} input The new source string.
+     */
+    public set(input: string) {
+        this.source = (input || '').normalize('NFC');
+        this.index = 0;
+        this.line = 1;
+        this.column = 1;
+        this.charsBuffer = [];
+        this.marks = [];
+        return this;
+    }
+
+    /**
+     * Gets the current stream position.
+     * @returns {Position} An object containing the current index, line, and column.
+     */
+    public getPosition(): Position {
+        return {
+            index: this.index,
+            line: this.line,
+            column: this.column,
+        };
+    }
+
+    /**
+     * Manually sets the stream's cursor to a specific position.
+     * @param {number} indexOrPosition - The character index.
+     * @param {number} line - The line number.
+     * @param {number} column - The column number.
+     *
+     * or
+     * 
+     * Manually set to a specific position using a Position object.
+     * @param {Position} indexOrPosition - The Position object to apply.
+     */
+    public setPosition(indexOrPosition: number | Position, line: number = 1, column: number = 1): void {
+        if (typeof indexOrPosition === 'object') {
+            this.index = indexOrPosition.index;
+            this.line = indexOrPosition.line;
+            this.column = indexOrPosition.column;
+        } else {
+            this.index = indexOrPosition;
+            this.line = line;
+            this.column = column;
+        }
+    }
+
+    /**
+     * Makes the stream class itself an iterable, allowing it to be used in `for...of` loops.
+     * @returns {IterableIterator<Character>} The stream instance.
+     */
+    public [Symbol.iterator](): IterableIterator<Character> {
+        this.isLoggingActive = false;
+        return this;
+    }
+
+    /**
+     * Consumes and returns the next character in the stream, advancing the cursor.
+     * Part of the Iterator protocol.
+     * @returns {IteratorResult<Character>} An object with `done` and `value` properties.
+     */
+    public next(): IteratorResult<Character> {
+        if (this.shouldLog && !this.isLoggingActive) {
+            this.logHeaderAndSource();
+            this.isLoggingActive = true;
+        }
+
+        if (this.isEOF()) {
+            if (this.isLoggingActive) {
+                this.logFooter();
+                this.isLoggingActive = false;
+                this.shouldLog = false; // Reset for the next iteration
+            }
+            return { done: true, value: this.atEOF() };
+        }
+
+        const nextChar = this.peek();
+        this.advance(nextChar.value);
+        this.charsBuffer.push(nextChar);
+
+        if (this.isLoggingActive) {
+            this.logCharacter(nextChar);
+        }
+
+        return { done: false, value: nextChar };
+    }
+
+    /**
+     * Looks at a character ahead in the stream *without consuming it*.
+     * The stream's position is not changed by this method.
+     * @param {number} [n=0] - The number of characters to look ahead (0 for the current character).
+     * @returns {Character} The character at the specified lookahead position, or an EOF character if out of bounds.
+     */
+    public peek(n: number = 0): Character {
+        const pos = this.peekPosition(n);
+        if (this.isEOF(pos.index)) return this.atEOF(pos);
+
+        const value = String.fromCodePoint(this.source.codePointAt(pos.index)!);
+
+        return {
+            value,
+            type: CHARCLASSIFY(value),
+            position: pos
+        };
+    }
+
+    /**
+     * Simulates `n` advances to find the position of a future character.
+     * @private
+     * @param {number} n - The number of characters to peek forward.
+     * @returns {Position} The calculated position `n` characters from the current cursor.
+     * @throws {Error} If `n` is negative.
+     */
+    private peekPosition(n: number): Position {
+        if (n < 0) throw new Error("Lookahead distance `n` must be non-negative.");
+        if (n === 0) return this.getPosition();
+
+        let pos = this.getPosition();
+        for (let i = 0; i < n; i++) {
+            if (this.isEOF(pos.index)) return pos;
+            pos = this.calculateNextPosition(pos);
+        }
+        return pos;
+    }
+
+    /**
+     * The core logic for calculating the position of the character immediately
+     * after a given position, correctly handling multi-byte characters and newlines.
+     * @private
+     * @param {Position} pos - The starting position.
+     * @returns {Position} The position of the next character.
+     */
+    private calculateNextPosition(pos: Position): Position {
+        const codePoint = this.source.codePointAt(pos.index)!;
+        const charValue = String.fromCodePoint(codePoint);
+        const newIndex = pos.index + charValue.length;
+
+        if (charValue === '\n') {
+            return {
+                index: newIndex,
+                line: pos.line + 1,
+                column: 1
+            };
+        } else {
+            return {
+                index: newIndex,
+                line: pos.line,
+                column: pos.column + [...charValue].length
+            };
+        }
+    }
+
+    /**
+     * A simplified version of `peek` that returns only the string value of a future character.
+     * @param {number} [n=0] - The number of characters to look ahead.
+     * @returns {string} The string value of the character, or an empty string if at EOF.
+     */
+    public lookahead(n: number = 0): string {
+        const lookaheadIndex = this.peekPosition(n).index;
+        if (this.isEOF(lookaheadIndex)) return '';
+        const codePoint = this.source.codePointAt(lookaheadIndex)!;
+        return String.fromCodePoint(codePoint);
+    }
+
+    /**
+     * Searches backwards through the character buffer and collects a contiguous
+     * sequence of characters that match a predicate. The stream's position is not changed.
+     * @param predicate A function returning true for characters to include.
+     * @returns {Character[]} An array of matching characters, in their original forward order.
+     */
+    public lookbackWhile(predicate: (char: Character) => boolean): Character[] {
+        if (this.charsBuffer.length === 0) return [];
+
+        const lookedBackChars: Character[] = [];
+        for (let i = this.charsBuffer.length - 1; i >= 0; i--) {
+            const char = this.charsBuffer[i]!;
+            if (predicate(char)) {
+                lookedBackChars.push(char);
+            } else {
+                break;
+            }
+        }
+        // Reverse the array to return them in their natural, forward-read order.
+        return lookedBackChars.reverse();
+    }
+
+    /**
+     * The internal method for moving the stream's cursor forward after a character has been processed.
+     * @param {string} charValue - The value of the character being advanced past.
+     */
+    public advance(charValue: string): void {
+        this.index += charValue.length;
+        if (charValue === '\n') {
+            this.line++;
+            this.column = 1;
+        } else {
+            this.column += [...charValue].length;
+        }
+    }
+
+    /**
+     * Rewinds the stream's position by a given number of steps by popping
+     * characters from the history buffer.
+     * @param {number} [steps=1] - The number of characters to rewind.
+     * @throws {Error} If `steps` is greater than the number of characters in the history buffer.
+     */
+    public back(steps: number = 1): void {
+        if (steps <= 0) return;
+
+        if (steps > this.charsBuffer.length) {
+            throw new Error(
+                `Cannot go back ${steps} steps. History only contains ${this.charsBuffer.length} characters to go back to.`
+            );
+        }
+
+        for (let i = 0; i < steps; i++) this.charsBuffer.pop();
+
+        const newPosition = this.charsBuffer.length > 0
+            ? this.calculateNextPosition(this.charsBuffer[this.charsBuffer.length - 1]!.position)
+            : { index: 0, line: 1, column: 1 };
+
+        this.setPosition(newPosition);
+    }
+
+    /**
+     * Saves the current stream position to a stack. This is useful for speculative
+     * parsing, allowing you to "try" a path and then either `reset()` on failure
+     * or `commit()` on success.
+     */
+    public mark(): void {
+        this.marks.push(this.charsBuffer.length);
+    }
+
+    /**
+     * Restores the stream to the last saved position from the `mark()` stack.
+     * This operation consumes the mark.
+     * @throws {Error} If no mark has been set.
+     */
+    public reset(): void {
+        if (this.marks.length === 0) throw new Error("Cannot reset. No mark has been set.");
+
+        const markedLength = this.marks.pop()!;
+        const lastCharPos = this.charsBuffer[markedLength - 1]?.position;
+
+        const resetPosition = lastCharPos
+            ? this.calculateNextPosition(lastCharPos)
+            : { index: 0, line: 1, column: 1 };
+
+        this.charsBuffer.length = markedLength;
+        this.setPosition(resetPosition);
+    }
+
+    /**
+     * Discards the most recent mark from the stack without changing the stream's position.
+     * This should be called after a speculative parse succeeds.
+     * @throws {Error} If no mark has been set.
+     */
+    public commit(): void {
+        if (this.marks.length === 0) throw new Error("Cannot commit. No mark has been set.");
+        this.marks.pop();
+    }
+
+    /**
+     * Consumes characters from the stream as long as the predicate returns true.
+     * @param predicate A function that takes a `Character` and returns a boolean.
+     * @returns {Character[]} An array of the consumed characters.
+     */
+    public consumeWhile(predicate: (char: Character) => boolean): Character[] {
+        const consumed: Character[] = [];
+        while (!this.isEOF() && predicate(this.peek())) {
+            const result = this.next();
+            consumed.push(result.value as Character);
+        }
+        return consumed;
+    }
+
+    /**
+     * Checks if the stream's cursor is at or past the end of the source string.
+     * @param {number} [index=this.index] - An optional index to check; defaults to the current cursor index.
+     * @returns {boolean} True if the index is at or past the end of the source.
+     */
+    public isEOF(index?: number): boolean {
+        index = index !== undefined ? index : this.index;
+        return index >= this.source.length;
+    }
+
+    /**
+     * Constructs a standard `Character` object representing the End-Of-File state.
+     * @param {Position} [pos=this.getPosition()] - An optional position for the EOF character; defaults to the current position.
+     * @returns {Character} The EOF character object.
+     */
+    public atEOF(pos?: Position): Character {
+        return ({
+            value: '',
+            type: CharType.EOF,
+            position: pos || this.getPosition(),
+        });
+    }
+
+    /**
+     * Constructs a standard `Character` object representing an error state.
+     * @returns {Character} The Error character object at the current position.
+     */
+    public atError(): Character {
+        return {
+            value: 'Error',
+            type: CharType.Other,
+            position: this.getPosition(),
+        };
+    }
+
+    /**
+     * Enables logging for the next full iteration of the stream.
+     * @param {string} [message] - An optional message for the log header.
+     */
+    public withLogging(message?: string): this {
+        this.shouldLog = true;
+        if (message) this.logMessage = message;
+        return this;
+    }
+
+    /**
+     * Disables logging.
+     */
+    public withoutLogging(): this {
+        this.shouldLog = false;
+        return this;
+    }
+
+    private logHeaderAndSource(): void {
+        PrintLine();
+        console.log(`CHARACTERSTREAM:\n\n\t${this.logMessage}\n`);
+        console.log(`\tSOURCE:\n\n\t${inspect(this.get(), this.inspectOptions)}\n`);
+        console.log(`\tRESULT (CHARACTERS):`);
+        PrintLine();
+    }
+
+    private logCharacter(char: Character): void {
+        console.log(`\t${inspect(char, this.inspectOptions)}`);
+    }
+
+    private logFooter(): void {
+        PrintLine({ preNewLine: true });
+    }
+} // End class CharacterStream
+
+export default CharacterStream;
+export {
+    type Position,
+    type Character,
+    CharType,
+    CHARCLASSIFY,
+}
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src\Character.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████

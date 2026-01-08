@@ -1,15 +1,13 @@
 // src/Character.ts
 
-/**
- * The Char namespace encapsulates all character and stream-related logic.
- */
-//namespace Char {
+import { inspect, type InspectOptions } from 'node:util';
+import PrintLine from './PrintLine.ts';
 
 /**
  * Represents a specific location within the source string, tracked by index,
  * line number, and column number.
  */
-export interface Position {
+interface Position {
     /** The zero-based index of the character in the overall string. */
     index: number;
     /** The one-based line number where the character appears. */
@@ -22,7 +20,7 @@ export interface Position {
  * Represents a single character processed from the stream, containing its
  * value, classified type, and original position.
  */
-export interface Character {
+interface Character {
     /** The string value of the character. May be multi-byte. */
     value: string;
     /** The type of the character, as classified by the CharUtility class. */
@@ -35,7 +33,7 @@ export interface Character {
  * A detailed enumeration of all possible character types recognized by the classifier.
  * This includes stream control types, general categories, and specific, common symbols.
  */
-export enum CharType {
+enum CharType {
     // CharacterStream Control
     EOF = 'EOF',
     Error = 'Error',
@@ -98,288 +96,272 @@ export enum CharType {
     // International / Multi-byte
     Emoji = 'Emoji',
     Unicode = 'Unicode',
-} // End enum CharType
+}
 
 /**
- * A stateless CharUtility class for classifying characters.
+ * An ordered list of regular expression rules used as a fallback mechanism
+ * for characters not found in the `CHARSYMBOL_MAP`. The order is critical for
+ * correct classification, testing for more specific categories (like Emoji)
+ * before more general ones (like Symbol).
  */
-export class CharUtility {
+const CHARREGEX_MAP: [CharType, (char: string) => boolean][] = [
+    /**
+     ** ASCII Whitespace Checks
+        */
+    [CharType.NewLine, (char: string) => /[\n\r]/.test(char)],
+    [CharType.Whitespace, (char: string) => /^\s+$/.test(char)],
 
     /**
-     * An ordered list of regular expression rules used as a fallback mechanism
-     * for characters not found in the `SymbolMap`. The order is critical for
-     * correct classification, testing for more specific categories (like Emoji)
-     * before more general ones (like Symbol).
-     */
-    private static readonly RegexMap: [CharType, (char: string) => boolean][] = [
-        /**
-         ** ASCII Whitespace Checks
-         */
-        [CharType.NewLine, (char: string) => /[\n\r]/.test(char)],
-        [CharType.Whitespace, (char: string) => /^\s+$/.test(char)],
-
-        /**
-         * UNICODE LETTERS
-         * 
-         ** L	Letter (includes):
-         *      Lu	Uppercase Letter
-         *      Ll	Lowercase Letter
-         *      Lt	Titlecase Letter
-         *      Lm	Modifier Letter
-         *      Lo	Other Letter
-         */
-        [CharType.Letter, (char: string) => /\p{L}/u.test(char)],
-
-        /**
-         * UNICODE NUMBERS
-         * 
-         ** N	Number (includes):
-         *      Nd	Decimal Digit Number
-         *      Nl	Letter Number
-         *      No	Other Number
-         */
-        [CharType.Number, (char: string) => /\p{N}/u.test(char)],
-
-        [CharType.Emoji, (char: string) => /\p{Emoji_Presentation}/v.test(char)],
-        [CharType.Currency, (char: string) => /\p{Sc}/u.test(char)],
-        [CharType.Punctuation, (char: string) => /\p{P}/u.test(char)],
-
-        /**
-         * UNICODE SYMBOLS
-         * 
-         ** S	Symbol (includes):
-         *      Sm	Math Symbol
-         *      Sc	Currency Symbol
-         *      Sk	Modifier Symbol
-         *      So	Other Symbol
-         */
-        [CharType.Symbol, (char: string) => /\p{S}/u.test(char)],
-
-        /**
-         * UNICODE
-         * 
-         ** ASCII (includes):
-         *      all ASCII characters ([\u{0}-\u{7F}])
-         */
-        [CharType.Unicode, (char: string) => /\P{ASCII}/u.test(char)],
-
-        /**
-         * UNICODE
-         * 
-         * Not Currently, Directly Implemented:
-         * 
-         ** M	Mark (includes):
-         *      Mn	Non-Spacing Mark
-         *      Mc	Spacing Combining Mark
-         *      Me	Enclosing Mark
-         * 
-         ** P	Punctuation (includes):
-         *      Pc	Connector Punctuation
-         *      Pd	Dash Punctuation
-         *      Ps	Open Punctuation
-         *      Pe	Close Punctuation
-         *      Pi	Initial Punctuation
-         *      Pf	Final Punctuation
-         *      Po	Other Punctuation
-         * 
-         ** Z	Separator (includes):
-         *      Zs	Space Separator
-         *      Zl	Line Separator
-         *      Zp	Paragraph Separator
-         * 
-         ** C	Other (includes):
-         *      Cc	Control
-         *      Cf	Format
-         *      Cs	Surrogate
-         *      Co	Private Use
-         *      Cn	Unassigned
-         **      -	*Any
-         **      -	*Assigned
-         **      -	*ASCII (implemented above)
-         * 
-         ** *Any (includes):
-         *      all code points ([\u{0}-\u{10FFFF}])
-         * 
-         ** *Assigned (includes):
-         *      all assigned characters (\P{Cn})
-         */
-
-        /**
-         * OTHER UNICODE CHARACTER PROPERTIES TO CONSIDER:
-         * 
-         *      GENERAL	                        CASE	                        SHAPING AND RENDERING
-         *      Name (Name_Alias)	            Uppercase	                    Join_Control
-         *      Block	                        Lowercase	                    Joining_Group
-         *      Age	                            Simple_Lowercase_Mapping	    Joining_CharType
-         *      General_Category	            Simple_Titlecase_Mapping	    Vertical_Orientation
-         *      Script (Script_Extensions)	    Simple_Uppercase_Mapping	    Line_Break
-         *      White_Space	                    Simple_Case_Folding	            Grapheme_Cluster_Break
-         *      Alphabetic	                    Soft_Dotted	                    Sentence_Break
-         *      Hangul_Syllable_CharType	        Cased	                        Word_Break
-         *      Noncharacter_Code_Point	        Case_Ignorable	                East_Asian_Width
-         *      Default_Ignorable_Code_Point	Changes_When_Lowercased	        Prepended_Concatenation_Mark
-         *      Deprecated	                    Changes_When_Uppercased	 
-         *      Logical_Order_Exception	        Changes_When_Titlecased	        BIDIRECTIONAL
-         *      Variation_Selector	            Changes_When_Casefolded	        Bidi_Class
-         *                                      Changes_When_Casemapped	        Bidi_Control
-         *      NUMERIC	 	                                                    Bidi_Mirrored
-         *      Numeric_Value	                NORMALIZATION	                Bidi_Mirroring_Glyph
-         *      Numeric_CharType	                Canonical_Combining_Class	    Bidi_Paired_Bracket
-         *      Hex_Digit	                    Decomposition_CharType	            Bidi_Paired_Bracket_CharType
-         *      ASCII_Hex_Digit	                NFC_Quick_Check	 
-         *                                      NFKC_Quick_Check	            MISCELLANEOUS
-         *      IDENTIFIERS	                    NFD_Quick_Check	                Math
-         *      ID_Continue	                    NFKD_Quick_Check	            Quotation_Mark
-         *      ID_Start	                    NFKC_Casefold	                Dash
-         *      XID_Continue	                Changes_When_NFKC_Casefolded	Sentence_Terminal
-         *      XID_Start	 	                                                Terminal_Punctuation
-         *      Pattern_Syntax	                EMOJI	                        Diacritic
-         *      Pattern_White_Space	            Emoji	                        Extender
-         *      Identifier_Status	            Emoji_Presentation	            Grapheme_Base
-         *      Identifier_CharType	                Emoji_Modifier	                Grapheme_Extend
-         *                                      Emoji_Modifier_Base	            Regional_Indicator
-         *      CJK	                            Emoji_Component	 
-         *      Ideographic	                    Extended_Pictographic	 
-         *      Unified_Ideograph	            Basic_Emoji*	 
-         *      Radical	                        Emoji_Keycap_Sequence*	 
-         *      IDS_Binary_Operator	            RGI_Emoji_Modifier_Sequence*	 
-         *      IDS_Trinary_Operator	        RGI_Emoji_Flag_Sequence*	 
-         *      Equivalent_Unified_Ideograph	RGI_Emoji_Tag_Sequence*	 
-         *      RGI_Emoji_ZWJ_Sequence*	 
-         *      RGI_Emoji*	 
-         */
-
-        /**
-         ** Table 12. General_Category Values
-         * 
-         *      ABBR    LONG	                    DESCRIPTION
-         *--------------------------------------------------------------------------------------------------------------
-         *      Lu  	Uppercase_Letter	        an uppercase letter
-         *      Ll  	Lowercase_Letter	        a lowercase letter
-         *      Lt  	Titlecase_Letter	        a digraph encoded as a single character, with first part uppercase
-         *      LC  	Cased_Letter	            Lu | Ll | Lt
-         *      Lm  	Modifier_Letter	            a modifier letter
-         *      Lo  	Other_Letter	            other letters, including syllables and ideographs
-         *      L   	Letter	                    Lu | Ll | Lt | Lm | Lo
-         *      Mn  	Nonspacing_Mark	            a nonspacing combining mark (zero advance width)
-         *      Mc  	Spacing_Mark	            a spacing combining mark (positive advance width)
-         *      Me  	Enclosing_Mark	            an enclosing combining mark
-         *      M   	Mark	                    Mn | Mc | Me
-         *      Nd  	Decimal_Number	            a decimal digit
-         *      Nl  	Letter_Number	            a letterlike numeric character
-         *      No  	Other_Number	            a numeric character of other type
-         *      N   	Number	                    Nd | Nl | No
-         *      Pc  	Connector_Punctuation       a connecting punctuation mark, like a tie
-         *      Pd  	Dash_Punctuation	        a dash or hyphen punctuation mark
-         *      Ps  	Open_Punctuation	        an opening punctuation mark (of a pair)
-         *      Pe  	Close_Punctuation	        a closing punctuation mark (of a pair)
-         *      Pi  	Initial_Punctuation	        an initial quotation mark
-         *      Pf  	Final_Punctuation	        a final quotation mark
-         *      Po  	Other_Punctuation	        a punctuation mark of other type
-         *      P   	Punctuation	                Pc | Pd | Ps | Pe | Pi | Pf | Po
-         *      Sm  	Math_Symbol	                a symbol of mathematical use
-         *      Sc  	Currency_Symbol	            a currency sign
-         *      Sk  	Modifier_Symbol	            a non-letterlike modifier symbol
-         *      So  	Other_Symbol	            a symbol of other type
-         *      S   	Symbol	                    Sm | Sc | Sk | So
-         *      Zs  	Space_Separator	            a space character (of various non-zero widths)
-         *      Zl  	Line_Separator	            U+2028 LINE SEPARATOR only
-         *      Zp  	Paragraph_Separator	        U+2029 PARAGRAPH SEPARATOR only
-         *      Z   	Separator	                Zs | Zl | Zp
-         *      Cc  	Control	                    a C0 or C1 control code
-         *      Cf  	Format	                    a format control character
-         *      Cs  	Surrogate	                a surrogate code point
-         *      Co  	Private_Use	                a private-use character
-         *      Cn  	Unassigned	                a reserved unassigned code point or a noncharacter
-         *      C   	Other	                    Cc | Cf | Cs | Co | Cn
-         */
-    ];
+     * UNICODE LETTERS
+     * 
+     ** L	Letter (includes):
+        *      Lu	Uppercase Letter
+        *      Ll	Lowercase Letter
+        *      Lt	Titlecase Letter
+        *      Lm	Modifier Letter
+        *      Lo	Other Letter
+        */
+    [CharType.Letter, (char: string) => /\p{L}/u.test(char)],
 
     /**
-     * A map of common single characters to their specific types.
-     * This provides an O(1) fast-path lookup, avoiding more expensive
-     * regex checks for the most frequent ASCII symbols.
-     */
-    private static readonly SymbolMap: Record<string, CharType> = {
-        '#': CharType.Hash,
-        '%': CharType.Percent,
-        '/': CharType.Slash,
-        ',': CharType.Comma,
-        '(': CharType.LParen,
-        ')': CharType.RParen,
-        '+': CharType.Plus,
-        '-': CharType.Minus,
-        '*': CharType.Star,
-        '.': CharType.Dot,
-        '`': CharType.Backtick,
-        "'": CharType.SingleQuote,
-        '"': CharType.DoubleQuote,
-        '\\': CharType.BackSlash,
-        '~': CharType.Tilde,
-        '!': CharType.Exclamation,
-        '@': CharType.At,
-        '$': CharType.Dollar,
-        '?': CharType.Question,
-        '^': CharType.Caret,
-        '&': CharType.Ampersand,
-        '<': CharType.LessThan,
-        '>': CharType.GreaterThan,
-        '_': CharType.Underscore,
-        '=': CharType.EqualSign,
-        '[': CharType.LBracket,
-        ']': CharType.RBracket,
-        '{': CharType.LBrace,
-        '}': CharType.RBrace,
-        ';': CharType.SemiColon,
-        ':': CharType.Colon,
-        '|': CharType.Pipe,
-    };
+     * UNICODE NUMBERS
+     * 
+     ** N	Number (includes):
+        *      Nd	Decimal Digit Number
+        *      Nl	Letter Number
+        *      No	Other Number
+        */
+    [CharType.Number, (char: string) => /\p{N}/u.test(char)],
+
+    [CharType.Emoji, (char: string) => /\p{Emoji_Presentation}/v.test(char)],
+    [CharType.Currency, (char: string) => /\p{Sc}/u.test(char)],
+    [CharType.Punctuation, (char: string) => /\p{P}/u.test(char)],
 
     /**
-     * Classifies a character using a multi-step, stateless process.
-     * The algorithm is:
-     * 1. Handle stream control cases (EOF, null).
-     * 2. Attempt a fast O(1) lookup in `SymbolMap`.
-     * 3. If not found, iterate through the ordered `RegexMap`.
-     * 4. If no rule matches, return a fallback `CharType`.
-     * @param char The character string to classify.
-     * @returns The classified `CharType` of the character.
+     * UNICODE SYMBOLS
+     * 
+     ** S	Symbol (includes):
+        *      Sm	Math Symbol
+        *      Sc	Currency Symbol
+        *      Sk	Modifier Symbol
+        *      So	Other Symbol
+        */
+    [CharType.Symbol, (char: string) => /\p{S}/u.test(char)],
+
+    /**
+     * UNICODE
+     * 
+     ** ASCII (includes):
+        *      all ASCII characters ([\u{0}-\u{7F}])
+        */
+    [CharType.Unicode, (char: string) => /\P{ASCII}/u.test(char)],
+
+    /**
+     * UNICODE
+     * 
+     * Not Currently, Directly Implemented:
+     * 
+     ** M	Mark (includes):
+        *      Mn	Non-Spacing Mark
+        *      Mc	Spacing Combining Mark
+        *      Me	Enclosing Mark
+        * 
+        ** P	Punctuation (includes):
+        *      Pc	Connector Punctuation
+        *      Pd	Dash Punctuation
+        *      Ps	Open Punctuation
+        *      Pe	Close Punctuation
+        *      Pi	Initial Punctuation
+        *      Pf	Final Punctuation
+        *      Po	Other Punctuation
+        * 
+        ** Z	Separator (includes):
+        *      Zs	Space Separator
+        *      Zl	Line Separator
+        *      Zp	Paragraph Separator
+        * 
+        ** C	Other (includes):
+        *      Cc	Control
+        *      Cf	Format
+        *      Cs	Surrogate
+        *      Co	Private Use
+        *      Cn	Unassigned
+        **      -	*Any
+        **      -	*Assigned
+        **      -	*ASCII (implemented above)
+        * 
+        ** *Any (includes):
+        *      all code points ([\u{0}-\u{10FFFF}])
+        * 
+        ** *Assigned (includes):
+        *      all assigned characters (\P{Cn})
+        */
+
+    /**
+     * OTHER UNICODE CHARACTER PROPERTIES TO CONSIDER:
+     * 
+     *      GENERAL	                        CASE	                        SHAPING AND RENDERING
+     *      Name (Name_Alias)	            Uppercase	                    Join_Control
+     *      Block	                        Lowercase	                    Joining_Group
+     *      Age	                            Simple_Lowercase_Mapping	    Joining_CharType
+     *      General_Category	            Simple_Titlecase_Mapping	    Vertical_Orientation
+     *      Script (Script_Extensions)	    Simple_Uppercase_Mapping	    Line_Break
+     *      White_Space	                    Simple_Case_Folding	            Grapheme_Cluster_Break
+     *      Alphabetic	                    Soft_Dotted	                    Sentence_Break
+     *      Hangul_Syllable_CharType	        Cased	                        Word_Break
+     *      Noncharacter_Code_Point	        Case_Ignorable	                East_Asian_Width
+     *      Default_Ignorable_Code_Point	Changes_When_Lowercased	        Prepended_Concatenation_Mark
+     *      Deprecated	                    Changes_When_Uppercased	 
+     *      Logical_Order_Exception	        Changes_When_Titlecased	        BIDIRECTIONAL
+     *      Variation_Selector	            Changes_When_Casefolded	        Bidi_Class
+     *                                      Changes_When_Casemapped	        Bidi_Control
+     *      NUMERIC	 	                                                    Bidi_Mirrored
+     *      Numeric_Value	                NORMALIZATION	                Bidi_Mirroring_Glyph
+     *      Numeric_CharType	                Canonical_Combining_Class	    Bidi_Paired_Bracket
+     *      Hex_Digit	                    Decomposition_CharType	            Bidi_Paired_Bracket_CharType
+     *      ASCII_Hex_Digit	                NFC_Quick_Check	 
+     *                                      NFKC_Quick_Check	            MISCELLANEOUS
+     *      IDENTIFIERS	                    NFD_Quick_Check	                Math
+     *      ID_Continue	                    NFKD_Quick_Check	            Quotation_Mark
+     *      ID_Start	                    NFKC_Casefold	                Dash
+     *      XID_Continue	                Changes_When_NFKC_Casefolded	Sentence_Terminal
+     *      XID_Start	 	                                                Terminal_Punctuation
+     *      Pattern_Syntax	                EMOJI	                        Diacritic
+     *      Pattern_White_Space	            Emoji	                        Extender
+     *      Identifier_Status	            Emoji_Presentation	            Grapheme_Base
+     *      Identifier_CharType	                Emoji_Modifier	                Grapheme_Extend
+     *                                      Emoji_Modifier_Base	            Regional_Indicator
+     *      CJK	                            Emoji_Component	 
+     *      Ideographic	                    Extended_Pictographic	 
+     *      Unified_Ideograph	            Basic_Emoji*	 
+     *      Radical	                        Emoji_Keycap_Sequence*	 
+     *      IDS_Binary_Operator	            RGI_Emoji_Modifier_Sequence*	 
+     *      IDS_Trinary_Operator	        RGI_Emoji_Flag_Sequence*	 
+     *      Equivalent_Unified_Ideograph	RGI_Emoji_Tag_Sequence*	 
+     *      RGI_Emoji_ZWJ_Sequence*	 
+     *      RGI_Emoji*	 
      */
-    public static classify(char: string): CharType {
-        // 1. Handle EOF, undefined and null
-        if (char === '') return this.handleEOF();
-        if (char === undefined || char === null) return this.handleError(char);
-        // 2. Handle characters in the symbol map (fast path)
-        if (this.SymbolMap[char]) return this.SymbolMap[char];
-        // 3. Loop through the ordered classification rules (fallback).
-        for (const [type, predicate] of this.RegexMap) {
-            if (predicate(char)) return type;
-        }
-        // 4. Fallback type
-        return this.handleOther(char);
+
+    /**
+     ** Table 12. General_Category Values
+        * 
+        *      ABBR    LONG	                    DESCRIPTION
+        *--------------------------------------------------------------------------------------------------------------
+        *      Lu  	Uppercase_Letter	        an uppercase letter
+        *      Ll  	Lowercase_Letter	        a lowercase letter
+        *      Lt  	Titlecase_Letter	        a digraph encoded as a single character, with first part uppercase
+        *      LC  	Cased_Letter	            Lu | Ll | Lt
+        *      Lm  	Modifier_Letter	            a modifier letter
+        *      Lo  	Other_Letter	            other letters, including syllables and ideographs
+        *      L   	Letter	                    Lu | Ll | Lt | Lm | Lo
+        *      Mn  	Nonspacing_Mark	            a nonspacing combining mark (zero advance width)
+        *      Mc  	Spacing_Mark	            a spacing combining mark (positive advance width)
+        *      Me  	Enclosing_Mark	            an enclosing combining mark
+        *      M   	Mark	                    Mn | Mc | Me
+        *      Nd  	Decimal_Number	            a decimal digit
+        *      Nl  	Letter_Number	            a letterlike numeric character
+        *      No  	Other_Number	            a numeric character of other type
+        *      N   	Number	                    Nd | Nl | No
+        *      Pc  	Connector_Punctuation       a connecting punctuation mark, like a tie
+        *      Pd  	Dash_Punctuation	        a dash or hyphen punctuation mark
+        *      Ps  	Open_Punctuation	        an opening punctuation mark (of a pair)
+        *      Pe  	Close_Punctuation	        a closing punctuation mark (of a pair)
+        *      Pi  	Initial_Punctuation	        an initial quotation mark
+        *      Pf  	Final_Punctuation	        a final quotation mark
+        *      Po  	Other_Punctuation	        a punctuation mark of other type
+        *      P   	Punctuation	                Pc | Pd | Ps | Pe | Pi | Pf | Po
+        *      Sm  	Math_Symbol	                a symbol of mathematical use
+        *      Sc  	Currency_Symbol	            a currency sign
+        *      Sk  	Modifier_Symbol	            a non-letterlike modifier symbol
+        *      So  	Other_Symbol	            a symbol of other type
+        *      S   	Symbol	                    Sm | Sc | Sk | So
+        *      Zs  	Space_Separator	            a space character (of various non-zero widths)
+        *      Zl  	Line_Separator	            U+2028 LINE SEPARATOR only
+        *      Zp  	Paragraph_Separator	        U+2029 PARAGRAPH SEPARATOR only
+        *      Z   	Separator	                Zs | Zl | Zp
+        *      Cc  	Control	                    a C0 or C1 control code
+        *      Cf  	Format	                    a format control character
+        *      Cs  	Surrogate	                a surrogate code point
+        *      Co  	Private_Use	                a private-use character
+        *      Cn  	Unassigned	                a reserved unassigned code point or a noncharacter
+        *      C   	Other	                    Cc | Cf | Cs | Co | Cn
+        */
+] as const;
+
+/**
+ * A map of common single characters to their specific types.
+ * This provides an O(1) fast-path lookup, avoiding more expensive
+ * regex checks for the most frequent ASCII symbols.
+ */
+const CHARSYMBOL_MAP: Record<string, CharType> = {
+    '#': CharType.Hash,
+    '%': CharType.Percent,
+    '/': CharType.Slash,
+    ',': CharType.Comma,
+    '(': CharType.LParen,
+    ')': CharType.RParen,
+    '+': CharType.Plus,
+    '-': CharType.Minus,
+    '*': CharType.Star,
+    '.': CharType.Dot,
+    '`': CharType.Backtick,
+    "'": CharType.SingleQuote,
+    '"': CharType.DoubleQuote,
+    '\\': CharType.BackSlash,
+    '~': CharType.Tilde,
+    '!': CharType.Exclamation,
+    '@': CharType.At,
+    '$': CharType.Dollar,
+    '?': CharType.Question,
+    '^': CharType.Caret,
+    '&': CharType.Ampersand,
+    '<': CharType.LessThan,
+    '>': CharType.GreaterThan,
+    '_': CharType.Underscore,
+    '=': CharType.EqualSign,
+    '[': CharType.LBracket,
+    ']': CharType.RBracket,
+    '{': CharType.LBrace,
+    '}': CharType.RBrace,
+    ';': CharType.SemiColon,
+    ':': CharType.Colon,
+    '|': CharType.Pipe,
+} as const;
+
+/**
+ * Classifies a character using a multi-step, stateless process.
+ * The algorithm is:
+ * 1. Handle stream control cases (EOF, null).
+ * 2. Attempt a fast O(1) lookup in `CHARSYMBOL_MAP`.
+ * 3. If not found, iterate through the ordered `CHARREGEX_MAP`.
+ * 4. If no rule matches, return a fallback `CharType`.
+ * @param char The character string to classify.
+ * @returns The classified `CharType` of the character.
+ */
+const CHARCLASSIFY = (char: string): CharType => {
+    // 1. Handle EOF
+    if (char === '') return CharType.EOF;
+
+    // 2. Handle undefined and null
+    if (char === undefined || char === null) return CharType.Error;
+
+    // 3. Handle characters in the symbol map (fast path)
+    if (CHARSYMBOL_MAP[char]) return CHARSYMBOL_MAP[char];
+
+    // 4. Loop through the ordered classification rules (fallback).
+    for (const [type, predicate] of CHARREGEX_MAP) {
+        if (predicate(char)) return type;
     }
 
-    /** Private helper for handling the 'Other' case. Can be expanded for custom logic. */
-    private static handleOther(char: string): CharType {
-        return CharType.Other;
-    }
-
-    /** Private helper for handling the 'Error' case. Can be expanded for custom logic. */
-    private static handleError(char: string): CharType {
-        return CharType.Error;
-    }
-
-    /** Private helper for handling the 'EOF' case. */
-    private static handleEOF(): CharType {
-        return CharType.EOF;
-    }
-} // End class CharUtility
+    // 5. Fallback type
+    return CharType.Other;
+}
 
 /**
  * Provides a stateful, iterable stream of `Character` objects from a source string.
  * It supports Unicode, peeking, backtracking, and speculative parsing via marks.
  */
-export class CharacterStream implements IterableIterator<Character> {
+class CharacterStream implements IterableIterator<Character> {
     // The Unicode-normalized (NFC) source string being processed.
     private source: string = ''.normalize('NFC');
     // The current byte index of the cursor in the source string.
@@ -388,6 +370,23 @@ export class CharacterStream implements IterableIterator<Character> {
     private line: number = 1;
     // The current 1-based column number of the cursor.
     private column: number = 1;
+    private shouldLog: boolean = false;
+    private isLoggingActive: boolean = false;
+    private logMessage = 'CHARACTER STREAM DEMONSTRATION:';
+    private inspectOptions: InspectOptions = {
+        showHidden: true,
+        depth: null,
+        colors: true,
+        customInspect: false,
+        showProxy: false,
+        maxArrayLength: null,
+        maxStringLength: null,
+        breakLength: 100,
+        compact: true,
+        sorted: false,
+        getters: false,
+        numericSeparator: true,
+    };
 
     /**
      * A buffer of all previously processed `Character` objects. This serves as the
@@ -395,7 +394,7 @@ export class CharacterStream implements IterableIterator<Character> {
      * Using the full `Character` object is a design choice to retain type and
      * position info, not just the raw value.
      */
-    public charsBuffer: Character[] = [];
+    private charsBuffer: Character[] = [];
 
     /** 
      * A stack storing the lengths of `charsBuffer` at points where `mark()` was called. 
@@ -425,11 +424,10 @@ export class CharacterStream implements IterableIterator<Character> {
     }
 
     /**
-     * Replaces the stream's source and resets its entire state (position, buffers, marks)
-     * to their initial values.
-     * @param {string} input - The new source string.
+     * Sets the current source string of the stream.
+     * @param {string} input The new source string.
      */
-    public set(input?: string): CharacterStream {
+    public set(input: string) {
         this.source = (input || '').normalize('NFC');
         this.index = 0;
         this.line = 1;
@@ -453,25 +451,24 @@ export class CharacterStream implements IterableIterator<Character> {
 
     /**
      * Manually sets the stream's cursor to a specific position.
-     * @param {number} index - The character index.
+     * @param {number} indexOrPosition - The character index.
      * @param {number} line - The line number.
      * @param {number} column - The column number.
+     *
+     * or
+     * 
+     * Manually set to a specific position using a Position object.
+     * @param {Position} indexOrPosition - The Position object to apply.
      */
-    public setPosition(index: number, line: number, column: number): void;
-    /**
-     * Manually sets the stream's cursor to a specific position using a Position object.
-     * @param {Position} position - The Position object to apply.
-     */
-    public setPosition(position: Position): void;
-    public setPosition(indexOrPosition: number | Position, line?: number, column?: number): void {
+    public setPosition(indexOrPosition: number | Position, line: number = 1, column: number = 1): void {
         if (typeof indexOrPosition === 'object') {
-            this.index = indexOrPosition.index || 0;
-            this.line = indexOrPosition.line || 1;
-            this.column = indexOrPosition.column || 1;
+            this.index = indexOrPosition.index;
+            this.line = indexOrPosition.line;
+            this.column = indexOrPosition.column;
         } else {
-            this.index = indexOrPosition || 0;
-            this.line = line || 1;
-            this.column = column || 1;
+            this.index = indexOrPosition;
+            this.line = line;
+            this.column = column;
         }
     }
 
@@ -480,6 +477,7 @@ export class CharacterStream implements IterableIterator<Character> {
      * @returns {IterableIterator<Character>} The stream instance.
      */
     public [Symbol.iterator](): IterableIterator<Character> {
+        this.isLoggingActive = false;
         return this;
     }
 
@@ -489,11 +487,28 @@ export class CharacterStream implements IterableIterator<Character> {
      * @returns {IteratorResult<Character>} An object with `done` and `value` properties.
      */
     public next(): IteratorResult<Character> {
-        if (this.isEOF()) return { done: true, value: this.atEOF() };
+        if (this.shouldLog && !this.isLoggingActive) {
+            this.logHeaderAndSource();
+            this.isLoggingActive = true;
+        }
+
+        if (this.isEOF()) {
+            if (this.isLoggingActive) {
+                this.logFooter();
+                this.isLoggingActive = false;
+                this.shouldLog = false; // Reset for the next iteration
+            }
+            return { done: true, value: this.atEOF() };
+        }
 
         const nextChar = this.peek();
         this.advance(nextChar.value);
         this.charsBuffer.push(nextChar);
+
+        if (this.isLoggingActive) {
+            this.logCharacter(nextChar);
+        }
+
         return { done: false, value: nextChar };
     }
 
@@ -505,13 +520,13 @@ export class CharacterStream implements IterableIterator<Character> {
      */
     public peek(n: number = 0): Character {
         const pos = this.peekPosition(n);
-        if (this.isEOF(pos.index)) return this.atEOF( pos );
+        if (this.isEOF(pos.index)) return this.atEOF(pos);
 
         const value = String.fromCodePoint(this.source.codePointAt(pos.index)!);
 
         return {
             value,
-            type: CharUtility.classify(value),
+            type: CHARCLASSIFY(value),
             position: pos
         };
     }
@@ -720,7 +735,46 @@ export class CharacterStream implements IterableIterator<Character> {
             position: this.getPosition(),
         };
     }
+
+    /**
+     * Enables logging for the next full iteration of the stream.
+     * @param {string} [message] - An optional message for the log header.
+     */
+    public withLogging(message?: string): this {
+        this.shouldLog = true;
+        if (message) this.logMessage = message;
+        return this;
+    }
+
+    /**
+     * Disables logging.
+     */
+    public withoutLogging(): this {
+        this.shouldLog = false;
+        return this;
+    }
+
+    private logHeaderAndSource(): void {
+        PrintLine();
+        console.log(`CHARACTERSTREAM:\n\n\t${this.logMessage}\n`);
+        console.log(`\tSOURCE:\n\n\t${inspect(this.get(), this.inspectOptions)}\n`);
+        console.log(`\tRESULT (CHARACTERS):`);
+        PrintLine();
+    }
+
+    private logCharacter(char: Character): void {
+        console.log(`\t${inspect(char, this.inspectOptions)}`);
+    }
+
+    private logFooter(): void {
+        PrintLine({ preNewLine: true });
+    }
 } // End class CharacterStream
 
-
-
+export default CharacterStream;
+export {
+    type Position,
+    type Character,
+    CharType,
+    CHARCLASSIFY,
+}

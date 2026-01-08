@@ -25,14 +25,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": [
-    "./src/**/*.ts"
-, "test_old/AST.ts", "test_old/Transition.ts"  ],
-  "exclude": [
-    "./ALL/**/*",
-    "./ALL/ALL_CONFIGS.ts",
-    "./ALL/ALL_FILES.ts",
-    "./ALL/ALL_TESTS.ts"
-  ]
+  "include": ["./src/**/*.ts"],
+  "exclude": ["./ALL/**/*"]
 }
-

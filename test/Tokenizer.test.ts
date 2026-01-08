@@ -1,7 +1,7 @@
 // src/tests/Tokenizer.test.ts
 
 import { describe, it, expect, vi } from 'vitest';
-import { CharacterStream } from '../src/Character';
+import CharacterStream from '../src/Character';
 import { Tokenizer, TokenType, type Token } from '../src/Tokenizer';
 
 describe('Tokenizer', () => {
@@ -18,7 +18,7 @@ describe('Tokenizer', () => {
             const stream = new CharacterStream('');
             const tokenizer = new Tokenizer();
             const tokens = tokenizer.tokenize(stream);
-            expect(tokens).toEqual([{ value: '', type: TokenType.EOF }]);
+            expect(tokens).toEqual([{ value: '', type: TokenType.END }]);
         });
 
         it('should tokenize a single identifier', () => {
@@ -48,14 +48,34 @@ describe('Tokenizer', () => {
     });
 
     describe('Keywords', () => {
-        it('should tokenize "let" as a KEYWORD', () => {
-            const tokens = tokenizeString('let');
-            expect(tokens).toEqual([{ value: 'let', type: TokenType.LET }]);
+        it('should tokenize "hsl" as a FUNCTION', () => {
+            const tokens = tokenizeString('hsl');
+            expect(tokens).toEqual([{ value: 'hsl', type: TokenType.FUNCTION }]);
         });
 
         it('should tokenize "const" as a KEYWORD', () => {
             const tokens = tokenizeString('const');
-            expect(tokens).toEqual([{ value: 'const', type: TokenType.CONST }]);
+            expect(tokens).toEqual([{ value: 'const', type: TokenType.KEYWORD }]);
+        });
+
+        it('should tokenize "let" as a KEYWORD', () => {
+            const tokens = tokenizeString('let');
+            expect(tokens).toEqual([{ value: 'let', type: TokenType.KEYWORD }]);
+        });
+
+        it('should tokenize "for" as a KEYWORD', () => {
+            const tokens = tokenizeString('for');
+            expect(tokens).toEqual([{ value: 'for', type: TokenType.KEYWORD }]);
+        });
+
+        it('should tokenize "red" as a KEYWORD', () => {
+            const tokens = tokenizeString('red');
+            expect(tokens).toEqual([{ value: 'red', type: TokenType.KEYWORD }]);
+        });
+
+        it('should tokenize "green" as a KEYWORD', () => {
+            const tokens = tokenizeString('green');
+            expect(tokens).toEqual([{ value: 'green', type: TokenType.KEYWORD }]);
         });
 
         it('should differentiate keywords from identifiers', () => {
@@ -129,7 +149,7 @@ describe('Tokenizer', () => {
     });
 
     describe('Complex Tokenization', () => {
-        it.skip('should tokenize a dimension value', () => {
+        it('should tokenize a dimension value', () => {
             const tokens = tokenizeString('180deg');
             expect(tokens).toEqual([{ value: '180deg', type: TokenType.DIMENSION }]);
         });
@@ -138,7 +158,7 @@ describe('Tokenizer', () => {
             const tokens = tokenizeString('let name = "John";');
             // FIX: Expect EQUALS and a generic SYMBOL for the semicolon.
             expect(tokens).toEqual([
-                { value: 'let', type: TokenType.LET },
+                { value: 'let', type: TokenType.KEYWORD },
                 { value: 'name', type: TokenType.IDENTIFIER },
                 { value: '=', type: TokenType.EQUALS },
                 { value: 'John', type: TokenType.STRING },
@@ -150,12 +170,12 @@ describe('Tokenizer', () => {
             const tokens = tokenizeString('const  value=123.45  ;for');
              // FIX: Expect EQUALS and a generic SYMBOL for the semicolon.
             expect(tokens).toEqual([
-                { value: 'const', type: TokenType.CONST },
+                { value: 'const', type: TokenType.KEYWORD },
                 { value: 'value', type: TokenType.IDENTIFIER },
                 { value: '=', type: TokenType.EQUALS },
                 { value: '123.45', type: TokenType.NUMBER },
                 { value: ';', type: TokenType.SYMBOL },
-                { value: 'for', type: TokenType.FOR },
+                { value: 'for', type: TokenType.KEYWORD },
             ]);
         });
 
@@ -163,7 +183,7 @@ describe('Tokenizer', () => {
             const tokens = tokenizeString('let x = 123');
             // FIX: Expect EQUALS instead of SYMBOL.
             expect(tokens).toEqual([
-                { value: 'let', type: TokenType.LET },
+                { value: 'let', type: TokenType.KEYWORD },
                 { value: 'x', type: TokenType.IDENTIFIER },
                 { value: '=', type: TokenType.EQUALS },
                 { value: '123', type: TokenType.NUMBER },
@@ -197,21 +217,6 @@ describe('Tokenizer', () => {
             // This test covers the error-throwing path in createToken.
             // We need to access the private method, which is okay for testing purposes.
             expect(() => (tokenizer as any).createToken('STRING')).toThrow('Cannot create token from empty buffer');
-        });
-
-        it('should correctly log a line to the console', () => {
-            const logSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
-
-            const tokenizer = new Tokenizer();
-            (tokenizer as any).printLine();
-
-            (tokenizer as any).printLine({ preNewLine: true, postNewLine: true });
-
-            // Check that console.log was called multiple times, confirming logs were generated
-            expect(logSpy).toHaveBeenCalled();
-
-            // Clean up the spy
-            logSpy.mockRestore();
         });
 
         it('should run without logging', () => {
