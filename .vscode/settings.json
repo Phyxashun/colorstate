@@ -60,7 +60,7 @@
         "RPAREN",
         "STRINGSTATE"
     ],
-    "editor.fontFamily": "'JetBrains Mono', monospace",
+    "editor.fontFamily": "'Hack Nerd Font', monospace",
     "editor.fontLigatures": true,
-    "terminal.integrated.fontFamily": "'JetBrains Mono Nerd Font'"
+    "terminal.integrated.fontFamily": "'Hack Nerd Font'"
 }
