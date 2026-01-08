@@ -25,6 +25,9 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["./src/**/*.ts"],
+  "include": [
+    "./src/**/*.ts",
+    "./types/**/*.d.ts", "types/Types.ts",
+  ],
   "exclude": ["./ALL/**/*"]
 }

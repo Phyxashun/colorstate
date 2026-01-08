@@ -225,5 +225,18 @@ describe('PrintLine Utility', () => {
             // Now it should be exactly 40
             expect(output[0].length).toBe(40);
         });
+
+        it('should use the longest line length when width is "tight"', () => {
+            // This specifically triggers the 'else' branch for non-wrapping strings
+            const multiLineString = "Short\nThis is the longest line\nMedium";
+            BoxText(multiLineString, { width: 'tight' });
+
+            const rawOutput = consoleSpy.mock.calls[consoleSpy.mock.calls.length - 1][0];
+            const output = stripAnsi(rawOutput).split('\n');
+
+            // "This is the longest line" is 24 chars.
+            // Box = 1 (border) + 1 (space) + 24 + 1 (space) + 1 (border) = 28.
+            expect(output[0].trim().length).toBe(28);
+        });
     });
 });

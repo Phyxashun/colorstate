@@ -1,53 +1,10 @@
 // src/Tokenizer.ts
 
 import { styleText, inspect, type InspectOptions } from 'node:util';
-import { Context, State } from './Context.ts';
+import { Context } from './Context.ts';
 import CharacterStream, { type Character } from './Character.ts';
 import PrintLine, { Spacer, CenterText, BoxText } from './PrintLine.ts';
-
-enum TokenType {
-    // State Control Tokens
-    START = 'START',
-    OTHER = 'OTHER',
-    ERROR = 'ERROR',
-    END = 'END',
-
-    // Whitespace and Formatting Tokens
-    WHITESPACE = 'WHITESPACE',
-    NEWLINE = 'NEWLINE',
-
-    // Primary Tokens
-    IDENTIFIER = 'IDENTIFIER',
-    NUMBER = 'NUMBER',
-    HEXVALUE = 'HEXVALUE',
-    SYMBOL = 'SYMBOL',
-
-    // Context Specific Identifier Literals
-    KEYWORD = 'KEYWORD',
-    FUNCTION = 'FUNCTION',
-
-    // Context Specific Numeric Literals
-    PERCENT = 'PERCENT',
-    DIMENSION = 'DIMENSION',
-
-    // Context Specific String Literals
-    STRING = 'STRING',
-    ESCAPE = 'ESCAPE',
-    COMMENT = 'COMMENT',
-
-    // Context Specific Symbol Literals
-    EQUALS = 'EQUALS',
-    PLUS = 'PLUS',
-    MINUS = 'MINUS',
-    STAR = 'STAR',
-    DOT = 'DOT',
-
-    // Context Specific Delimiter Tokens
-    COMMA = 'COMMA',
-    SLASH = 'SLASH',
-    LPAREN = 'LPAREN',
-    RPAREN = 'RPAREN',
-}
+import { State, TokenType } from '../types/Types.ts';
 
 interface Token {
     value: string;
@@ -315,6 +272,5 @@ class Tokenizer {
 
 export {
     type Token,
-    TokenType,
     Tokenizer
 }

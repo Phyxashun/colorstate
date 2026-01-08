@@ -2,7 +2,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import CharacterStream from '../src/Character';
-import { Tokenizer, TokenType, type Token } from '../src/Tokenizer';
+import { Tokenizer, type Token } from '../src/Tokenizer';
+import { State, TokenType } from '../types/Types.ts';
 
 describe('Tokenizer', () => {
     // Helper function to streamline testing
@@ -168,7 +169,7 @@ describe('Tokenizer', () => {
 
         it('should tokenize a complex line with mixed spacing', () => {
             const tokens = tokenizeString('const  value=123.45  ;for');
-             // FIX: Expect EQUALS and a generic SYMBOL for the semicolon.
+            // FIX: Expect EQUALS and a generic SYMBOL for the semicolon.
             expect(tokens).toEqual([
                 { value: 'const', type: TokenType.KEYWORD },
                 { value: 'value', type: TokenType.IDENTIFIER },
@@ -229,6 +230,51 @@ describe('Tokenizer', () => {
 
             expect(logSpy).not.toHaveBeenCalled();
             logSpy.mockRestore();
+        });
+    });
+
+    describe('Comments', () => {
+        it('should tokenize a single-line comment', () => {
+            const tokens = tokenizeString('// this is a comment\nnext');
+            expect(tokens).toEqual([
+                { value: '// this is a comment', type: TokenType.COMMENT },
+                { value: 'next', type: TokenType.IDENTIFIER }
+            ]);
+        });
+
+        it('should tokenize a multi-line comment and preserve the closing slash', () => {
+            const tokens = tokenizeString('/* hello */ next');
+            expect(tokens).toEqual([
+                { value: '/* hello */', type: TokenType.COMMENT },
+                { value: 'next', type: TokenType.IDENTIFIER }
+            ]);
+        });
+    });
+
+    describe('Percentages and Dimensions', () => {
+        it('should tokenize a percentage value', () => {
+            const tokens = tokenizeString('100%');
+            expect(tokens).toEqual([{ value: '100%', type: TokenType.PERCENT }]);
+        });
+
+        it('should tokenize dimensions like rad and turn', () => {
+            const tokens = tokenizeString('90deg 1turn');
+            expect(tokens).toEqual([
+                { value: '90deg', type: TokenType.DIMENSION },
+                { value: '1turn', type: TokenType.DIMENSION }
+            ]);
+        });
+    });
+
+    describe('State Machine Transitions (Reprocessing)', () => {
+        it('should handle immediate reprocessing when a symbol follows a number', () => {
+            // The '2' finishes the number, the '+' must be reprocessed in INITIAL state
+            const tokens = tokenizeString('12+34');
+            expect(tokens).toEqual([
+                { value: '12', type: TokenType.NUMBER },
+                { value: '+', type: TokenType.PLUS },
+                { value: '34', type: TokenType.NUMBER }
+            ]);
         });
     });
 });

@@ -1,7 +1,7 @@
 // src/tests/Character.test.ts
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import CharacterStream, { type Position, type Character, CharType, CHARCLASSIFY  } from '../src/Character';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import CharacterStream, { type Position, type Character, CharType, CHARCLASSIFY } from '../src/Character';
 
 
 // Tests for Char.CharUtility (from your test run)
@@ -215,5 +215,110 @@ describe('CharacterStream', () => {
         const consumed = newStream.consumeWhile(c => c.type === CharType.Number);
         expect(consumed.length).toBe(3);
         expect(newStream.peek().value).toBe('a');
+    });
+});
+
+describe('Character Utility', () => {
+    describe('CHARCLASSIFY', () => {
+        it('should classify ASCII symbols correctly', () => {
+            expect(CHARCLASSIFY('#')).toBe(CharType.Hash);
+            expect(CHARCLASSIFY('+')).toBe(CharType.Plus);
+        });
+
+        it('should classify Unicode letters and numbers', () => {
+            expect(CHARCLASSIFY('é')).toBe(CharType.Letter);
+            expect(CHARCLASSIFY('５')).toBe(CharType.Number); // Full-width 5
+        });
+
+        it('should classify Emojis and Currency', () => {
+            expect(CHARCLASSIFY('🚀')).toBe(CharType.Emoji);
+            expect(CHARCLASSIFY('€')).toBe(CharType.Currency);
+        });
+
+        it('should handle EOF and error cases', () => {
+            expect(CHARCLASSIFY('')).toBe(CharType.EOF);
+            expect((CHARCLASSIFY as any)(null)).toBe(CharType.Error);
+        });
+    });
+
+    describe('CharacterStream', () => {
+        it('should handle multi-byte Unicode and track positions', () => {
+            const stream = new CharacterStream('A\n🚀');
+            const char1 = stream.next().value; // A
+            const char2 = stream.next().value; // \n
+            const char3 = stream.next().value; // 🚀
+
+            expect(char1.position.column).toBe(1);
+            expect(char2.type).toBe(CharType.NewLine);
+            expect(char3.position.line).toBe(2);
+            expect(char3.position.column).toBe(1);
+            expect(char3.value).toBe('🚀');
+        });
+
+        describe('Speculative Parsing (Mark/Reset/Commit)', () => {
+            it('should backtrack correctly on reset', () => {
+                const stream = new CharacterStream('abcdef');
+                stream.next(); // a
+                stream.mark();
+                stream.next(); // b
+                stream.next(); // c
+
+                expect(stream.peek().value).toBe('d');
+                stream.reset();
+                expect(stream.peek().value).toBe('b');
+            });
+
+            it('should discard marks on commit', () => {
+                const stream = new CharacterStream('abc');
+                stream.mark();
+                stream.next();
+                stream.commit();
+                expect(() => stream.reset()).toThrow();
+            });
+        });
+
+        describe('History and Lookback', () => {
+            it('should lookbackWhile based on a predicate', () => {
+                const stream = new CharacterStream('  abc');
+
+                // You MUST consume characters to fill the internal history buffer
+                stream.next(); // Buffer: [' ']
+                stream.next(); // Buffer: [' ', ' ']
+                stream.next(); // Buffer: [' ', ' ', 'a']
+
+                // Now we look back from the current position (index 3)
+                const spaces = stream.lookbackWhile(c => c.type === CharType.Whitespace);
+
+                expect(spaces.length).toBe(2);
+                expect(spaces[0].value).toBe(' ');
+            });
+
+            it('should go back n steps manually', () => {
+                const stream = new CharacterStream('123');
+                stream.next();
+                stream.next();
+                stream.back(1);
+                expect(stream.peek().value).toBe('2');
+            });
+        });
+
+        it('should consumeWhile a predicate is true', () => {
+            const stream = new CharacterStream('123abc');
+            const numbers = stream.consumeWhile(c => c.type === CharType.Number);
+            expect(numbers.map(n => n.value).join('')).toBe('123');
+            expect(stream.peek().value).toBe('a');
+        });
+    });
+
+    it('should exercise logging methods', () => {
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+        const stream = new CharacterStream('hi');
+
+        // Enable logging and consume the stream
+        stream.withLogging('Testing Log').next();
+        stream.next(); // This triggers the EOF footer log
+
+        expect(logSpy).toHaveBeenCalled();
+        logSpy.mockRestore();
     });
 });
