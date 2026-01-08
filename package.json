@@ -25,6 +25,8 @@
     "start": "bun run ./index.ts",
     "consolidate": "bun run ./Consolidate.ts",
     "test": "vitest",
-    "coverage": "vitest --coverage"
+    "coverage": "vitest --coverage",
+    "test:nowatch": "vitest run",
+    "coverage:nowatch": "vitest run --coverage"
   }
 }

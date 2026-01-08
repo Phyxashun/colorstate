@@ -291,13 +291,10 @@ class Tokenizer {
         });
         console.log(CenterText(styleText('yellow', 'SOURCE:\n')));
         BoxText(stream.get(), {
-            width: 'max',
-            boxStyle: 'single', // Or any style you prefer
-            preNewLine: false,
-            postNewLine: true,
-            color: 'cyan',
+            width: 50,
+            boxStyle: 'double',
+            textColor: 'yellow',
         });
-        //console.log(CenterText(`${inspect(stream.get(), this.inspectOptions)}`));
         PrintLine({ preNewLine: true, postNewLine: true });
     }
 

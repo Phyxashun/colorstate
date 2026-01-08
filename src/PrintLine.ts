@@ -33,10 +33,10 @@ enum LineType {
 const BOX_STYLES = {
     single: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
     double: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' },
-    light:  { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
+    light: { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
     medium: { tl: '▒', t: '▒', tr: '▒', l: '▒', r: '▒', bl: '▒', b: '▒', br: '▒' },
-    heavy:  { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
-    bold:   { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
+    heavy: { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
+    bold: { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
 } as const;
 
 type BoxStyle = keyof typeof BOX_STYLES;
@@ -132,27 +132,27 @@ const DefaultOptions: PrintLineOptions = {
  * @function PrintLine
  * @description Outputs a styled horizontal line to the console.
  * @param {PrintLineOptions} [options={}] - Configuration options for the line.
- * @returns {void}
+ * @returns {string}
  */
-const PrintLine = (options: PrintLineOptions = {}): void => {
+const PrintLine = (options: PrintLineOptions = {}): string => {
     const themeOptions = options.theme ? THEMES[options.theme] : {};
     const mergedOptions = {
         ...DefaultOptions,
         ...themeOptions,
         ...options
     };
-    const { 
-        preNewLine, 
-        postNewLine, 
-        width, 
-        line, 
-        color, 
+    const {
+        preNewLine,
+        postNewLine,
+        width,
+        line,
+        color,
         bgColor,
-        gradient, 
-        styles, 
-        text, 
+        gradient,
+        styles,
+        text,
         textAlign = 'center',
-        textColor 
+        textColor
     } = mergedOptions;
 
     const colorStyles = color ? (Array.isArray(color) ? color : [color]) : [];
@@ -168,14 +168,15 @@ const PrintLine = (options: PrintLineOptions = {}): void => {
     if (gradient) {
         const [startColor, endColor] = gradient;
         const halfWidth = Math.floor(width! / 2);
-        
+
         const startSegment = styleText([startColor], line!.repeat(halfWidth));
         const endSegment = styleText([endColor], line!.repeat(width! - halfWidth));
-        
+
         const styledDivider = startSegment + endSegment;
-        
-        console.log(`${pre}${styledDivider}${post}`);
-        return; // Exit early
+
+        const result = `${pre}${styledDivider}${post}`;
+        console.log(result);
+        return result;
     }
 
 
@@ -185,7 +186,7 @@ const PrintLine = (options: PrintLineOptions = {}): void => {
     } else {
         // Advanced case: Text exists, so build the line in pieces.
         const paddedText = ` ${text} `; // Add padding
-        
+
         // Style the text separately
         const styledText = styleText(textStyles, paddedText);
 
@@ -220,92 +221,152 @@ const PrintLine = (options: PrintLineOptions = {}): void => {
     }
 
     // 5. Log the final constructed string
-    console.log(`${pre}${finalOutput}${post}`);
+    const result = `${pre}${finalOutput}${post}`;
+    console.log(result);
+    return result;
 };
 
 interface BoxTextOptions {
     preNewLine?: boolean;
     postNewLine?: boolean;
-    width?: 'tight' | 'max';
+    // Allow 'tight', 'max', or a specific number for the width
+    width?: 'tight' | 'max' | number;
     boxStyle?: BoxStyle;
+    boxAlign?: 'left' | 'center' | 'right';
+
+    // Box-specific styling
     color?: InspectColor | InspectColor[];
     bgColor?: InspectColor | InspectColor[];
     styles?: ('bold' | 'italic' | 'underline')[];
+
+    // New! Text-specific styling
+    textColor?: InspectColor | InspectColor[];
+    textBgColor?: InspectColor | InspectColor[];
 }
 
 /**
  * @function BoxText
  * @description Draws a styled ASCII box around a given text string and prints it to the console.
- * @param {string} text - The text to be enclosed in the box.
+ * @param {string | string[]} text - The text to be enclosed in the box.
  * @param {BoxTextOptions} [options={}] - Configuration options for the box.
- * @returns {void}
+ * @returns {string}
  */
-const BoxText = (text: string, options: BoxTextOptions = {}): void => {
+const BoxText = (text: string | string[], options: BoxTextOptions = {}): void => {
     // --- 1. Set Defaults and Merge Options ---
     const {
         preNewLine = false,
         postNewLine = false,
         width = 'tight',
         boxStyle = 'single',
+        boxAlign = 'center',
         color,
         bgColor,
         styles,
+        textColor,
+        textBgColor,
     } = options;
 
     const boxChars = BOX_STYLES[boxStyle];
 
-    // --- 2. Prepare Styles ---
-    const finalStyles = [
+    // --- 2. Prepare Separate Styles for Box and Text ---
+    const boxFinalStyles = [
         ...(color ? (Array.isArray(color) ? color : [color]) : []),
         ...(bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : []),
         ...(styles || []),
     ];
 
-    // --- 3. Process Text and Determine Dimensions ---
-    let innerWidth: number;
+    // If text styles aren't provided, they default to the box styles
+    const textFinalStyles = [
+        ...(textColor ? (Array.isArray(textColor) ? textColor : [textColor]) : boxFinalStyles),
+        ...(textBgColor ? (Array.isArray(textBgColor) ? textBgColor : [textBgColor]) : []),
+        ...(styles || []),
+    ];
+
+
+    // --- 3. Calculate Content Width and Wrap Text ---
+    let contentWidth: number;
     let textLines: string[];
 
-    if (width === 'max') {
-        innerWidth = MAX_WIDTH - 4; // 80 - 2 for borders - 2 for padding
+    if (Array.isArray(text)) {
+        textLines = text;
+        contentWidth = Math.max(...textLines.map(line => line.length));
         
-        // Word wrapping algorithm
-        const words = text.split(/\s+/);
-        textLines = words.reduce((lines, word) => {
-            if (lines.length === 0) return [word];
-            
-            let lastLine = lines[lines.length - 1]!;
-            if ((lastLine.length + word.length + 1) > innerWidth) {
-                lines.push(word); // Start a new line
-            } else {
-                lines[lines.length - 1] = lastLine + ' ' + word; // Add to current line
-            }
-            return lines;
-        }, [] as string[]);
+        // If a fixed width is requested, we use it instead of the longest line
+        if (typeof width === 'number') {
+            contentWidth = width - 4;
+        } else if (width === 'max') {
+            contentWidth = MAX_WIDTH - 4;
+        }
+    } else {
+        // --- Existing logic for single strings ---
+        if (width === 'max') {
+            contentWidth = MAX_WIDTH - 4;
+        } else if (typeof width === 'number') {
+            if (width <= 4) throw new Error('Custom width must be greater than 4.');
+            contentWidth = width - 4;
+        } else {
+            textLines = text.split('\n');
+            contentWidth = Math.max(...textLines.map(line => line.length));
+        }
 
-    } else { // 'tight' width
-        textLines = text.split('\n');
-        innerWidth = Math.max(...textLines.map(line => line.length));
+        // Word-wrap if width is constrained
+        if (width !== 'tight') {
+            const words = text.split(/\s+/);
+            textLines = words.reduce((lines, word) => {
+                if (lines.length === 0) return [word];
+                let lastLine = lines[lines.length - 1]!;
+                if ((lastLine.length + word.length + 1) > contentWidth) {
+                    lines.push(word);
+                } else {
+                    lines[lines.length - 1] = lastLine + ' ' + word;
+                }
+                return lines;
+            }, [] as string[]);
+        } else {
+            textLines = text.split('\n');
+        }
     }
 
-    // Pad each line to match the determined inner width
-    const paddedLines = textLines.map(line => line.padEnd(innerWidth));
 
-    // --- 4. Construct the Box String ---
-    const topBorder = boxChars.tl + boxChars.t.repeat(innerWidth + 2) + boxChars.tr;
-    const bottomBorder = boxChars.bl + boxChars.b.repeat(innerWidth + 2) + boxChars.br;
-    
-    const contentLines = paddedLines.map(line => 
-        `${boxChars.l} ${line} ${boxChars.r}`
-    );
+    // --- NEW: Calculate Outer Alignment Padding ---
+    const fullBoxWidth = contentWidth + 4; // Border(1) + Space(1) + Content + Space(1) + Border(1)
+    let leftPaddingAmount = 0;
 
-    const fullBoxString = [topBorder, ...contentLines, bottomBorder].join('\n');
+    if (boxAlign === 'center') {
+        leftPaddingAmount = Math.max(0, Math.floor((MAX_WIDTH - fullBoxWidth) / 2));
+    } else if (boxAlign === 'right') {
+        leftPaddingAmount = Math.max(0, MAX_WIDTH - fullBoxWidth);
+    }
 
-    // --- 5. Style and Print ---
-    const styledBox = styleText(finalStyles, fullBoxString);
+    const outerPadding = ' '.repeat(leftPaddingAmount);
+
+    // --- Build Box Components ---
+    const centerAlign = (str: string, width: number): string => {
+        const padding = Math.floor((width - str.length) / 2);
+        return ' '.repeat(padding) + str + ' '.repeat(width - str.length - padding);
+    };
+
+    const styledTop = styleText(boxFinalStyles, boxChars.tl + boxChars.t.repeat(contentWidth + 2) + boxChars.tr);
+    const styledBottom = styleText(boxFinalStyles, boxChars.bl + boxChars.b.repeat(contentWidth + 2) + boxChars.br);
+    const styledLeftBorder = styleText(boxFinalStyles, boxChars.l + ' ');
+    const styledRightBorder = styleText(boxFinalStyles, ' ' + boxChars.r);
+
+    // Assemble lines with outer padding
+    const styledContentLines = textLines!.map(line => {
+        const centeredText = centerAlign(line, contentWidth);
+        const styledText = styleText(textFinalStyles, centeredText);
+        return outerPadding + styledLeftBorder + styledText + styledRightBorder;
+    });
+
+    const fullBoxString = [
+        outerPadding + styledTop,
+        ...styledContentLines,
+        outerPadding + styledBottom
+    ].join('\n');
+
     const pre = preNewLine ? '\n' : '';
     const post = postNewLine ? '\n' : '';
-
-    console.log(`${pre}${styledBox}${post}`);
+    console.log(`${pre}${fullBoxString}${post}`);
 };
 
 export default PrintLine;
