@@ -50,7 +50,10 @@ export enum TokenType {
 export interface Token {
     value: string;
     type: TokenType;
-    position: Position
+    position: {
+        start: Position;
+        end: Position;
+    }
 }
 
-export type CreateTokenFn = (value: string, type?: TokenType) => Token;
+export type CreateTokenFn = (value: string, type: TokenType, start: Position, end: Position) => Token;

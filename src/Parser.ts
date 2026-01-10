@@ -152,7 +152,11 @@ export class Parser {
                 return {
                     type: NodeType.AssignmentExpression,
                     left: expr,
-                    right: right
+                    right: right,
+                    location: {
+                        start: expr.location.start,
+                        end: right.location.end
+                    }
                 } as AssignmentExpression;
             }
 
@@ -165,24 +169,30 @@ export class Parser {
     }
 
     private series(): Expression {
-        // Parse the first expression (which could be an addition, number, etc.)
         let expr = this.addition();
 
-        // After parsing an expression, check if a comma follows it
-        while (this.match(TokenType.COMMA)) {
+        if (this.match(TokenType.COMMA)) {
             const expressions = [expr];
-            // If we found a comma, we are in a series.
-            // Keep parsing expressions as long as they are separated by commas.
+
             while (this.check(TokenType.COMMA)) {
                 this.consume(TokenType.COMMA, "Expected comma in series.");
                 expressions.push(this.addition());
             }
 
-            // Create the SeriesExpression node
-            expr = {
-                type: NodeType.SeriesExpression,
-                expressions: expressions,
-            } as SeriesExpression;
+            // Guard against empty array (should never happen, but TypeScript doesn't know that)
+            if (expressions.length === 0) {
+                throw new Error("Series expression cannot be empty");
+            } else {
+
+                const start = expressions[0]!.location.start;
+                const end = expressions[expressions.length - 1]!.location.end;
+
+                expr = {
+                    type: NodeType.SeriesExpression,
+                    expressions: expressions,
+                    location: { start, end }
+                } as SeriesExpression;
+            }
         }
 
         return expr;
@@ -230,6 +240,10 @@ export class Parser {
                 operator,
                 left: expr,
                 right,
+                location: {
+                    start: expr.location.start,
+                    end: right.location.end
+                }
             } as BinaryExpression;
         }
 
@@ -241,12 +255,17 @@ export class Parser {
             !this.isAtEnd() &&
             this.match(TokenType.PLUS, TokenType.MINUS)
         ) {
-            const operator = this.previous().value as '+' | '-';
+            const operatorToken = this.previous();  // ✅ Save the operator token
+            const operator = operatorToken.value as '+' | '-';
             const argument = this.unary();
             return {
                 type: NodeType.UnaryExpression,
                 operator,
                 argument,
+                location: {
+                    start: operatorToken.position.start,  // ✅ Start at operator
+                    end: argument.location.end
+                }
             } as UnaryExpression;
         }
 
@@ -256,17 +275,14 @@ export class Parser {
     private call(): Expression {
         let expr = this.primary();
 
-        // Only parse call if expr is Identifier
         if (
             expr &&
             expr.type === NodeType.Identifier &&
             this.match(TokenType.LPAREN)
         ) {
-            const keyword = this.previous(2).value;
-            console.log("FUNCTION KEYWORD:", keyword);
             const args: Expression[] = [];
 
-            // Parse arguments, skipping commas
+            // Parse arguments WITHOUT going through series
             while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
                 // Skip comma if present
                 if (this.check(TokenType.COMMA)) {
@@ -274,7 +290,8 @@ export class Parser {
                     continue;
                 }
 
-                const arg = this.expression();
+                // Use addition() instead of expression() to skip series handling
+                const arg = this.addition();  // ✅ Changed from expression()
                 if (arg) args.push(arg);
             }
 
@@ -284,6 +301,10 @@ export class Parser {
                 type: NodeType.CallExpression,
                 callee: expr as Identifier,
                 arguments: args,
+                location: {
+                    start: expr.location.start,
+                    end: this.previous().position.end  // ✅ Use end position
+                }
             } as CallExpression;
         }
 
@@ -317,7 +338,8 @@ export class Parser {
                 const token = this.previous();
                 return {
                     type: NodeType.Identifier,
-                    name: token.value
+                    name: token.value,
+                    location: { start: token.position, end: token.position }
                 } as Identifier;
             }
 
@@ -342,7 +364,10 @@ export class Parser {
     }
 
     private createLiteralNode(token: Token): Expression {
-        const location = { start: token.position, end: token.position };
+        const location = {
+            start: token.position.start,
+            end: token.position.end  // ✅ Use end position
+        };
 
         switch (token.type) {
             case TokenType.STRING: {

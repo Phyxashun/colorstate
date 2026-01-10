@@ -4,9 +4,10 @@ import { TokenType, type Token, type CreateTokenFn } from './types/Tokenizer.typ
 
 import { styleText, inspect, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
-import { CharacterStream, type Character } from './Character/CharacterStream.ts';
+import { CharacterStream, type Position, type Character } from './Character/CharacterStream.ts';
 import { PrintLine, Spacer, CenterText, BoxText } from './PrintLine.ts';
 import { State } from './types/Context.types.ts';
+import { BoxStyle } from './types/PrintLine.types.ts';
 
 class Tokenizer {
     private inspectOptions: InspectOptions = {
@@ -128,7 +129,6 @@ class Tokenizer {
                 const ACTION = this.ctx.process(CHAR);
                 reprocess = ACTION.reprocess;
 
-                // 1. Handle emitting a token
                 if (ACTION.emit && this.buffer.length > 0) {
                     const tokenType = (this.state === State.INITIAL)
                         ? ACTION.tokenType
@@ -138,36 +138,60 @@ class Tokenizer {
                     this.buffer = [];
                 }
 
-                // 2. Handle the current character
                 if (!ACTION.ignore && !reprocess) this.buffer.push(CHAR);
 
             } while (reprocess);
         }
 
-        // After the loop, flush any remaining characters in the buffer.
         if (this.buffer.length > 0) {
             const newState = Tokenizer.STATETOKEN_MAP[this.state] ?? TokenType.OTHER;
             tokens.push(this.createToken(newState));
         }
 
-        tokens.push({ value: '', type: TokenType.END });
+        // Create END token with proper position
+        const lastChar = stream.lookback();
+        const endPos = lastChar?.position ?? { index: 0, line: 1, column: 1 };
+        tokens.push({
+            value: '',
+            type: TokenType.END,
+            position: { start: endPos, end: endPos }
+        });
+
         this.logResults(tokens);
         return tokens;
     }
 
-    private static readonly TOKENMAP: Partial<Record<TokenType, CreateTokenFn>> = {
-        [TokenType.STRING]: (value) => {
-            return { value: Tokenizer.unescapeString(value), type: TokenType.STRING };
-        },
-        [TokenType.IDENTIFIER]: (value) => {
-            return { value, type: Tokenizer.KEYWORDS[value] ?? TokenType.IDENTIFIER };
-        },
-        [TokenType.SYMBOL]: (value) => {
-            return { value, type: Tokenizer.SYMBOLS[value] ?? TokenType.SYMBOL };
-        },
-        [TokenType.COMMENT]: (value) => {
-            return { value, type: TokenType.COMMENT };
-        }
+    private static createTOKENMAP(start: Position, end: Position): Partial<Record<TokenType, CreateTokenFn>> {
+        return {
+            [TokenType.STRING]: (value) => {
+                return {
+                    value: Tokenizer.unescapeString(value),
+                    type: TokenType.STRING,
+                    position: { start, end }
+                };
+            },
+            [TokenType.IDENTIFIER]: (value) => {
+                return {
+                    value,
+                    type: Tokenizer.KEYWORDS[value] ?? TokenType.IDENTIFIER,
+                    position: { start, end }
+                };
+            },
+            [TokenType.SYMBOL]: (value) => {
+                return {
+                    value,
+                    type: Tokenizer.SYMBOLS[value] ?? TokenType.SYMBOL,
+                    position: { start, end }
+                };
+            },
+            [TokenType.COMMENT]: (value) => {
+                return {
+                    value,
+                    type: TokenType.COMMENT,
+                    position: { start, end }
+                };
+            }
+        };
     }
 
     /**
@@ -178,20 +202,28 @@ class Tokenizer {
      */
     private createToken(tokenType: TokenType): Token {
         if (this.buffer.length === 0) throw new Error('Cannot create token from empty buffer');
+
+        // Capture start from first character, end from last character
+        const start: Position = this.buffer[0]!.position;
+        const end: Position = this.buffer[this.buffer.length - 1]!.position;
+
         let value = this.buffer.map(c => c.value).join('');
 
-        // For a multi-line comment, manually add the closing slash
-        // that was consumed by the state machine.
         if (tokenType === TokenType.COMMENT && value.startsWith('/*')) {
             value += '/';
         }
 
         const otherToken: CreateTokenFn = (newValue: string, newType?: TokenType) => {
-            return { value: newValue, type: newType ?? TokenType.OTHER };
+            return {
+                value: newValue,
+                type: newType ?? TokenType.OTHER,
+                position: { start, end }
+            };
         }
 
-        const tokenFn = Tokenizer.TOKENMAP[tokenType] ?? otherToken;
-        return tokenFn(value, tokenType);
+        const tokenMap = Tokenizer.createTOKENMAP(start, end);
+        const tokenFn = tokenMap[tokenType] ?? otherToken;
+        return tokenFn(value, tokenType, start, end);
     }
 
     /**
@@ -245,7 +277,7 @@ class Tokenizer {
         console.log(CenterText(styleText('yellow', 'SOURCE:\n')));
         BoxText(stream.get(), {
             width: 50,
-            boxStyle: 'double',
+            boxStyle: BoxStyle.Double,
             textColor: 'yellow',
         });
         PrintLine({ preNewLine: true, postNewLine: true });

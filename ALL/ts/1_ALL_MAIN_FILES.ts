@@ -699,7 +699,11 @@ export class Parser {
                 return {
                     type: NodeType.AssignmentExpression,
                     left: expr,
-                    right: right
+                    right: right,
+                    location: {
+                        start: expr.location.start,
+                        end: right.location.end
+                    }
                 } as AssignmentExpression;
             }
 
@@ -712,24 +716,30 @@ export class Parser {
     }
 
     private series(): Expression {
-        // Parse the first expression (which could be an addition, number, etc.)
         let expr = this.addition();
 
-        // After parsing an expression, check if a comma follows it
-        while (this.match(TokenType.COMMA)) {
+        if (this.match(TokenType.COMMA)) {
             const expressions = [expr];
-            // If we found a comma, we are in a series.
-            // Keep parsing expressions as long as they are separated by commas.
+
             while (this.check(TokenType.COMMA)) {
                 this.consume(TokenType.COMMA, "Expected comma in series.");
                 expressions.push(this.addition());
             }
 
-            // Create the SeriesExpression node
-            expr = {
-                type: NodeType.SeriesExpression,
-                expressions: expressions,
-            } as SeriesExpression;
+            // Guard against empty array (should never happen, but TypeScript doesn't know that)
+            if (expressions.length === 0) {
+                throw new Error("Series expression cannot be empty");
+            } else {
+
+                const start = expressions[0]!.location.start;
+                const end = expressions[expressions.length - 1]!.location.end;
+
+                expr = {
+                    type: NodeType.SeriesExpression,
+                    expressions: expressions,
+                    location: { start, end }
+                } as SeriesExpression;
+            }
         }
 
         return expr;
@@ -777,6 +787,10 @@ export class Parser {
                 operator,
                 left: expr,
                 right,
+                location: {
+                    start: expr.location.start,
+                    end: right.location.end
+                }
             } as BinaryExpression;
         }
 
@@ -788,12 +802,17 @@ export class Parser {
             !this.isAtEnd() &&
             this.match(TokenType.PLUS, TokenType.MINUS)
         ) {
-            const operator = this.previous().value as '+' | '-';
+            const operatorToken = this.previous();  // ✅ Save the operator token
+            const operator = operatorToken.value as '+' | '-';
             const argument = this.unary();
             return {
                 type: NodeType.UnaryExpression,
                 operator,
                 argument,
+                location: {
+                    start: operatorToken.position.start,  // ✅ Start at operator
+                    end: argument.location.end
+                }
             } as UnaryExpression;
         }
 
@@ -803,17 +822,14 @@ export class Parser {
     private call(): Expression {
         let expr = this.primary();
 
-        // Only parse call if expr is Identifier
         if (
             expr &&
             expr.type === NodeType.Identifier &&
             this.match(TokenType.LPAREN)
         ) {
-            const keyword = this.previous(2).value;
-            console.log("FUNCTION KEYWORD:", keyword);
             const args: Expression[] = [];
 
-            // Parse arguments, skipping commas
+            // Parse arguments WITHOUT going through series
             while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
                 // Skip comma if present
                 if (this.check(TokenType.COMMA)) {
@@ -821,7 +837,8 @@ export class Parser {
                     continue;
                 }
 
-                const arg = this.expression();
+                // Use addition() instead of expression() to skip series handling
+                const arg = this.addition();  // ✅ Changed from expression()
                 if (arg) args.push(arg);
             }
 
@@ -831,6 +848,10 @@ export class Parser {
                 type: NodeType.CallExpression,
                 callee: expr as Identifier,
                 arguments: args,
+                location: {
+                    start: expr.location.start,
+                    end: this.previous().position.end  // ✅ Use end position
+                }
             } as CallExpression;
         }
 
@@ -864,7 +885,8 @@ export class Parser {
                 const token = this.previous();
                 return {
                     type: NodeType.Identifier,
-                    name: token.value
+                    name: token.value,
+                    location: { start: token.position, end: token.position }
                 } as Identifier;
             }
 
@@ -889,7 +911,10 @@ export class Parser {
     }
 
     private createLiteralNode(token: Token): Expression {
-        const location = { start: token.position, end: token.position };
+        const location = {
+            start: token.position.start,
+            end: token.position.end  // ✅ Use end position
+        };
 
         switch (token.type) {
             case TokenType.STRING: {
@@ -1056,9 +1081,10 @@ import { TokenType, type Token, type CreateTokenFn } from './types/Tokenizer.typ
 
 import { styleText, inspect, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
-import { CharacterStream, type Character } from './Character/CharacterStream.ts';
+import { CharacterStream, type Position, type Character } from './Character/CharacterStream.ts';
 import { PrintLine, Spacer, CenterText, BoxText } from './PrintLine.ts';
 import { State } from './types/Context.types.ts';
+import { BoxStyle } from './types/PrintLine.types.ts';
 
 class Tokenizer {
     private inspectOptions: InspectOptions = {
@@ -1180,7 +1206,6 @@ class Tokenizer {
                 const ACTION = this.ctx.process(CHAR);
                 reprocess = ACTION.reprocess;
 
-                // 1. Handle emitting a token
                 if (ACTION.emit && this.buffer.length > 0) {
                     const tokenType = (this.state === State.INITIAL)
                         ? ACTION.tokenType
@@ -1190,36 +1215,60 @@ class Tokenizer {
                     this.buffer = [];
                 }
 
-                // 2. Handle the current character
                 if (!ACTION.ignore && !reprocess) this.buffer.push(CHAR);
 
             } while (reprocess);
         }
 
-        // After the loop, flush any remaining characters in the buffer.
         if (this.buffer.length > 0) {
             const newState = Tokenizer.STATETOKEN_MAP[this.state] ?? TokenType.OTHER;
             tokens.push(this.createToken(newState));
         }
 
-        tokens.push({ value: '', type: TokenType.END });
+        // Create END token with proper position
+        const lastChar = stream.lookback();
+        const endPos = lastChar?.position ?? { index: 0, line: 1, column: 1 };
+        tokens.push({
+            value: '',
+            type: TokenType.END,
+            position: { start: endPos, end: endPos }
+        });
+
         this.logResults(tokens);
         return tokens;
     }
 
-    private static readonly TOKENMAP: Partial<Record<TokenType, CreateTokenFn>> = {
-        [TokenType.STRING]: (value) => {
-            return { value: Tokenizer.unescapeString(value), type: TokenType.STRING };
-        },
-        [TokenType.IDENTIFIER]: (value) => {
-            return { value, type: Tokenizer.KEYWORDS[value] ?? TokenType.IDENTIFIER };
-        },
-        [TokenType.SYMBOL]: (value) => {
-            return { value, type: Tokenizer.SYMBOLS[value] ?? TokenType.SYMBOL };
-        },
-        [TokenType.COMMENT]: (value) => {
-            return { value, type: TokenType.COMMENT };
-        }
+    private static createTOKENMAP(start: Position, end: Position): Partial<Record<TokenType, CreateTokenFn>> {
+        return {
+            [TokenType.STRING]: (value) => {
+                return {
+                    value: Tokenizer.unescapeString(value),
+                    type: TokenType.STRING,
+                    position: { start, end }
+                };
+            },
+            [TokenType.IDENTIFIER]: (value) => {
+                return {
+                    value,
+                    type: Tokenizer.KEYWORDS[value] ?? TokenType.IDENTIFIER,
+                    position: { start, end }
+                };
+            },
+            [TokenType.SYMBOL]: (value) => {
+                return {
+                    value,
+                    type: Tokenizer.SYMBOLS[value] ?? TokenType.SYMBOL,
+                    position: { start, end }
+                };
+            },
+            [TokenType.COMMENT]: (value) => {
+                return {
+                    value,
+                    type: TokenType.COMMENT,
+                    position: { start, end }
+                };
+            }
+        };
     }
 
     /**
@@ -1230,20 +1279,28 @@ class Tokenizer {
      */
     private createToken(tokenType: TokenType): Token {
         if (this.buffer.length === 0) throw new Error('Cannot create token from empty buffer');
+
+        // Capture start from first character, end from last character
+        const start: Position = this.buffer[0]!.position;
+        const end: Position = this.buffer[this.buffer.length - 1]!.position;
+
         let value = this.buffer.map(c => c.value).join('');
 
-        // For a multi-line comment, manually add the closing slash
-        // that was consumed by the state machine.
         if (tokenType === TokenType.COMMENT && value.startsWith('/*')) {
             value += '/';
         }
 
         const otherToken: CreateTokenFn = (newValue: string, newType?: TokenType) => {
-            return { value: newValue, type: newType ?? TokenType.OTHER };
+            return {
+                value: newValue,
+                type: newType ?? TokenType.OTHER,
+                position: { start, end }
+            };
         }
 
-        const tokenFn = Tokenizer.TOKENMAP[tokenType] ?? otherToken;
-        return tokenFn(value, tokenType);
+        const tokenMap = Tokenizer.createTOKENMAP(start, end);
+        const tokenFn = tokenMap[tokenType] ?? otherToken;
+        return tokenFn(value, tokenType, start, end);
     }
 
     /**
@@ -1297,7 +1354,7 @@ class Tokenizer {
         console.log(CenterText(styleText('yellow', 'SOURCE:\n')));
         BoxText(stream.get(), {
             width: 50,
-            boxStyle: 'double',
+            boxStyle: BoxStyle.Double,
             textColor: 'yellow',
         });
         PrintLine({ preNewLine: true, postNewLine: true });
@@ -1962,6 +2019,8 @@ import { CharSpec } from './utils/CharSpec.ts';
 import { CharClassify } from './utils/CharClassify.ts'
 import { inspect, styleText, type InspectOptions } from 'node:util';
 import { PrintLine, CenteredText, BoxText, Spacer } from '../PrintLine.ts';
+import type { TypeReferenceDirectiveResolutionCache } from 'typescript';
+import { BoxStyle } from '../types/PrintLine.types.ts';
 
 /**
  * Provides a stateful, iterable stream of `Character` objects from a source string.
@@ -2217,6 +2276,11 @@ class CharacterStream implements Iterable<Character> {
         return lookedBackChars.reverse();
     }
 
+    public lookback(): Character {
+        if (this.charsBuffer.length === 0) return null as unknown as Character;
+        return this.charsBuffer[this.charsBuffer.length - 1]!;
+    }
+
     /**
      * The internal method for moving the stream's cursor forward after a character has been processed.
      * @param {string} charValue - The value of the character being advanced past.
@@ -2370,7 +2434,7 @@ class CharacterStream implements Iterable<Character> {
         CenteredText(styleText('yellow', 'SOURCE:\n'));
 
         // Output Source String
-        BoxText(this.get(), { width: 50, boxStyle: 'double', textColor: 'yellow' });
+        BoxText(this.get(), { width: 50, boxStyle: BoxStyle.Double, textColor: 'yellow' });
 
         // Output Divider between Source and Result
         PrintLine({ preNewLine: true, postNewLine: true });
@@ -3654,10 +3718,13 @@ export enum TokenType {
 export interface Token {
     value: string;
     type: TokenType;
-    position: Position
+    position: {
+        start: Position;
+        end: Position;
+    }
 }
 
-export type CreateTokenFn = (value: string, type?: TokenType) => Token;
+export type CreateTokenFn = (value: string, type: TokenType, start: Position, end: Position) => Token;
 
 
 

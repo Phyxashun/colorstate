@@ -339,7 +339,7 @@ echo -e "${NC}"
     "coverage": "vitest --coverage",
     "test:nowatch": "vitest run",
     "coverage:nowatch": "vitest run --coverage",
-    "push": "./git-push.sh 'Automated commit'"
+    "git-push": "./git-push.sh 'Automated commit'"
   }
 }
 

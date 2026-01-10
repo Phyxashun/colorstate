@@ -3,6 +3,8 @@ import { CharSpec } from './utils/CharSpec.ts';
 import { CharClassify } from './utils/CharClassify.ts'
 import { inspect, styleText, type InspectOptions } from 'node:util';
 import { PrintLine, CenteredText, BoxText, Spacer } from '../PrintLine.ts';
+import type { TypeReferenceDirectiveResolutionCache } from 'typescript';
+import { BoxStyle } from '../types/PrintLine.types.ts';
 
 /**
  * Provides a stateful, iterable stream of `Character` objects from a source string.
@@ -258,6 +260,11 @@ class CharacterStream implements Iterable<Character> {
         return lookedBackChars.reverse();
     }
 
+    public lookback(): Character {
+        if (this.charsBuffer.length === 0) return null as unknown as Character;
+        return this.charsBuffer[this.charsBuffer.length - 1]!;
+    }
+
     /**
      * The internal method for moving the stream's cursor forward after a character has been processed.
      * @param {string} charValue - The value of the character being advanced past.
@@ -411,7 +418,7 @@ class CharacterStream implements Iterable<Character> {
         CenteredText(styleText('yellow', 'SOURCE:\n'));
 
         // Output Source String
-        BoxText(this.get(), { width: 50, boxStyle: 'double', textColor: 'yellow' });
+        BoxText(this.get(), { width: 50, boxStyle: BoxStyle.Double, textColor: 'yellow' });
 
         // Output Divider between Source and Result
         PrintLine({ preNewLine: true, postNewLine: true });
