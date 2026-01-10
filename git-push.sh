@@ -18,12 +18,6 @@ echo "▌                                        ▐"
 echo "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀"
 echo -e "${NC}\n"
 
-
-# ▒
-#╔  ═  ╗
-#║     ║
-#╚  ═  ╝
-
 echo -e "${GREEN}Starting git push process...${NC}\n"
 
 # Check if we're in a git repository
@@ -68,4 +62,17 @@ BRANCH=$(git branch --show-current)
 echo -e "${YELLOW}Pushing to origin/${BRANCH}...${NC}\n"
 git push origin "$BRANCH"
 
-echo -e "\n${GREEN}✓ Git push process completed successfully!${NC}\n"
+
+#╔  ═  ╗
+#║     ║
+#╚  ═  ╝
+# Display title box
+echo -e "${GREEN}"
+echo "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄"
+echo "▌                                                ▐"
+echo "▌  ✓ Git push process completed successfully!!!  ▐"
+echo "▌                                                ▐"
+echo "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀"
+echo -e "${NC}\n"
+
+exit 0
