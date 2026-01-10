@@ -192,25 +192,21 @@ parserTest();
  */
 
 import { styleText } from 'node:util';
-import figlet from 'figlet';
-import standard from "figlet/fonts/Standard";
-import * as fs from 'node:fs';
+import fs from 'node:fs';
 import { globSync } from 'glob';
+import path from 'node:path';
+import { PrintLine, CenteredFiglet, Spacer, CenteredText, BoxText } from './src/PrintLine';
+import { BoxStyle, LineType } from './src/types/PrintLine.types';
 
 /**
  * Constants
  */
 const TEXT_OUTPUT_DIR = './ALL/txt/';
 const TS_OUTPUT_DIR = './ALL/ts/';
-const MAX_WIDTH: number = 80;
-const LINE_CHAR = '█';
-const TAB_WIDTH = 4;
-const SPACE = ' ';
 const START_END_SPACER = 30;
 const START_END_NEWLINE = 2;
+const FILE_DIVIDER_WIDTH = 100;
 const UTF_8 = 'utf-8';
-const FIGLET_FONT = 'Standard';
-figlet.parseFont(FIGLET_FONT, standard);
 
 /**************************************************************************************************
  * 
@@ -228,7 +224,7 @@ figlet.parseFont(FIGLET_FONT, standard);
 interface ConsolidationSourceDef {
     jobName?: string;
     name: string;
-    patterns: string [];
+    patterns: string[];
 }
 
 /**
@@ -242,43 +238,52 @@ interface ConsolidationJob extends ConsolidationSourceDef {
 }
 
 const SOURCE_DEFINITIONS: ConsolidationSourceDef[] = [
-    { 
-        jobName: 'Typescript',
-        name: 'Main Project Typescript Files', 
+    {
+        name: 'MAIN_FILES',
+        jobName: 'Main Project TypeScript and JavaScript Files',
         patterns: [
-            'src/**/*.ts', 
-            'index.ts',
-            'Consolidate.ts',
-        ] 
+            './src/**/*.ts',
+            './src/**/*.js',
+            './index.ts',
+            './Consolidate.ts',
+        ]
     },
-    { 
-        jobName: 'Configuration',
-        name: 'Configuration Files and Markdown', 
+    {
+        name: 'CONFIG',
+        jobName: 'Configuration Files and Markdown',
         patterns: [
-            '.vscode/launch.json', 
-            '0. NOTES/*.md', 
-            '.gitignore', 
-            '*.json', 
-            '*.config.ts', 
-            'License', 
-            'README.md'
-        ] 
+            './.vscode/launch.json',
+            './.vscode/settings.json',
+            './.gitignore',
+            './*.json',
+            './*.config.ts',
+            './git-push.sh',
+        ]
     },
-    { 
-        jobName: 'Test',
-        name: 'New Test Files', 
+    {
+        name: 'NEW_TEST',
+        jobName: 'New Test Files',
         patterns: [
-            'test/**/*.test.ts', 
-        ] 
+            './test/**/*.test.ts',
+        ]
     },
-    { 
-        jobName: 'Test',
-        name: 'Old Test Files', 
+    {
+        name: 'OLD_TEST',
+        jobName: 'Old Test Files',
         patterns: [
-            'test_old/**/*.ts',
-            'test_old/**/*.test.ts',
-        ], 
-    }, //
+            './test_old/**/*.ts',
+            './test_old/**/*.test.ts',
+        ],
+    },
+    {
+        name: 'MARKDOWN',
+        jobName: 'Project Markdown Files',
+        patterns: [
+            './0. NOTES/*.md',
+            './License',
+            './README.md'
+        ],
+    },
 ];
 
 const config = {
@@ -328,90 +333,15 @@ interface PrintLineOptions {
 
 const ui = {
     /**
-     * @description Default options object for the printLine function.
-     */
-    defaultPrintLineOptions: {
-        preNewLine: false,  // No preceding new line
-        postNewLine: false, // No successive new line
-        width: MAX_WIDTH,   // Use global const MAX_WIDTH = 80
-        char: LINE_CHAR,    // Use global const LINE_CHAR = '='          
-    },
-
-    /**
-     * @function printLine
-     * @description Prints a styled horizontal line to the console.
-     * @param {PrintLineOptions} [options={}] - Configuration options for the line.
-     * @returns {void}
-     */
-    printLine: (options: PrintLineOptions = {}): void => {
-        const { preNewLine, postNewLine, width, char } = {
-            ...ui.defaultPrintLineOptions,
-            ...options
-        };
-        const pre = preNewLine ? '\n' : '';
-        const post = postNewLine ? '\n' : '';
-        const styledDivider = styleText(['gray', 'bold'], char!.repeat(width!));
-        console.log(`${pre}${styledDivider}${post}`);
-    },
-
-    /**
-     * @function spacer
-     * @description Creates a string of repeated characters, useful for padding.
-     * @param {number} [width=TAB_WIDTH] - Number of characters to repeat.
-     * @param {string} [char=SPACE] - The character to repeat.
-     * @returns {string} A string of repeated characters.
-     */
-    spacer: (width: number = TAB_WIDTH, char: string = SPACE): string => char.repeat(width),
-
-    /**
-     * @function centerText
-     * @description Centers a line of text within a given width by adding padding.
-     * @param {string} text - The text to center.
-     * @param {number} [width=MAX_WIDTH] - The total width to center within.
-     * @returns {string} The centered text string.
-     * @requires spacer - Function that return a string for spacing.
-     */
-    centerText: (text: string, width: number = MAX_WIDTH): string => {
-        // Remove any existing styling for accurate length calculation
-        const unstyledText = text.replace(/\x1b\[[0-9;]*m/g, '');
-        const padding = Math.max(0, Math.floor((width - unstyledText.length) / 2));
-        return `${ui.spacer(padding)}${text}`;
-    },
-
-    /**
-     * @function centeredFiglet
-     * @description Generates and centers multi-line FIGlet (ASCII) text.
-     * @param {string} text - The text to convert to ASCII art.
-     * @param {number} [width=MAX_WIDTH] - The total width to center the art within.
-     * @returns {string} The centered, multi-line ASCII art as a single string.
-     * @requires centerText
-     */
-    centeredFiglet: (text: string, width: number = MAX_WIDTH): string => {
-        const rawFiglet = figlet.textSync(text, {
-            font: FIGLET_FONT,
-            width: width,
-            whitespaceBreak: true
-        });
-
-        return rawFiglet.split('\n')
-            .map(line => ui.centerText(line, width))
-            .join('\n');
-    },
-
-    /**
      * @function displayHeader
      * @description Renders the main application header, including title and subtitle.
      * @returns {void}
-     * @requires printLine
-     * @requires centeredFiglet
-     * @requires styleText
-     * @requires centerText
      */
-    displayHeader: async (): Promise<void> => {
-        ui.printLine({ preNewLine: true });
-        console.log(styleText(['yellowBright', 'bold'], ui.centeredFiglet(`Consolidate!!!`)));
-        console.log(ui.centerText(styleText(['magentaBright', 'bold'], '*** PROJECT FILE CONSOLIDATOR SCRIPT ***')));
-        ui.printLine({ preNewLine: true, postNewLine: true });
+    displayHeader: (): void => {
+        PrintLine({ preNewLine: true, line: LineType.Bold });
+        console.log(styleText(['yellowBright', 'bold'], CenteredFiglet(`Consolidate!!!`)));
+        CenteredText(styleText(['magentaBright', 'bold'], '*** PROJECT FILE CONSOLIDATOR SCRIPT ***'));
+        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
     },
 
     /**
@@ -420,8 +350,8 @@ const ui = {
      * @param {string} outputFile - The path of the output file for the job.
      */
     logJobStart: (jobName: string, outputFile: string): void => {
-        const styledJob = styleText('cyan', `Consolidating all project ${jobName} files into`)
-        console.log(styledJob, `${outputFile}...\n`);
+        CenteredText(styleText('cyan', `Consolidating all project ${jobName}`));
+        CenteredText(styleText('cyan', `files into ${outputFile}...\n`));
     },
 
     /**
@@ -436,8 +366,25 @@ const ui = {
      * Logs a successful completion message for a job.
      */
     logComplete: (): void => {
-        console.log(styleText(['green', 'bold'], '\nConsolidation complete!!!'));
-        ui.printLine({ preNewLine: true, postNewLine: true });
+        console.log();
+        CenteredText(styleText(['yellow', 'bold'], 'Consolidation complete!!!'));
+        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
+    },
+
+    /**
+     * Logs a final summary message after all jobs are complete.
+     * @param {number} fileCount - The total number of files consolidated.
+     * @param {number} jobCount - The total number of jobs processed.
+     */
+    logFinalSummary: (fileCount: number, jobCount: number): void => {
+        BoxText(
+            `✓ Successfully consolidated ${fileCount} files across ${jobCount} jobs!`, { 
+                boxStyle: BoxStyle.Double,
+                color: 'green',
+                textColor: ['green', 'bold'] 
+            }
+        );
+        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
     },
 }
 
@@ -449,10 +396,24 @@ const ui = {
 
 const fileSystem = {
     /**
+     * Ensures that a directory exists, creating it if necessary.
+     * @param {string} dirPath - The path to the directory to create.
+     */
+    ensureDirectoryExists: (dirPath: string): void => {
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+        }
+    },
+
+    /**
      * Ensures an output file is empty by deleting it if it already exists.
      * @param {string} filePath - The path to the output file to prepare.
      */
     prepareOutputFile: (filePath: string): void => {
+        // Extract directory path and ensure it exists
+        const dirPath = path.dirname(filePath);
+        fileSystem.ensureDirectoryExists(dirPath);
+
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     },
 
@@ -482,26 +443,31 @@ const fileSystem = {
      * @param {string} sourceFile - The path of the source file to append.
      */
     appendFileWithHeaders: (outputFile: string, sourceFile: string): void => {
-        const space = ui.spacer(START_END_SPACER, '■');
-        const endLine = ui.spacer(START_END_NEWLINE, '\n')
-        
-        // MARK FILE START
-        const startFile = `${endLine}//${space} Start of file: ${sourceFile} ${space}${endLine}${endLine}\n`;
-        fs.appendFileSync(outputFile, startFile, UTF_8);
+        try {
+            const space = Spacer(START_END_SPACER, '■');
+            const endLine = Spacer(START_END_NEWLINE, '\n')
 
-        // ADD FILE CONTENT
-        const content = fs.readFileSync(sourceFile, UTF_8);
-        fs.appendFileSync(outputFile, content, UTF_8);
+            // MARK FILE START
+            const startFile = `${endLine}//${space} Start of file: ${sourceFile} ${space}${endLine}${endLine}\n`;
+            fs.appendFileSync(outputFile, startFile, UTF_8);
 
-        // MARK FILE END
-        const endFile = `\n${endLine}${endLine}//${space} End of file: ${sourceFile} ${space}${endLine}\n`;
-        fs.appendFileSync(outputFile, endFile, UTF_8);
+            // ADD FILE CONTENT
+            const content = fs.readFileSync(sourceFile, UTF_8);
+            fs.appendFileSync(outputFile, content, UTF_8);
 
-        // Add divider between files
-        const divider = ui.spacer(100, '█');
-        const fileDivider = `//${divider}\n`;
-        fs.appendFileSync(outputFile, fileDivider, UTF_8);
-        fs.appendFileSync(outputFile, fileDivider, UTF_8);
+            // MARK FILE END
+            const endFile = `\n${endLine}${endLine}//${space} End of file: ${sourceFile} ${space}${endLine}\n`;
+            fs.appendFileSync(outputFile, endFile, UTF_8);
+
+            // Add divider between files
+            const divider = Spacer(FILE_DIVIDER_WIDTH, '█');
+            const fileDivider = `//${divider}\n`;
+            fs.appendFileSync(outputFile, fileDivider, UTF_8);
+            fs.appendFileSync(outputFile, fileDivider, UTF_8);
+        } catch (error) {
+            console.error(styleText('red', `✗ Error processing ${sourceFile}:`), error);
+            throw error;
+        }
     },
 }
 
@@ -517,7 +483,7 @@ const consolidateJobs = {
      * @param {config.ConsolidationJob} job - The consolidation job to execute.
      * @private
      */
-    process: (job: ConsolidationJob): void => {
+    process: (job: ConsolidationJob): number => {
         const { name, outputFile, patterns } = job;
 
         ui.logJobStart(name, outputFile);
@@ -530,6 +496,7 @@ const consolidateJobs = {
             });
 
         ui.logComplete();
+        return 1;
     },
 
     /**
@@ -537,7 +504,12 @@ const consolidateJobs = {
      * @param {config.ConsolidationJob[]} jobs - An array of consolidation jobs to execute.
      */
     run: (jobs: ConsolidationJob[]): void => {
-        jobs.forEach(consolidateJobs.process);
+        let totalFiles = 0;
+        jobs.forEach(job => {
+            const count = consolidateJobs.process(job);
+            totalFiles += count;
+        });
+        ui.logFinalSummary(totalFiles, jobs.length);
     },
 }
 
@@ -1666,29 +1638,13 @@ export {
 import { styleText } from 'node:util';
 import figlet from 'figlet';
 import standard from "figlet/fonts/Standard";
-import { LineType, type PrintLineOptions, type BoxTextOptions } from './types/PrintLine.types';
+import { BoxStyle, BoxStyles, LineType, Themes, type PrintLineOptions, type BoxTextOptions } from './types/PrintLine.types';
 
 const MAX_WIDTH: number = 80;
 const TAB_WIDTH: number = 4;
 const SPACE: string = ' ';
 const FIGLET_FONT = 'Standard';
 figlet.parseFont(FIGLET_FONT, standard);
-
-const BOX_STYLES = {
-    single: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
-    double: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' },
-    light: { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
-    medium: { tl: '▒', t: '▒', tr: '▒', l: '▒', r: '▒', bl: '▒', b: '▒', br: '▒' },
-    heavy: { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
-    bold: { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
-} as const;
-
-const THEMES = {
-    success: { color: 'green', line: LineType.Default, styles: ['bold'] },
-    error: { color: 'red', line: LineType.Bold },
-    warning: { color: 'yellow', line: LineType.Dashed },
-    info: { color: 'cyan', line: LineType.Default },
-} as const;
 
 /**
  * @function Spacer
@@ -1752,7 +1708,7 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
         color: ['gray', 'bold'] // styleText formatting         
     } as const;
 
-    const themeOptions = options.theme ? THEMES[options.theme] : {};
+    const themeOptions = options.theme ? (Themes as any)[options.theme] : {};
     const mergedOptions = {
         ...defaultOptions,
         ...themeOptions,
@@ -1865,7 +1821,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
         textBgColor,
     } = options;
 
-    const boxChars = BOX_STYLES[boxStyle];
+    const boxChars = BoxStyles[boxStyle];
 
     // --- 2. Prepare Separate Styles for Box and Text ---
     const boxFinalStyles = [
@@ -1886,9 +1842,12 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     let contentWidth: number;
     let textLines: string[];
 
+    // Add this helper inside BoxText, right after the options destructuring
+    const stripAnsi = (str: string): string => str.replace(/\x1b\[[0-9;]*m/g, '');
+
     if (Array.isArray(text)) {
         textLines = text;
-        contentWidth = Math.max(...textLines.map(line => line.length));
+        contentWidth = Math.max(...textLines.map(line => stripAnsi(line).length));
 
         // If a fixed width is requested, we use it instead of the longest line
         if (typeof width === 'number') {
@@ -1973,8 +1932,7 @@ const CenteredText = (text: string): void => {
 }
 
 export {
-    BOX_STYLES,
-    THEMES,
+    Themes,
     Spacer,
     CenterText,
     CenteredText,
@@ -3492,56 +3450,80 @@ export {
 
 import type { InspectColor } from "node:util";
 
+/**
+ * @enum LineType
+ * @description Enum for different line types.
+ */
 export enum LineType {
-    Default = '─',
-    Square = '■',
-    Bold = '█',
-    Dashed = '-',
-    Underscore = '_',
-    DoubleUnderscore = '‗',
-    Equals = '=',
-    Double = '═',
-    BoldBottom = '▄',
-    BoldTop = '▀',
-    Diaeresis = '¨',
-    Macron = '¯',
-    Section = '§',
-    Interpunct = '·',
-    LightBlock = '░',
-    MediumBlock = '▒',
-    HeavyBlock = '▓',
+    Default =           '─',
+    Square =            '■',
+    Bold =              '█',
+    Dashed =            '-',
+    Underscore =        '_',
+    DoubleUnderscore =  '‗',
+    Equals =            '=',
+    Double =            '═',
+    BoldBottom =        '▄',
+    BoldTop =           '▀',
+    Diaeresis =         '¨',
+    Macron =            '¯',
+    Section =           '§',
+    Interpunct =        '·',
+    LightBlock =        '░',
+    MediumBlock =       '▒',
+    HeavyBlock =        '▓',
 };
 
-declare const BOX_STYLES: {
-    readonly single: {};
-    readonly double: {};
-    readonly light: {};
-    readonly medium: {};
-    readonly heavy: {};
-    readonly bold: {};
+/**
+ * @type BoxPartKeys
+ * @description Type defining the keys for box parts.
+ */
+export type BoxPartKeys = 'tl' | 't' | 'tr' | 'l' | 'r' | 'bl' | 'b' | 'br';
+
+/**
+ * @type BoxParts
+ * @description Type defining the structure for box parts.
+ */
+export type BoxParts = Record<BoxPartKeys, string>;
+
+/**
+ * @enum BoxStyle
+ * @description Enum for different box styles.
+ */
+export enum BoxStyle {
+    Single = 'single',
+    Double = 'double',
+    Light =  'light',
+    Medium = 'medium',
+    Heavy =  'heavy',
+    Bold =   'bold',
+    Half =   'half',
 }
 
-export type BoxStyle = keyof typeof BOX_STYLES;
+/**
+ * @constant BoxStyles
+ * @description Predefined box styles with their corresponding characters.
+ */
+export const BoxStyles: Record<BoxStyle, BoxParts> = {
+    single: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
+    double: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' },
+    light:  { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
+    medium: { tl: '▒', t: '▒', tr: '▒', l: '▒', r: '▒', bl: '▒', b: '▒', br: '▒' },
+    heavy:  { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
+    bold:   { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
+    half:   { tl: '▄', t: '▄', tr: '▄', l: '█', r: '█', bl: '▀', b: '▀', br: '▀' },
+} as const;
 
-declare const THEMES: {
-    readonly success: {
-        readonly color: "green";
-        readonly line: LineType.Default;
-        readonly styles: readonly ["bold"];
-    };
-    readonly error: {
-        readonly color: "red";
-        readonly line: LineType.Bold;
-    };
-    readonly warning: {
-        readonly color: "yellow";
-        readonly line: LineType.Dashed;
-    };
-    readonly info: {
-        readonly color: "cyan";
-        readonly line: LineType.Default;
-    };
-}
+/**
+ * @constant THEMES
+ * @description Predefined themes for PrintLine.
+ */
+export const Themes = {
+    success: { color: 'green', line: LineType.Default, styles: ['bold'] },
+    error: { color: 'red', line: LineType.Bold },
+    warning: { color: 'yellow', line: LineType.Dashed },
+    info: { color: 'cyan', line: LineType.Default },
+} as const;
 
 /**
  * @interface PrintLineOptions
@@ -3564,7 +3546,7 @@ export interface PrintLineOptions {
     postNewLine?: boolean;
     width?: number;
     line?: LineType;
-    theme?: keyof typeof THEMES;
+    theme?: keyof typeof Themes;
     color?: InspectColor | InspectColor[];
     bgColor?: InspectColor | InspectColor[];
     gradient?: [InspectColor, InspectColor];

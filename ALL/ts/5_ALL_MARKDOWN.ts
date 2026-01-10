@@ -1,123 +1,9 @@
 
 
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: .vscode/launch.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-
-
-// @ts-nocheck
-/* eslint-disable */
-
-{
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "bun",
-            "internalConsoleOptions": "neverOpen",
-            "request": "launch",
-            "name": "Debug File",
-            "program": "${file}",
-            "cwd": "${workspaceFolder}",
-            "stopOnEntry": false,
-            "watchMode": false
-        },
-        {
-            "type": "bun",
-            "internalConsoleOptions": "neverOpen",
-            "request": "launch",
-            "name": "Run File",
-            "program": "${file}",
-            "cwd": "${workspaceFolder}",
-            "noDebug": true,
-            "watchMode": false
-        },
-        {
-            "type": "bun",
-            "internalConsoleOptions": "neverOpen",
-            "request": "attach",
-            "name": "Attach Bun",
-            "url": "ws://localhost:6499/",
-            "stopOnEntry": false
-        }
-    ]
-}
-
-
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: .vscode/launch.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: .gitignore ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-
-
-// @ts-nocheck
-/* eslint-disable */
-
-# dependencies (bun install)
-node_modules
-
-# output
-out
-dist
-*.tgz
-
-# code coverage
-coverage
-*.lcov
-
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
-
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# caches
-.eslintcache
-.cache
-*.tsbuildinfo
-
-# IntelliJ based IDEs
-.idea
-
-# Finder (MacOS) folder config
-.DS_Store
-
-#Dictionary
-cspell.json
-
-
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: .gitignore ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: License ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
-
-// @ts-nocheck
-/* eslint-disable */
 
 # MIT License
 
@@ -156,9 +42,6 @@ SOFTWARE.
 
 
 
-
-// @ts-nocheck
-/* eslint-disable */
 
 # ColorState
 
@@ -491,13 +374,306 @@ Built as an educational project to demonstrate DFA tokenization, state machine d
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/10. UNICODEParsingCharacterClasses.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+# Annex F. Parsing Character Classes
+
+It is reasonably straightforward to build a parser for Character Classes. While there are many ways to do this, the following describes one example of a logical process for building such a parser. Implementations can use optimized code, such as a DFA (Deterministic Finite Automaton) for processing.
+
+## Storage
+
+The description uses Java syntax to illustrate the code, but of course would be expressed in other programming languages. At the core is a class (here called CharacterClass) that stores the information that is being built, typically a set of strings optimized for compact storage of ranges of characters, such as ICU’s UnicodeSet (C++).
+
+The methods needed are the following:
+
+| Method                                        | Meaning                       |
+|:----------------------------------------------|:------------------------------|
+| CharacterClass create()                       | A = {}                        |
+| void addAll(CharacterClass other)             | A = A ∪ other                 |
+| void retainAll(CharacterClass other)          | A = A ∩ other                 |
+| void removeAll(CharacterClass other)          | A = A ∖ other                 |
+| void symmetricDiffAll(CharacterClass other)   | A = A ⊖ other                 |
+| void add(int cp)                              | A = A ∪ {cp}                  |
+| void addRange(int cpStart, int cpEnd)         | A = A ∪ {cpStart .. cpEnd}    |
+| void addString(String stringToAdd)            | A = A ∪ {stringToAdd}         |
+| void codePointComplement()                    | A = ∁ℙA                       |
+| void setToProperty(String propertyString)     | A = propertySet               |
+
+## Building
+
+At the top level a method parseCharacterClass can recognize and branch on ‘\p{’, ‘\P{’, ‘[’, and ‘[^’ . For ‘\p{’ and ‘\P{’, it calls a parseProperty method that parses up to an unescaped ‘}’, and returns a set based on Unicode properties. See RL1.2 Properties, 2.7 Full Properties, RL2.7 Full Properties, and 2.8 Optional Properties.
+
+For ‘[’, and ‘[^’, it calls a parseSequence method that parses out items, stopping when it hits ‘]’. The type of each item can be determined by the initial characters. There is a special check for ‘-’ so that it can be interpreted according to context. The targetSet is set to the first item. All successive items at that level are combined with the targetSet, according to the specified operation (union, intersection, etc.). Note that other binding/precedence options would require somewhat more complicated parsing.
+
+For the Character Class item, a recursive call is made on the parseCharacterClass method. The other initial characters that are branched on are ‘\u{’, ‘\u’, ‘\q{’, ‘\N{’, ‘\’, the operators, and literal and escaped characters.
+
+### Examples
+
+In the following examples, ➗  is a cursor marking how the parsing progresses. For brevity, intermediate steps that only change state are omitted. The two examples are the same, except that in the right-hand example the second and third character classes are grouped.
+
+#### Example 1: No Grouping
+
+| Input                            | Action                | Result    |
+|:---------------------------------|:----------------------|:----------|
+| ➗[[abc] -- [bcd] && [c-e]]      | A = create()          | A = []    |
+| [[a➗bc] -- [bcd] && [c-e]]      | A.add('a')            | A = [a]   |
+| [[ab➗c] -- [bcd] && [c-e]]      | A.add('b')            | A = [ab]  |
+| [[abc➗] -- [bcd] && [c-e]]      | A.add('c')            | A = [a-c] |
+| [[abc] -- ➗[bcd] && [c-e]]      | B = create()          | A = [a-c] |
+| [[abc] -- [b➗cd] && [c-e]]      | B.add('b')            |           |
+| [[abc] -- [bc➗d] && [c-e]]      | B.add('c')            | B = [b-c] |
+| [[abc] -- [bcd➗] && [c-e]]      | B.add('d')            | B = [b-d] |
+| [[abc] -- [bcd]➗ && [c-e]]      | A.removeAll(B)        | A = [a]   |
+| [[abc] -- [bcd] && ➗[c-e]]      | B.clear()             | B = []    |
+| [[abc] -- [[bcd] && [c➗-e]]]    | B.add('c')            | B = [c]   |
+| [[abc] -- [[bcd] && [c-e➗]]]    | B.addRange('d', 'e')  | B = [c-e] |
+| [[abc] -- [[bcd] && [c-e]➗]]    | A.retainAll(C)        | A = []    |
+
+#### Example 2: With Grouping
+
+| Input                              | Action                | Result    |
+|:-----------------------------------|:----------------------|:----------|
+| ➗[[abc] -- [[bcd] && [c-e]]]      | A = create()          | A = []    |
+| [[a➗bc] -- [[bcd] && [c-e]]]      | A.add('a')            | A = [a]   |
+| [[ab➗c] -- [[bcd] && [c-e]]]      | A.add('b')            | A = [ab]  |
+| [[abc➗] -- [[bcd] && [c-e]]]      | A.add('c')            | A = [a-c] |
+| [[abc] -- ➗[[bcd] && [c-e]]]      | B = create()          | A = [a-c] |
+| [[abc] -- [[b➗cd] && [c-e]]]      | B.add('b')            |           |
+| [[abc] -- [[bc➗d] && [c-e]]]      | B.add('c')            | B = [b-d] |
+| [[abc] -- [[bcd➗] && [c-e]]]      | B.add('d')            | B = [b-d] |
+| [[abc] -- [[bcd]➗ && [c-e]]]      |                       |           |
+| [[abc] -- [[bcd] && ➗[c-e]]]      | C = create()          | C = []    |
+| [[abc] -- [[bcd] && [c➗-e]]]      | C.add('c')            | C = [c]   |
+| [[abc] -- [[bcd] && [c-e➗]]]      | C.addRange('d', 'e')  | C = [c-e] |
+| [[abc] -- [[bcd] && [c-e]➗]]      | B.retainAll(C)        | B = [cd]  |
+| [[abc] -- [[bcd] && [c-e]]]➗      | A.removeAll(B)        | A = [ab]  |
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/10. UNICODEParsingCharacterClasses.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/11. BoxTest Recommendation.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+# BoxText() Changes
+
+Of course! These are excellent and powerful additions. Adding custom widths, separate text coloring, and text alignment will turn `BoxText` into a highly professional and reusable utility.
+
+Let's implement these changes. We'll need to update the options interface and then significantly refactor the `BoxText` function to handle the more complex rendering logic.
+
+## 1. Update the `BoxTextOptions` Interface
+
+First, we'll add the new properties to `BoxTextOptions` in `PrintLine.ts`.
+
+```typescript
+// In PrintLine.ts
+
+interface BoxTextOptions {
+    preNewLine?: boolean;
+    postNewLine?: boolean;
+    // Allow 'tight', 'max', or a specific number for the width
+    width?: 'tight' | 'max' | number;
+    boxStyle?: BoxStyle;
+    
+    // Box-specific styling
+    color?: InspectColor | InspectColor[];
+    bgColor?: InspectColor | InspectColor[];
+    styles?: ('bold' | 'italic' | 'underline')[];
+
+    // New! Text-specific styling
+    textColor?: InspectColor | InspectColor[];
+    textBgColor?: InspectColor | InspectColor[];
+    textStyles?: ('bold' | 'italic' | 'underline')[];
+}
+```
+
+## 2. Refactor the `BoxText` Function
+
+This is the main part of the work. The old implementation styled the entire box at once. The new implementation must build the box in styled pieces (top border, left border, text, right border, bottom border) to allow for different colors.
+
+Here is the complete, refactored `BoxText` function.
+
+```typescript
+// In PrintLine.ts, replace your old BoxText function with this one.
+
+/**
+ * @function BoxText
+ * @description Draws a styled ASCII box around a given text string and prints it to the console.
+ * @param {string} text - The text to be enclosed in the box.
+ * @param {BoxTextOptions} [options={}] - Configuration options for the box.
+ * @returns {void}
+ */
+export const BoxText = (text: string, options: BoxTextOptions = {}): void => {
+    // --- 1. Set Defaults and Merge Options ---
+    const {
+        preNewLine = false,
+        postNewLine = false,
+        width = 'tight',
+        boxStyle = 'single',
+        color,
+        bgColor,
+        styles,
+        textColor,
+        textBgColor,
+        textStyles,
+    } = options;
+
+    const boxChars = BOX_STYLES[boxStyle];
+
+    // --- 2. Prepare Separate Styles for Box and Text ---
+    const boxFinalStyles = [
+        ...(color ? (Array.isArray(color) ? color : [color]) : []),
+        ...(bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : []),
+        ...(styles || []),
+    ];
+    
+    // If text styles aren't provided, they default to the box styles
+    const textFinalStyles = [
+        ...(textColor ? (Array.isArray(textColor) ? textColor : [textColor]) : boxFinalStyles),
+        ...(textBgColor ? (Array.isArray(textBgColor) ? textBgColor : [textBgColor]) : []),
+        ...(textStyles || []),
+    ];
+
+
+    // --- 3. Calculate Content Width and Wrap Text ---
+    let contentWidth: number;
+    let textLines: string[];
+
+    if (width === 'max') {
+        contentWidth = MAX_WIDTH - 4; // 80 - 2 for borders - 2 for padding
+    } else if (typeof width === 'number') {
+        if (width <= 4) throw new Error('Custom width must be greater than 4.');
+        contentWidth = width - 4;
+    } else { // 'tight'
+        textLines = text.split('\n');
+        contentWidth = Math.max(...textLines.map(line => line.length));
+    }
+
+    // Word-wrap the text if width is 'max' or a number
+    if (width !== 'tight') {
+        const words = text.split(/\s+/);
+        textLines = words.reduce((lines, word) => {
+            if (lines.length === 0) return [word];
+            let lastLine = lines[lines.length - 1];
+            if ((lastLine.length + word.length + 1) > contentWidth) {
+                lines.push(word);
+            } else {
+                lines[lines.length - 1] = lastLine + ' ' + word;
+            }
+            return lines;
+        }, [] as string[]);
+    }
+
+
+    // --- 4. Build the Box with Piece-by-Piece Styling ---
+    
+    // Helper to center-align text
+    const centerAlign = (str: string, width: number): string => {
+        const padding = Math.floor((width - str.length) / 2);
+        return ' '.repeat(padding) + str + ' '.repeat(width - str.length - padding);
+    };
+
+    // Style the border components
+    const styledTop = styleText(boxFinalStyles, boxChars.tl + boxChars.t.repeat(contentWidth + 2) + boxChars.tr);
+    const styledBottom = styleText(boxFinalStyles, boxChars.bl + boxChars.b.repeat(contentWidth + 2) + boxChars.br);
+    const styledLeftBorder = styleText(boxFinalStyles, boxChars.l + ' ');
+    const styledRightBorder = styleText(boxFinalStyles, ' ' + boxChars.r);
+
+    // Style each line of text and assemble with borders
+    const styledContentLines = textLines.map(line => {
+        const centeredText = centerAlign(line, contentWidth);
+        const styledText = styleText(textFinalStyles, centeredText);
+        return styledLeftBorder + styledText + styledRightBorder;
+    });
+
+    const fullBoxString = [
+        styledTop,
+        ...styledContentLines,
+        styledBottom
+    ].join('\n');
+
+    // --- 5. Print Final Output ---
+    const pre = preNewLine ? '\n' : '';
+    const post = postNewLine ? '\n' : '';
+    console.log(`${pre}${fullBoxString}${post}`);
+};
+```
+
+## How the New Logic Works
+
+1. **Separate Style Preparations:** The code now creates two distinct style arrays: `boxFinalStyles` and `textFinalStyles`. Crucially, if you don't provide a `textColor`, the `textFinalStyles` will default to using the `boxFinalStyles`, so it still looks good out-of-the-box.
+2. **Flexible Width Calculation:** The logic now correctly handles all three cases for `width`:
+    * **`'max'`**: Sets a fixed `contentWidth` of 76.
+    * **`number`**: Sets the `contentWidth` based on your number, ensuring it's valid.
+    * **`'tight'`**: Calculates the `contentWidth` based on the longest line of text *after* splitting by newlines.
+3. **Unified Word Wrapping:** The word-wrap logic is now correctly applied for both `'max'` and `number` widths.
+4. **Centering and Piece-by-Piece Styling:** This is the biggest change.
+    * A new `centerAlign` helper function ensures every line of text is perfectly centered within the `contentWidth`.
+    * Instead of building one giant string and styling it at the end, it now styles the **top border**, **left border**, **text**, **right border**, and **bottom border** as separate pieces.
+    * It then joins these pre-styled pieces together to create the final visual output. This is the key to allowing the text and border to have different styles.
+
+## New Usage Examples
+
+You can now use your function in these powerful new ways:
+
+```typescript
+// --- Custom Width with Centered Text ---
+BoxText('This box has a custom width of 50.', {
+    width: 50,
+    boxStyle: 'double',
+    preNewLine: true,
+    postNewLine: true,
+});
+
+// --- Custom Text Color ---
+BoxText('This text is a different color from the border.', {
+    width: 'max',
+    color: 'gray', // Border color
+    textColor: 'cyan', // Text color
+    preNewLine: true,
+    postNewLine: true,
+});
+
+// --- Complex Example: Themed Box with Styled Text ---
+const longText = 'This demonstrates all features: a custom width, a heavy box style, a gray border, and bold, centered, yellow text inside.';
+BoxText(longText, {
+    width: 60,
+    boxStyle: 'heavy',
+    color: 'gray',
+    textColor: 'yellow',
+    textStyles: ['bold'],
+    preNewLine: true,
+    postNewLine: true,
+});
+```
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/11. BoxTest Recommendation.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/9. TokenizerUpdates.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 
-
-// @ts-nocheck
-/* eslint-disable */
 
 To update your `Tokenizer` to leverage the new `CharacterStream` functions, you should shift the responsibility of "peeking" and "marking" into the lexing loop. This allows you to handle complex tokens—like multi-character operators or specific CSS units—without prematurely advancing the stream.
 
@@ -622,9 +798,6 @@ const isUnary = (stream: Char.Stream) => {
 
 
 
-
-// @ts-nocheck
-/* eslint-disable */
 
 # lookbackWhile() Method
 
@@ -811,9 +984,6 @@ This "look back and correct" pattern is extremely powerful. Your lookbackWhile m
 
 
 
-
-// @ts-nocheck
-/* eslint-disable */
 
 # Yes, this will absolutely work. This is an excellent refactoring
 
@@ -1490,9 +1660,6 @@ As you can see, `back(1)` allows the parser to easily correct its course when it
 
 
 
-// @ts-nocheck
-/* eslint-disable */
-
 # HELP
 
 Your code is a well-structured example of a classic "State Machine" lexer and a "Recursive Descent" parser. However, it currently suffers from **"Boilerplate Overload"**—there are many layers of abstraction (Context, Transition objects, Singleton State classes) that make it harder to see the actual logic.
@@ -1655,9 +1822,6 @@ For a project of this size, you might find it easier to follow if you group by "
 
 
 
-// @ts-nocheck
-/* eslint-disable */
-
 # CHAT UTILITY RECOMMENDATION
 
 This is an excellent update. Your `CharUtility` is now far more robust, descriptive, and logically sound. You have successfully addressed the biggest ambiguity by replacing the generic `Unicode` type with specific checks for `Punctuation` (`\p{P}`) and `SymbolMark` (`\p{S}`).
@@ -1756,9 +1920,6 @@ Based on the code provided, the simplified, broader approach seems more robust a
 
 
 
-
-// @ts-nocheck
-/* eslint-disable */
 
 # CHAR UTILITY
 
@@ -1863,9 +2024,6 @@ export class CharUtility {
 
 
 
-
-// @ts-nocheck
-/* eslint-disable */
 
 # TOKENIZER BUFFER
 
@@ -2000,9 +2158,6 @@ public tokenize(input: string): Token[] {
 
 
 
-
-// @ts-nocheck
-/* eslint-disable */
 
 # FUNCTIONAL STATES
 
@@ -2168,9 +2323,6 @@ class Context {
 
 
 
-// @ts-nocheck
-/* eslint-disable */
-
 # PARSER STRUCTURE
 
 To streamline your `Parser` class, you should focus on reducing the repetitive logic in your binary expression methods and moving the heavy `switch` statement out of `primary` into a more modular dispatcher.
@@ -2300,9 +2452,6 @@ private createLiteral(token: Token): Expression {
 
 
 
-// @ts-nocheck
-/* eslint-disable */
-
 # NEW EFFICIENCIES
 
 Beyond the structural refactors already discussed, there are several "logic-level" efficiencies you can implement to remove redundant code and improve performance. Currently, your pipeline performs **double classification**: the `States` classify characters to build tokens, and then the `Tokenizer` re-scans those tokens to determine their final `TokenType`.
@@ -2424,182 +2573,6 @@ private primary(): Expression {
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/6. NewEfficiencies.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: package.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-
-
-// @ts-nocheck
-/* eslint-disable */
-
-{
-  "name": "colorstate",
-  "version": "1.0.0",
-  "license": "MIT",
-  "author": "Dustin Dew, phyxashun@gmail.com",
-  "module": "index.ts",
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/figlet": "^1.7.0",
-    "@types/node": "^25.0.3",
-    "@vitest/coverage-istanbul": "4.0.16",
-    "@vitest/coverage-v8": "^4.0.16",
-    "@vitest/ui": "4.0.16",
-    "figlet": "^1.9.4",
-    "glob": "^13.0.0",
-    "typedoc": "^0.28.15",
-    "vitest": "^4.0.16"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
-  },
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "start": "bun run ./index.ts",
-    "consolidate": "bun run ./Consolidate.ts",
-    "test": "vitest",
-    "coverage": "vitest --coverage"
-  }
-}
-
-
-
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: package.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: tsconfig.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-
-
-// @ts-nocheck
-/* eslint-disable */
-
-{
-  "compilerOptions": {
-    // Environment setup & latest features
-    "lib": [
-      "ESNext"
-    ],
-    "target": "ESNext",
-    "module": "Preserve",
-    "moduleDetection": "force",
-    "jsx": "react-jsx",
-    "allowJs": true,
-    // Bundler mode
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "noEmit": true,
-    // Best practices
-    "strict": true,
-    "skipLibCheck": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    // Some stricter flags (disabled by default)
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
-  },
-  "include": [
-    "./src/**/*.ts"
-, "test_old/AST.ts", "test_old/Transition.ts"  ],
-  "exclude": [
-    "./ALL/**/*",
-    "./ALL/ALL_CONFIGS.ts",
-    "./ALL/ALL_FILES.ts",
-    "./ALL/ALL_TESTS.ts"
-  ]
-}
-
-
-
-
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: tsconfig.json ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: vitest.config.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-
-
-// @ts-nocheck
-/* eslint-disable */
-
-// vitest.config.ts
-
-//import {inspect, type InspectOptions } from 'node:util';
-
-import { defineConfig, configDefaults } from "vitest/config";
-
-export default defineConfig({
-    test: {
-        reporters: ['default', 'html'],
-        coverage: {
-            provider: 'v8',
-            enabled: true,
-            clean: true,
-            reportsDirectory: './coverage',
-            reporter: ['text', 'json', 'html'],
-            include: ['src/**/*.{ts,tsx}'],
-            exclude: [ 
-                '**/utils/**/*'
-            ]
-        },
-        exclude: [
-            ...configDefaults.exclude,
-            '**/utils/**/*',
-            'test_old/**/*',
-            '.vscode/**/*',
-            '0.NOTES/**/*',
-            'ALL/**/*'
-        ]
-    }
-});
-
-// const inspectOptions: InspectOptions = {
-//     showHidden: true,
-//     depth: null,
-//     colors: true,
-//     customInspect: false,
-//     showProxy: false,
-//     maxArrayLength: null,
-//     maxStringLength: null,
-//     breakLength: 100,
-//     compact: true,
-//     sorted: false,
-//     getters: false,
-//     numericSeparator: true,
-// };
-
-// console.log('VITEST CONFIG DEFAULTS:\n');
-// console.log(inspect(configDefaults, inspectOptions));
-
-
-
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: vitest.config.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 //████████████████████████████████████████████████████████████████████████████████████████████████████

@@ -2,56 +2,80 @@
 
 import type { InspectColor } from "node:util";
 
+/**
+ * @enum LineType
+ * @description Enum for different line types.
+ */
 export enum LineType {
-    Default = '─',
-    Square = '■',
-    Bold = '█',
-    Dashed = '-',
-    Underscore = '_',
-    DoubleUnderscore = '‗',
-    Equals = '=',
-    Double = '═',
-    BoldBottom = '▄',
-    BoldTop = '▀',
-    Diaeresis = '¨',
-    Macron = '¯',
-    Section = '§',
-    Interpunct = '·',
-    LightBlock = '░',
-    MediumBlock = '▒',
-    HeavyBlock = '▓',
+    Default =           '─',
+    Square =            '■',
+    Bold =              '█',
+    Dashed =            '-',
+    Underscore =        '_',
+    DoubleUnderscore =  '‗',
+    Equals =            '=',
+    Double =            '═',
+    BoldBottom =        '▄',
+    BoldTop =           '▀',
+    Diaeresis =         '¨',
+    Macron =            '¯',
+    Section =           '§',
+    Interpunct =        '·',
+    LightBlock =        '░',
+    MediumBlock =       '▒',
+    HeavyBlock =        '▓',
 };
 
-declare const BOX_STYLES: {
-    readonly single: {};
-    readonly double: {};
-    readonly light: {};
-    readonly medium: {};
-    readonly heavy: {};
-    readonly bold: {};
+/**
+ * @type BoxPartKeys
+ * @description Type defining the keys for box parts.
+ */
+export type BoxPartKeys = 'tl' | 't' | 'tr' | 'l' | 'r' | 'bl' | 'b' | 'br';
+
+/**
+ * @type BoxParts
+ * @description Type defining the structure for box parts.
+ */
+export type BoxParts = Record<BoxPartKeys, string>;
+
+/**
+ * @enum BoxStyle
+ * @description Enum for different box styles.
+ */
+export enum BoxStyle {
+    Single = 'single',
+    Double = 'double',
+    Light =  'light',
+    Medium = 'medium',
+    Heavy =  'heavy',
+    Bold =   'bold',
+    Half =   'half',
 }
 
-export type BoxStyle = keyof typeof BOX_STYLES;
+/**
+ * @constant BoxStyles
+ * @description Predefined box styles with their corresponding characters.
+ */
+export const BoxStyles: Record<BoxStyle, BoxParts> = {
+    single: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
+    double: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' },
+    light:  { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
+    medium: { tl: '▒', t: '▒', tr: '▒', l: '▒', r: '▒', bl: '▒', b: '▒', br: '▒' },
+    heavy:  { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
+    bold:   { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
+    half:   { tl: '▄', t: '▄', tr: '▄', l: '█', r: '█', bl: '▀', b: '▀', br: '▀' },
+} as const;
 
-declare const THEMES: {
-    readonly success: {
-        readonly color: "green";
-        readonly line: LineType.Default;
-        readonly styles: readonly ["bold"];
-    };
-    readonly error: {
-        readonly color: "red";
-        readonly line: LineType.Bold;
-    };
-    readonly warning: {
-        readonly color: "yellow";
-        readonly line: LineType.Dashed;
-    };
-    readonly info: {
-        readonly color: "cyan";
-        readonly line: LineType.Default;
-    };
-}
+/**
+ * @constant THEMES
+ * @description Predefined themes for PrintLine.
+ */
+export const Themes = {
+    success: { color: 'green', line: LineType.Default, styles: ['bold'] },
+    error: { color: 'red', line: LineType.Bold },
+    warning: { color: 'yellow', line: LineType.Dashed },
+    info: { color: 'cyan', line: LineType.Default },
+} as const;
 
 /**
  * @interface PrintLineOptions
@@ -74,7 +98,7 @@ export interface PrintLineOptions {
     postNewLine?: boolean;
     width?: number;
     line?: LineType;
-    theme?: keyof typeof THEMES;
+    theme?: keyof typeof Themes;
     color?: InspectColor | InspectColor[];
     bgColor?: InspectColor | InspectColor[];
     gradient?: [InspectColor, InspectColor];

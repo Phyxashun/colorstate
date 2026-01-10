@@ -3,29 +3,13 @@
 import { styleText } from 'node:util';
 import figlet from 'figlet';
 import standard from "figlet/fonts/Standard";
-import { LineType, type PrintLineOptions, type BoxTextOptions } from './types/PrintLine.types';
+import { BoxStyle, BoxStyles, LineType, Themes, type PrintLineOptions, type BoxTextOptions } from './types/PrintLine.types';
 
 const MAX_WIDTH: number = 80;
 const TAB_WIDTH: number = 4;
 const SPACE: string = ' ';
 const FIGLET_FONT = 'Standard';
 figlet.parseFont(FIGLET_FONT, standard);
-
-const BOX_STYLES = {
-    single: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
-    double: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' },
-    light: { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
-    medium: { tl: '▒', t: '▒', tr: '▒', l: '▒', r: '▒', bl: '▒', b: '▒', br: '▒' },
-    heavy: { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
-    bold: { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
-} as const;
-
-const THEMES = {
-    success: { color: 'green', line: LineType.Default, styles: ['bold'] },
-    error: { color: 'red', line: LineType.Bold },
-    warning: { color: 'yellow', line: LineType.Dashed },
-    info: { color: 'cyan', line: LineType.Default },
-} as const;
 
 /**
  * @function Spacer
@@ -89,7 +73,7 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
         color: ['gray', 'bold'] // styleText formatting         
     } as const;
 
-    const themeOptions = options.theme ? THEMES[options.theme] : {};
+    const themeOptions = options.theme ? (Themes as any)[options.theme] : {};
     const mergedOptions = {
         ...defaultOptions,
         ...themeOptions,
@@ -202,7 +186,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
         textBgColor,
     } = options;
 
-    const boxChars = BOX_STYLES[boxStyle];
+    const boxChars = BoxStyles[boxStyle];
 
     // --- 2. Prepare Separate Styles for Box and Text ---
     const boxFinalStyles = [
@@ -223,9 +207,12 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     let contentWidth: number;
     let textLines: string[];
 
+    // Add this helper inside BoxText, right after the options destructuring
+    const stripAnsi = (str: string): string => str.replace(/\x1b\[[0-9;]*m/g, '');
+
     if (Array.isArray(text)) {
         textLines = text;
-        contentWidth = Math.max(...textLines.map(line => line.length));
+        contentWidth = Math.max(...textLines.map(line => stripAnsi(line).length));
 
         // If a fixed width is requested, we use it instead of the longest line
         if (typeof width === 'number') {
@@ -310,8 +297,7 @@ const CenteredText = (text: string): void => {
 }
 
 export {
-    BOX_STYLES,
-    THEMES,
+    Themes,
     Spacer,
     CenterText,
     CenteredText,
