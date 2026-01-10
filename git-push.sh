@@ -62,15 +62,12 @@ BRANCH=$(git branch --show-current)
 echo -e "${YELLOW}Pushing to origin/${BRANCH}...${NC}\n"
 git push origin "$BRANCH"
 
-
-#╔  ═  ╗
-#║     ║
-#╚  ═  ╝
 # Display title box
 echo -e "${GREEN}"
-echo "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄"
-echo "▌                                                ▐"
-echo "▌  ✓ Git push process completed successfully!!!  ▐"
-echo "▌                                                ▐"
-echo "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀"
+echo "╔════════════════════════════════════════╗"
+echo "║                                        ║"
+echo "║     ✓ Git push process completed       ║"
+echo "║            successfully!!!             ║"
+echo "║                                        ║"
+echo "╚════════════════════════════════════════╝"
 echo -e "${NC}"
