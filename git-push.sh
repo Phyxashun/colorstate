@@ -6,7 +6,17 @@ set -e  # Exit on error
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Display title box
+echo -e "${BLUE}"
+echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
+echo "▒                                        ▒"
+echo "▒         GIT PUSH AUTOMATION            ▒"
+echo "▒                                        ▒"
+echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
+echo -e "${NC}\n"
 
 echo
 echo -e "${GREEN}Starting git push process...${NC}\n"
