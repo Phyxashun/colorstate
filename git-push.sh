@@ -13,20 +13,19 @@ echo -e "${GREEN}Starting git push process...${NC}\n"
 
 # Check if we're in a git repository
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
-    echo -e "${RED}Error: Not a git repository${NC}"
+    echo -e "${RED}Error: Not a git repository${NC}\n"
     exit 1
 fi
 
 # Check for uncommitted changes
 if [[ -z $(git status -s) ]]; then
-    echo -e "${YELLOW}No changes to commit${NC}"
+    echo -e "${YELLOW}No changes to commit${NC}\n"
     exit 0
 fi
 
 # Show what will be staged
-echo -e "${YELLOW}Changes to be committed:${NC}"
+echo -e "${YELLOW}Changes to be committed:${NC}\n"
 git status -s
-echo
 
 # Stage all changes
 git add .
@@ -45,13 +44,13 @@ fi
 
 # Commit changes
 git commit -m "$COMMIT_MSG"
-echo -e "${GREEN}✓ Committed changes${NC}\n"
+echo -e "\n${GREEN}✓ Committed changes${NC}\n"
 
 # Get current branch
 BRANCH=$(git branch --show-current)
 
 # Push to remote
-echo -e "${YELLOW}Pushing to origin/${BRANCH}...${NC}"
+echo -e "${YELLOW}Pushing to origin/${BRANCH}...${NC}\n"
 git push origin "$BRANCH"
 
 echo -e "\n${GREEN}✓ Git push process completed successfully!${NC}\n"
