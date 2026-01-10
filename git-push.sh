@@ -8,6 +8,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+echo
 echo -e "${GREEN}Starting git push process...${NC}\n"
 
 # Check if we're in a git repository
