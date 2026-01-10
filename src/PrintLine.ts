@@ -1,34 +1,15 @@
 // src/PrintLine.ts
 
-import { styleText, type InspectColor } from 'node:util';
+import { styleText } from 'node:util';
 import figlet from 'figlet';
 import standard from "figlet/fonts/Standard";
+import { LineType, type PrintLineOptions, type BoxTextOptions } from './types/PrintLine.types';
 
 const MAX_WIDTH: number = 80;
 const TAB_WIDTH: number = 4;
 const SPACE: string = ' ';
 const FIGLET_FONT = 'Standard';
 figlet.parseFont(FIGLET_FONT, standard);
-
-enum LineType {
-    Default = '─',
-    Square = '■',
-    Bold = '█',
-    Dashed = '-',
-    Underscore = '_',
-    DoubleUnderscore = '‗',
-    Equals = '=',
-    Double = '═',
-    BoldBottom = '▄',
-    BoldTop = '▀',
-    Diaeresis = '¨',
-    Macron = '¯',
-    Section = '§',
-    Interpunct = '·',
-    LightBlock = '░',
-    MediumBlock = '▒',
-    HeavyBlock = '▓',
-};
 
 const BOX_STYLES = {
     single: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
@@ -38,8 +19,6 @@ const BOX_STYLES = {
     heavy: { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
     bold: { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
 } as const;
-
-type BoxStyle = keyof typeof BOX_STYLES;
 
 const THEMES = {
     success: { color: 'green', line: LineType.Default, styles: ['bold'] },
@@ -93,51 +72,26 @@ const CenteredFiglet = (text: string, width: number = MAX_WIDTH): string => {
 }
 
 /**
- * @interface PrintLineOptions
- * @description Defines the structure for a printLine options object.
- * @property {boolean} preNewLine - If true, adds a newline before the divider.
- * @property {boolean} postNewLine - If true, adds a newline after the divider.
- * @property {number} width - The width of the line.
- * @property {string | LineType} line - The character to use for the line.
- * @property {InspectColor | InspectColor[]} color - The default foreground color
- * @property {InspectColor | InspectColor[]} bgColor - the default backgound color
- */
-interface PrintLineOptions {
-    preNewLine?: boolean;
-    postNewLine?: boolean;
-    width?: number;
-    line?: LineType;
-    theme?: keyof typeof THEMES;
-    color?: InspectColor | InspectColor[];
-    bgColor?: InspectColor | InspectColor[];
-    gradient?: [InspectColor, InspectColor];
-    styles?: ('bold' | 'italic' | 'underline' | 'inverse')[];
-    text?: string;
-    textAlign?: 'left' | 'center' | 'right';
-    textColor?: InspectColor | InspectColor[];
-}
-
-/**
- * @description Default options object for the printLine function.
- */
-const DefaultOptions: PrintLineOptions = {
-    preNewLine: false,      // No preceding new line
-    postNewLine: false,     // No successive new line
-    width: MAX_WIDTH,       // Use global const MAX_WIDTH = 80
-    line: LineType.Double,  // Use global line enum
-    color: ['gray', 'bold'] // styleText formatting         
-} as const;
-
-/**
  * @function PrintLine
  * @description Outputs a styled horizontal line to the console.
  * @param {PrintLineOptions} [options={}] - Configuration options for the line.
  * @returns {string}
  */
 const PrintLine = (options: PrintLineOptions = {}): string => {
+    /**
+     * @description Default options object for the printLine function.
+     */
+    const defaultOptions: PrintLineOptions = {
+        preNewLine: false,      // No preceding new line
+        postNewLine: false,     // No successive new line
+        width: MAX_WIDTH,       // Use global const MAX_WIDTH = 80
+        line: LineType.Double,  // Use global line enum
+        color: ['gray', 'bold'] // styleText formatting         
+    } as const;
+
     const themeOptions = options.theme ? THEMES[options.theme] : {};
     const mergedOptions = {
-        ...DefaultOptions,
+        ...defaultOptions,
         ...themeOptions,
         ...options
     };
@@ -226,24 +180,6 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
     return result;
 };
 
-interface BoxTextOptions {
-    preNewLine?: boolean;
-    postNewLine?: boolean;
-    // Allow 'tight', 'max', or a specific number for the width
-    width?: 'tight' | 'max' | number;
-    boxStyle?: BoxStyle;
-    boxAlign?: 'left' | 'center' | 'right';
-
-    // Box-specific styling
-    color?: InspectColor | InspectColor[];
-    bgColor?: InspectColor | InspectColor[];
-    styles?: ('bold' | 'italic' | 'underline')[];
-
-    // New! Text-specific styling
-    textColor?: InspectColor | InspectColor[];
-    textBgColor?: InspectColor | InspectColor[];
-}
-
 /**
  * @function BoxText
  * @description Draws a styled ASCII box around a given text string and prints it to the console.
@@ -259,10 +195,10 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
         width = 'tight',
         boxStyle = 'single',
         boxAlign = 'center',
-        color,
+        color = ['gray', 'bold'],
         bgColor,
         styles,
-        textColor,
+        textColor = 'white',
         textBgColor,
     } = options;
 
@@ -290,7 +226,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     if (Array.isArray(text)) {
         textLines = text;
         contentWidth = Math.max(...textLines.map(line => line.length));
-        
+
         // If a fixed width is requested, we use it instead of the longest line
         if (typeof width === 'number') {
             contentWidth = width - 4;
@@ -369,50 +305,17 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     console.log(`${pre}${fullBoxString}${post}`);
 };
 
-export default PrintLine;
-
-export {
-    LineType,
-    THEMES,
-    type PrintLineOptions,
-    Spacer,
-    CenterText,
-    CenteredFiglet,
-    BoxText,
-    type BoxTextOptions,
-    type BoxStyle,
+const CenteredText = (text: string): void => {
+    console.log(CenterText(text));
 }
 
-/**
-    ### Usage Examples
-
-    You can now do things like this:
-
-    ```typescript
-    // A success message with bold green text on a default gray line
-    PrintLine({ 
-        text: 'Operation Successful', 
-        textColor: ['green', 'bold'] 
-    });
-    // Output: ═══════════ Operation Successful ═══════════  (text is green/bold, line is gray)
-
-    // An error message with white text on a red background
-    PrintLine({
-        line: LineType.Bold,
-        color: 'red',
-        text: 'FATAL ERROR',
-        textColor: ['white', 'bgRed', 'bold']
-    });
-    // Output: █████████████ FATAL ERROR ██████████████ (text is white on a red background)
-
-    // A themed line with custom text color
-    PrintLine({
-        theme: 'warning', // Sets line color to yellow and style to dashed
-        text: 'Deprecation Notice',
-        textColor: 'white' // Overrides text color to be white
-    });
-    // Output: ----------- Deprecation Notice ----------- (line is yellow, text is white)
-    ```
-
-    This makes your `PrintLine` utility incredibly versatile and professional-looking.
-*/
+export {
+    BOX_STYLES,
+    THEMES,
+    Spacer,
+    CenterText,
+    CenteredText,
+    CenteredFiglet,
+    PrintLine,
+    BoxText,
+}

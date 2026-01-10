@@ -1,17 +1,8 @@
 // src/Context.ts
 
-import { State, TokenType } from '../types/Types.ts';
-import { type Character, CharType } from './Character.ts';
-
-// The instructions the Context gives back to the Tokenizer.
-interface ContextAction {
-    emit: boolean;        // Should the current buffer be emitted as a token?
-    reprocess: boolean;   // Should the current character be re-processed in the new state?
-    ignore: boolean;      // Should the current character be ignored and not buffered?
-    tokenType: TokenType; // What type of token should be emitted?
-}
-
-type QuoteType = CharType.Backtick | CharType.SingleQuote | CharType.DoubleQuote;
+import { CharType, type Character } from './Character/CharacterStream.ts';
+import { State, type Action, type QuoteType } from './types/Context.types.ts';
+import { TokenType } from './types/Tokenizer.types.ts';
 
 /**
  * The Context class is a state machine that tracks the current tokenizing state.
@@ -53,7 +44,7 @@ class Context {
         this._state = value ?? State.INITIAL;
     }
 
-    private readonly STATEPROCESS_MAP: Partial<Record<State, (char: Character) => ContextAction>> = {
+    private readonly STATEPROCESS_MAP: Partial<Record<State, (char: Character) => Action>> = {
         [State.INITIAL]: (char) => this.processInitial(char),
         [State.IN_IDENTIFIER]: (char) => this.processIdentifier(char),
         [State.IN_HEXVALUE]: (char) => this.processHex(char),
@@ -72,9 +63,9 @@ class Context {
     /**
      * The core processing logic of the state machine.
      * @param char The character to process.
-     * @returns {ContextAction} The action for the Tokenizer to take.
+     * @returns {Action} The action for the Tokenizer to take.
      */
-    public process(char: Character): ContextAction {
+    public process(char: Character): Action {
         const processFn = this.STATEPROCESS_MAP[this.state];
         if (processFn) return processFn(char);
 
@@ -83,7 +74,7 @@ class Context {
     }
 
     // Handles characters when in the initial state (between tokens).
-    private processInitial(char: Character): ContextAction {
+    private processInitial(char: Character): Action {
         switch (char.type) {
             case CharType.Letter:
                 this.transitionTo(State.IN_IDENTIFIER);
@@ -120,7 +111,7 @@ class Context {
     }
 
     // Handles characters when building an identifier.
-    private processIdentifier(char: Character): ContextAction {
+    private processIdentifier(char: Character): Action {
         if (char.type === CharType.Letter || char.type === CharType.Number) {
             // Continue building the identifier.
             return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.IDENTIFIER };
@@ -131,7 +122,7 @@ class Context {
     }
 
     // Handles characters when building a number.
-    private processNumber(char: Character): ContextAction {
+    private processNumber(char: Character): Action {
         // If we see a number or a dot, continue building the NUMBER.
         if (char.type === CharType.Number || char.type === CharType.Dot) {
             return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.NUMBER };
@@ -157,7 +148,7 @@ class Context {
     }
 
     // Handles the token when a dimension arrives.
-    private processDimension(char: Character): ContextAction {
+    private processDimension(char: Character): Action {
         // Continue consuming as long as we see letters.
         if (char.type === CharType.Letter) {
             return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.DIMENSION };
@@ -168,7 +159,7 @@ class Context {
     }
 
     // Handles the token when the character *after* the '%' arrives.
-    private processPercent(char: Character): ContextAction {
+    private processPercent(char: Character): Action {
         // The percentage token is complete as soon as we see any new character.
         this.transitionTo(State.INITIAL);
         // Emit the buffered "56%" and reprocess the new character.
@@ -176,7 +167,7 @@ class Context {
     }
 
     // Handles characters when building a hex value.
-    private processHex(char: Character): ContextAction {
+    private processHex(char: Character): Action {
         // FIX: The regex was incorrect. It should not contain extra brackets.
         if (char.type === CharType.Number ||
             (char.type === CharType.Letter && /^[0-9a-fA-F]$/i.test(char.value))) {
@@ -189,7 +180,7 @@ class Context {
     }
 
     // Handles characters when inside a string.
-    private processString(char: Character): ContextAction {
+    private processString(char: Character): Action {
         // If we see a backslash, set the escape flag for the *next* character.
         if (char.type === CharType.BackSlash) {
             this.transitionTo(State.IN_ESCAPE);
@@ -208,7 +199,7 @@ class Context {
     }
 
     // Handles the character AFTER a '/'
-    private processSeenSlash(char: Character): ContextAction {
+    private processSeenSlash(char: Character): Action {
         if (char.type === CharType.Slash) {
             // It's a single-line comment. Keep consuming.
             this.transitionTo(State.IN_SINGLE_LINE_COMMENT);
@@ -227,7 +218,7 @@ class Context {
     }
 
     // Handles '//' comments
-    private processSingleLineComment(char: Character): ContextAction {
+    private processSingleLineComment(char: Character): Action {
         if (char.type === CharType.NewLine || char.type === CharType.EOF) {
             // Comment ends at a newline.
             this.transitionTo(State.INITIAL);
@@ -239,7 +230,7 @@ class Context {
     }
 
     // Handles '/*' comments
-    private processMultiLineComment(char: Character): ContextAction {
+    private processMultiLineComment(char: Character): Action {
         if (char.type === CharType.Star) {
             // We might be at the end of the comment. Transition to check the next character.
             this.transitionTo(State.IN_MULTI_LINE_COMMENT_SAW_STAR);
@@ -250,7 +241,7 @@ class Context {
     }
 
     // Handles when we've just seen a '*' inside a '/*' comment
-    private processMultiLineCommentSawStar(char: Character): ContextAction {
+    private processMultiLineCommentSawStar(char: Character): Action {
         if (char.type === CharType.Slash) {
             // This is the closing '*/'. The comment is finished.
             this.transitionTo(State.INITIAL);
@@ -268,14 +259,14 @@ class Context {
     }
 
     // Handles escaped characters inside of a string.
-    private processEscape(char: Character): ContextAction {
+    private processEscape(char: Character): Action {
         // After processing an escaped character, we must return to the IN_STRING state,
         this.transitionTo(State.IN_STRING);
         return { emit: false, reprocess: false, ignore: false, tokenType: TokenType.STRING };
     }
 
     // Handles emitting single-character symbols.
-    private processSymbol(char: Character): ContextAction {
+    private processSymbol(char: Character): Action {
         // Any new character means the single symbol is complete.
         this.transitionTo(State.INITIAL);
         return { emit: true, reprocess: true, ignore: false, tokenType: TokenType.SYMBOL };
@@ -283,7 +274,5 @@ class Context {
 }
 
 export {
-    type ContextAction,
     Context
 }
-

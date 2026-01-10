@@ -26,8 +26,8 @@
     "noPropertyAccessFromIndexSignature": false
   },
   "include": [
-    "./src/**/*.ts",
-    "./types/**/*.d.ts", "types/Types.ts",
+    "src/**/*.ts",
+    "src/types/**/*.d.ts",
   ],
   "exclude": ["./ALL/**/*"]
 }

@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import CharacterStream from '../src/Character';
 import { Tokenizer, type Token } from '../src/Tokenizer';
-import { State, TokenType } from '../types/Types.ts';
+import { State, TokenType } from '../src/types/Types.ts';
 
 describe('Tokenizer', () => {
     // Helper function to streamline testing

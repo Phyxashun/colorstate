@@ -1,9 +1,32 @@
-// src/AST.ts
+// src/types/Parser.types.ts
+
+/**
+ * Represents a specific location within the source string, tracked by index,
+ * line number, and column number.
+ */
+type Position = {
+    /** The zero-based index of the character in the overall string. */
+    index: number;
+    /** The one-based line number where the character appears. */
+    line: number;
+    /** The one-based column number of the character on its line. */
+    column: number;
+}
+
+/**
+ * Source code location metadata
+ */
+type SourceLocation = {
+    /** Starting position */
+    start: Position;
+    /** Ending position */
+    end: Position;
+}
 
 /**
  * Node Types
  */
-export enum NodeType {
+enum NodeType {
     Program = 'Program',
     Declaration = 'Declaration',
     VariableDeclaration = 'VariableDeclaration',
@@ -20,44 +43,30 @@ export enum NodeType {
     UnaryExpression = 'UnaryExpression',
     CallExpression = 'CallExpression',
     GroupExpression = 'GroupExpression',
+    SeriesExpression = 'SeriesExpression',
+    AssignmentExpression = 'AssignmentExpression',
 }
+
+type VariableDeclarationKind = 'const' | 'let' | 'var';
+type DimensionKind = 'deg' | 'grad' | 'rad' | 'turn';
+type ColorFunctionKind = 'rgb' | 'rgba' | 'hsl' | 'hsla' | 
+    'hwb' | 'lab' | 'lch' | 'oklab' | 'oklch' | 'ictcp' | 
+    'jzazbz' | 'jzczhz' | 'alpha' | 'color';
 
 /**
  * Base interface for all AST nodes
  */
-export interface ASTNode {
+type BaseNode = {
     /** Type of the AST node */
     type: NodeType;
     /** Source location information */
-    location?: SourceLocation;
-}
-
-/**
- * Source code location metadata
- */
-export interface SourceLocation {
-    /** Starting position */
-    start: Position;
-    /** Ending position */
-    end: Position;
-}
-
-/**
- * Position in source code
- */
-export interface Position {
-    /** Byte index */
-    index: number;
-    /** Line number (1-indexed) */
-    line: number;
-    /** Column number (1-indexed) */
-    column: number;
+    location: SourceLocation;
 }
 
 /**
  * Program root node - contains all statements
  */
-export interface Program extends ASTNode {
+interface Program extends BaseNode {
     type: NodeType.Program;
     body: Statement[];
 }
@@ -65,12 +74,12 @@ export interface Program extends ASTNode {
 /**
  * Base type for all statements
  */
-export type Statement = ExpressionStatement | VariableDeclaration;
+type Statement = ExpressionStatement | VariableDeclaration;
 
 /**
  * Expression wrapped as a statement
  */
-export interface ExpressionStatement extends ASTNode {
+interface ExpressionStatement extends BaseNode {
     type: NodeType.ExpressionStatement;
     expression: Expression;
 }
@@ -79,20 +88,30 @@ export interface ExpressionStatement extends ASTNode {
  * Variable declaration node
  * Example: const x = 5;
  */
-export interface VariableDeclaration extends ASTNode {
+interface VariableDeclaration extends BaseNode {
     type: NodeType.VariableDeclaration;
     /** The kind of declaration (e.g., const, let, var) */
-    kind: 'const' | 'let' | 'var';
-    /** The identifier being declared */
-    identifier: Identifier;
+    kind: VariableDeclarationKind;
+    /** The identifier being x */
+    identifier: { name: string, type: NodeType };
     /** The expression the variable is initialized to (optional) */
     initializer?: Expression;
 }
 
 /**
+ * Assignment to an existing variable
+ * Example: myVar = 100
+ */
+interface AssignmentExpression extends BaseNode {
+    type: NodeType.AssignmentExpression;
+    left: Identifier; // The variable being assigned to
+    right: Expression; // The value being assigned
+}
+
+/**
  * Base type for all expressions
  */
-export type Expression =
+type Expression =
     | Identifier
     | StringLiteral
     | NumericLiteral
@@ -102,13 +121,15 @@ export type Expression =
     | BinaryExpression
     | UnaryExpression
     | CallExpression
-    | GroupExpression;
+    | GroupExpression
+    | SeriesExpression
+    | AssignmentExpression;
 
 /**
  * Identifier node (variable names, function names)
  * Example: red, myVar
  */
-export interface Identifier extends ASTNode {
+interface Identifier extends BaseNode {
     type: NodeType.Identifier;
     name: string;
 }
@@ -117,7 +138,7 @@ export interface Identifier extends ASTNode {
  * String literal node
  * Example: "hello", 'world'
  */
-export interface StringLiteral extends ASTNode {
+interface StringLiteral extends BaseNode {
     type: NodeType.StringLiteral;
     value: string;
     raw: string;
@@ -127,7 +148,7 @@ export interface StringLiteral extends ASTNode {
  * Numeric literal node
  * Example: 42, 3.14
  */
-export interface NumericLiteral extends ASTNode {
+interface NumericLiteral extends BaseNode {
     type: NodeType.NumericLiteral;
     value: number;
     raw: string;
@@ -137,7 +158,7 @@ export interface NumericLiteral extends ASTNode {
  * Hexadecimal color literal
  * Example: #ff0000, #abc
  */
-export interface HexLiteral extends ASTNode {
+interface HexLiteral extends BaseNode {
     type: NodeType.HexLiteral;
     value: string;
     raw: string;
@@ -147,13 +168,13 @@ export interface HexLiteral extends ASTNode {
  * Percentage literal
  * Example: 50%, 100%
  */
-export interface PercentLiteral extends ASTNode {
+interface PercentLiteral extends BaseNode {
     type: NodeType.PercentLiteral;
     value: number;
     raw: string;
 }
 
-export interface DimensionLiteral extends ASTNode {
+interface DimensionLiteral extends BaseNode {
     type: NodeType.DimensionLiteral;
     value: number;
     unit: string;
@@ -164,7 +185,7 @@ export interface DimensionLiteral extends ASTNode {
  * Binary operation (two operands and an operator)
  * Example: 1 + 2, a - b
  */
-export interface BinaryExpression extends ASTNode {
+interface BinaryExpression extends BaseNode {
     type: NodeType.BinaryExpression;
     operator: '+' | '-' | '*' | '/' | '%';
     left: Expression;
@@ -175,7 +196,7 @@ export interface BinaryExpression extends ASTNode {
  * Unary operation (one operand and an operator)
  * Example: -5, +10
  */
-export interface UnaryExpression extends ASTNode {
+interface UnaryExpression extends BaseNode {
     type: NodeType.UnaryExpression;
     operator: '+' | '-';
     argument: Expression;
@@ -185,7 +206,7 @@ export interface UnaryExpression extends ASTNode {
  * Function call expression
  * Example: rgb(255, 0, 0)
  */
-export interface CallExpression extends ASTNode {
+interface CallExpression extends BaseNode {
     type: NodeType.CallExpression;
     callee: Identifier;
     arguments: Expression[];
@@ -195,7 +216,44 @@ export interface CallExpression extends ASTNode {
  * Grouped expression (parentheses)
  * Example: (1 + 2)
  */
-export interface GroupExpression extends ASTNode {
+interface GroupExpression extends BaseNode {
     type: NodeType.GroupExpression;
     expression: Expression;
 }
+
+interface SeriesExpression extends BaseNode {
+    type: NodeType.SeriesExpression;
+    expressions: Expression[];
+}
+
+// EXPORTS
+export {
+    // Enumeration
+    NodeType,
+
+    // Types
+    type Statement,
+    type Expression,
+    type VariableDeclarationKind,
+    type DimensionKind,
+    type ColorFunctionKind,
+
+    // Interfaces
+    type BaseNode,
+    type SourceLocation,
+    type Program,
+    type ExpressionStatement,
+    type VariableDeclaration,
+    type Identifier,
+    type StringLiteral,
+    type NumericLiteral,
+    type HexLiteral,
+    type PercentLiteral,
+    type DimensionLiteral,
+    type BinaryExpression,
+    type UnaryExpression,
+    type CallExpression,
+    type GroupExpression,
+    type SeriesExpression,
+    type AssignmentExpression,
+};

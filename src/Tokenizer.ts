@@ -1,17 +1,12 @@
 // src/Tokenizer.ts
 
+import { TokenType, type Token, type CreateTokenFn } from './types/Tokenizer.types.ts';
+
 import { styleText, inspect, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
-import CharacterStream, { type Character } from './Character.ts';
-import PrintLine, { Spacer, CenterText, BoxText } from './PrintLine.ts';
-import { State, TokenType } from '../types/Types.ts';
-
-interface Token {
-    value: string;
-    type: TokenType;
-}
-
-type CreateTokenFn = (value: string, type?: TokenType) => Token;
+import { CharacterStream, type Character } from './Character/CharacterStream.ts';
+import { PrintLine, Spacer, CenterText, BoxText } from './PrintLine.ts';
+import { State } from './types/Context.types.ts';
 
 class Tokenizer {
     private inspectOptions: InspectOptions = {
@@ -95,6 +90,7 @@ class Tokenizer {
         '(': TokenType.LPAREN,
         ')': TokenType.RPAREN,
         '%': TokenType.PERCENT,
+        ';': TokenType.SEMICOLON,
         // Add other single-character symbols here
     };
 
@@ -271,6 +267,5 @@ class Tokenizer {
 }
 
 export {
-    type Token,
     Tokenizer
 }
