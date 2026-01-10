@@ -11,14 +11,19 @@ NC='\033[0m' # No Color
 
 # Display title box
 echo -e "${BLUE}"
-echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
-echo "▒                                        ▒"
-echo "▒         GIT PUSH AUTOMATION            ▒"
-echo "▒                                        ▒"
-echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
+echo "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄"
+echo "▌                                        ▐"
+echo "▌         GIT PUSH AUTOMATION            ▐"
+echo "▌                                        ▐"
+echo "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀"
 echo -e "${NC}\n"
 
-echo
+
+# ▒
+#╔  ═  ╗
+#║     ║
+#╚  ═  ╝
+
 echo -e "${GREEN}Starting git push process...${NC}\n"
 
 # Check if we're in a git repository
