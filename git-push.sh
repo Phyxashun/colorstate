@@ -73,6 +73,6 @@ echo "▌                                                ▐"
 echo "▌  ✓ Git push process completed successfully!!!  ▐"
 echo "▌                                                ▐"
 echo "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀"
-echo -e "${NC}\n"
+echo -e "${NC}"
 
 exit 0
