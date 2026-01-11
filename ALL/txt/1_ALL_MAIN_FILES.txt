@@ -584,7 +584,7 @@ export class Parser {
 
     public parse(): Program {
         // Capture the very first token for the start position.
-        const start = this.peek().position;
+        const start = this.peek().position.start;
         const statements: Statement[] = [];
 
         while (!this.isAtEnd()) {
@@ -593,7 +593,7 @@ export class Parser {
 
         // Capture the last token consumed for the end position.
         // If the file is empty, this will be the same as the start.
-        const end = this.tokens.length > 0 ? this.previous().position : start;
+        const end = this.tokens.length > 0 ? this.previous().position.end : start;
 
         return {
             type: NodeType.Program,
@@ -645,7 +645,7 @@ export class Parser {
     }
 
     private variableDeclaration(kind: VariableDeclarationKind): VariableDeclaration {
-        const start = this.peek().position;
+        const start = this.peek().position.start;
         const name = this.consume(TokenType.IDENTIFIER, 'Expect variable name.').value;
 
         this.consume(TokenType.EQUALS, "Expect '=' after variable name.");
@@ -654,7 +654,7 @@ export class Parser {
 
         // Assuming you have a Semicolon token type or will handle it
         // this.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
-        const end = this.tokens.length > 0 ? this.previous().position : start;
+        const end = this.tokens.length > 0 ? this.previous().position.end : start;
         return {
             type: NodeType.VariableDeclaration,
             kind,
@@ -669,9 +669,9 @@ export class Parser {
     }
 
     private expressionStatement(): ExpressionStatement {
-        const start = this.peek().position;
+        const start = this.peek().position.start;
         const expr = this.expression();
-        const end = this.tokens.length > 0 ? this.previous().position : start;
+        const end = this.tokens.length > 0 ? this.previous().position.end : start;
         return {
             type: NodeType.ExpressionStatement,
             expression: expr,
@@ -802,7 +802,7 @@ export class Parser {
             !this.isAtEnd() &&
             this.match(TokenType.PLUS, TokenType.MINUS)
         ) {
-            const operatorToken = this.previous();  // ✅ Save the operator token
+            const operatorToken = this.previous();
             const operator = operatorToken.value as '+' | '-';
             const argument = this.unary();
             return {
@@ -810,7 +810,7 @@ export class Parser {
                 operator,
                 argument,
                 location: {
-                    start: operatorToken.position.start,  // ✅ Start at operator
+                    start: operatorToken.position.start,
                     end: argument.location.end
                 }
             } as UnaryExpression;
@@ -838,7 +838,7 @@ export class Parser {
                 }
 
                 // Use addition() instead of expression() to skip series handling
-                const arg = this.addition();  // ✅ Changed from expression()
+                const arg = this.addition();
                 if (arg) args.push(arg);
             }
 
@@ -850,8 +850,8 @@ export class Parser {
                 arguments: args,
                 location: {
                     start: expr.location.start,
-                    end: this.previous().position.end  // ✅ Use end position
-                }
+                    end: this.previous().position.end,
+                },
             } as CallExpression;
         }
 
@@ -886,7 +886,10 @@ export class Parser {
                 return {
                     type: NodeType.Identifier,
                     name: token.value,
-                    location: { start: token.position, end: token.position }
+                    location: { 
+                        start: token.position.start, 
+                        end: token.position.end 
+                    },
                 } as Identifier;
             }
 
@@ -899,8 +902,8 @@ export class Parser {
                     type: NodeType.GroupExpression,
                     expression: expr,
                     location: {
-                        start: startToken.position, // Position of '('
-                        end: endToken.position      // Position of ')'
+                        start: startToken.position.start, // Position of '('
+                        end: endToken.position.end      // Position of ')'
                     },
                 } as GroupExpression;
             }
@@ -913,7 +916,7 @@ export class Parser {
     private createLiteralNode(token: Token): Expression {
         const location = {
             start: token.position.start,
-            end: token.position.end  // ✅ Use end position
+            end: token.position.end
         };
 
         switch (token.type) {
