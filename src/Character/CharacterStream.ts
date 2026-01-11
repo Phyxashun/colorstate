@@ -393,9 +393,10 @@ class CharacterStream implements Iterable<Character> {
      * Enables logging for the next full iteration of the stream.
      * @param {string} [message] - An optional message for the log header.
      */
-    public withLogging(message?: string): this {
+    public withLogging(message?: string, width?: number): this {
         this.shouldLog = true;
         if (message) this.logMessage = message;
+        if (width) this.inspectOptions.breakLength = width;
         return this;
     }
 
@@ -411,7 +412,7 @@ class CharacterStream implements Iterable<Character> {
         if (!this.shouldLog) return;
 
         // Output Title Line
-        PrintLine({ postNewLine: true, color: 'red', textColor: 'magenta', text: this.logMessage });
+        PrintLine({ width: this.inspectOptions.breakLength, postNewLine: true, color: 'red', textColor: 'magenta', text: this.logMessage });
 
         // Output Source Title
         CenteredText(styleText('yellow', 'SOURCE:\n'));
@@ -420,7 +421,7 @@ class CharacterStream implements Iterable<Character> {
         BoxText(this.get(), { width: 50, boxType: BoxType.double, textColor: 'yellow' });
 
         // Output Divider between Source and Result
-        PrintLine({ preNewLine: true, postNewLine: true });
+        PrintLine({ width: this.inspectOptions.breakLength, preNewLine: true, postNewLine: true });
 
         // Output Result Title
         console.log(styleText('yellow', 'RESULT (CHARACTERS):'));
@@ -433,7 +434,7 @@ class CharacterStream implements Iterable<Character> {
 
     private logFooter(): void {
         // Output Ending Divider after all results
-        PrintLine({ preNewLine: true, color: 'red' });
+        PrintLine({ width: this.inspectOptions.breakLength, preNewLine: true, color: 'red' });
     }
 
 } // End class CharacterStream

@@ -253,8 +253,9 @@ class Tokenizer {
         });
     }
 
-    public withLogging(message?: string): this {
+    public withLogging(message?: string, width?:number): this {
         this.shouldLog = true;
+        if (width) this.inspectOptions.breakLength = width;
         if (message) this.message = message;
         return this;
     }
@@ -268,6 +269,7 @@ class Tokenizer {
     private logHeader(stream: CharacterStream): void {
         if (!this.shouldLog) return;
         PrintLine({
+            width: this.inspectOptions.breakLength,
             preNewLine: false,
             postNewLine: true,
             color: 'red',
@@ -276,11 +278,11 @@ class Tokenizer {
         });
         console.log(CenterText(styleText('yellow', 'SOURCE:\n')));
         BoxText(stream.get(), {
-            width: 50,
+            width: 'tight',
             boxType: BoxType.double,
             textColor: 'yellow',
         });
-        PrintLine({ preNewLine: true, postNewLine: true });
+        PrintLine({ width: this.inspectOptions.breakLength, preNewLine: true, postNewLine: true });
     }
 
     private logResults(tokens: Token[]): void {
@@ -292,7 +294,7 @@ class Tokenizer {
             console.log(`${Spacer(3)}${inspect(token, this.inspectOptions)}`);
         }
 
-        PrintLine({ preNewLine: true, postNewLine: false, color: 'red' });
+        PrintLine({ width: this.inspectOptions.breakLength, preNewLine: true, postNewLine: false, color: 'red' });
         this.shouldLog = false;
         this.message = '';
     }

@@ -16,7 +16,7 @@ import {
     Style 
 } from './types/Logging.types';
 
-const MAX_WIDTH: number = 80;
+const MAX_WIDTH: number = 100;
 const TAB_WIDTH: number = 4;
 const SPACE: string = ' ';
 const FIGLET_FONT = 'Standard';
@@ -217,7 +217,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
 
     const boxChars = (BoxStyles as any)[boxType];
 
-    // --- 2. Prepare Separate Styles for Box and Text ---
+    // Prepare Separate Styles for Box and Text
     const boxFinalStyles = [
         ...(color ? (Array.isArray(color) ? color : [color]) : []),
         ...(bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : []),
@@ -232,7 +232,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     ];
 
 
-    // --- 3. Calculate Content Width and Wrap Text ---
+    // Calculate Content Width and Wrap Text
     let contentWidth: number;
     let textLines: string[];
 
@@ -250,7 +250,6 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
             contentWidth = MAX_WIDTH - 4;
         }
     } else {
-        // --- Existing logic for single strings ---
         if (width === 'max') {
             contentWidth = MAX_WIDTH - 4;
         } else if (typeof width === 'number') {
@@ -261,7 +260,6 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
             contentWidth = Math.max(...textLines.map(line => line.length));
         }
 
-        // Word-wrap if width is constrained
         if (width !== 'tight') {
             const words = text.split(/\s+/);
             textLines = words.reduce((lines, word) => {
@@ -280,7 +278,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     }
 
 
-    // --- NEW: Calculate Outer Alignment Padding ---
+    // Calculate Outer Alignment Padding
     const fullBoxWidth = contentWidth + 4; // Border(1) + Space(1) + Content + Space(1) + Border(1)
     let leftPaddingAmount = 0;
 
@@ -292,7 +290,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
 
     const outerPadding = ' '.repeat(leftPaddingAmount);
 
-    // --- Build Box Components ---
+    // Build Box Components
     const centerAlign = (str: string, width: number): string => {
         const padding = Math.floor((width - str.length) / 2);
         return ' '.repeat(padding) + str + ' '.repeat(width - str.length - padding);
@@ -321,6 +319,11 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     console.log(`${pre}${fullBoxString}${post}`);
 };
 
+/**
+ * @function CenteredText
+ * @description Outputs centered text to the console.
+ * @param {string} text - The text to center and print.
+ */
 const CenteredText = (text: string): void => {
     console.log(CenterText(text));
 }

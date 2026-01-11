@@ -3,12 +3,12 @@
 import { type Token, TokenType } from './types/Tokenizer.types.ts';
 import { NodeType } from './types/Parser.types.ts';
 import type {
-    Statement, Expression, VariableDeclarationKind, BaseNode,
-    SourcePosition, Program, ExpressionStatement, VariableDeclaration,
-    Identifier, StringLiteral, NumericLiteral, HexLiteral, PercentLiteral,
-    DimensionLiteral, BinaryExpression, UnaryExpression, CallExpression,
-    GroupExpression, SeriesExpression, AssignmentExpression, DimensionKind,
-    ColorFunctionKind,
+    Statement, Expression, VariableDeclarationKind, Program, 
+    ExpressionStatement, VariableDeclaration, Identifier, 
+    StringLiteral, NumericLiteral, HexLiteral, PercentLiteral,
+    DimensionLiteral, BinaryExpression, UnaryExpression, 
+    CallExpression, GroupExpression, SeriesExpression, 
+    AssignmentExpression, DimensionKind, ColorFunctionKind,
 } from './types/Parser.types.ts';
 
 /**
@@ -355,8 +355,8 @@ export class Parser {
                     type: NodeType.GroupExpression,
                     expression: expr,
                     position: {
-                        start: startToken.position.start, // Position of '('
-                        end: endToken.position.end      // Position of ')'
+                        start: startToken.position.start,
+                        end: endToken.position.end
                     },
                 } as GroupExpression;
             }

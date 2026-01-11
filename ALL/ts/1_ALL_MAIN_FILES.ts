@@ -18,43 +18,58 @@ import { PrintLine } from './src/Logging.ts';
  * @TODO Add character, token, and state support for quotes
  */
 
+const inspectOptions: InspectOptions = {
+    showHidden: true,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: false,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
+
 // TEST CASES
 // Commented out cases are not working
 const testCases: string[] = [
-    '"67 a, b, c / 1 \'word\' 2 3+(2-0)"',
-    '67 a, b, c / 1 word 2 3+(2-0)',
-    'rgba(100 128 255 / 0.5)',
-    'rgba(100grad 360 220  / 50%)',
-    '#ff00ff00',
-    '56%',
-    '100deg',
-    '1 + 2',
-    '10 - 5 + 3',
-    '2 * 3 + 4',
-    'rgb(255, 0, 0)',
-    '#ff0000',
-    '100%',
-    '(1 + 2) * 3',
-    '-5 + 10',
-    'rgba(255, 128, 0, 50%)',
-    'const a = 10;',
+    // '"67 a, b, c / 1 \'word\' 2 3+(2-0)"',
+    // '67 a, b, c / 1 word 2 3+(2-0)',
+    // 'rgba(100 128 255 / 0.5)',
+    // 'rgba(100grad 360 220  / 50%)',
+    // '#ff00ff00',
+    // '56%',
+    // '100deg',
+    // '1 + 2',
+    // '10 - 5 + 3',
+    // '2 * 3 + 4',
+    // 'rgb(255, 0, 0)',
+    // '#ff0000',
+    // '100%',
+    // '(1 + 2) * 3',
+    // '-5 + 10',
+    // 'rgba(255, 128, 0, 50%)',
+    // 'const a = 10;',
 
     // Big Test
 
-    // `const characterStreamTest = () => {
-    //     line();
-    //     console.log('=== CHARACTERSTREAM DEMO ===');
-    //     line();
-    //     const input = 'rgb(255, 100, 75)';
-    //     const stream = new CharacterStream(input);
-    //     console.log('INPUT:');
-    //     console.log('RESULT OF CHARACTERSTREAM:');
-    //     for (const char of stream) {
-    //         console.log(inspect(char, compactInspectOptions));
-    //     }
-    //     console.log();
-    //     line();
-    // }`,
+    `const characterStreamTest = () => {
+        line();
+        console.log('=== CHARACTERSTREAM DEMO ===');
+        line();
+        const input = 'rgb(255, 100, 75)';
+        const stream = new CharacterStream(input);
+        console.log('INPUT:');
+        console.log('RESULT OF CHARACTERSTREAM:');
+        for (const char of stream) {
+            console.log(inspect(char, compactInspectOptions));
+        }
+        console.log();
+        line();
+    }`,
 ];
 
 const characterStreamTest = () => {
@@ -62,7 +77,7 @@ const characterStreamTest = () => {
         const stream = new CharacterStream();
         stream
             .set(test)
-            .withLogging();
+            .withLogging(undefined, inspectOptions.breakLength);
 
         for (const char of stream) {
 
@@ -77,7 +92,7 @@ const tokenizerTest = () => {
     for (const test in testCases) {
         const stream = new CharacterStream(testCases[test]);
         tokenizer
-            .withLogging(`TEST (${test}): Direct Tokenization`)
+            .withLogging(`TEST (${test}): Direct Tokenization`, inspectOptions.breakLength)
             .tokenize(stream);
     }
 }
@@ -104,23 +119,6 @@ const tokenizerCommentsTest = () => {
 }
 
 const parserTest = () => {
-    const inspectOptions: InspectOptions = {
-        showHidden: true,
-        depth: null,
-        colors: true,
-        customInspect: false,
-        showProxy: false,
-        maxArrayLength: null,
-        maxStringLength: null,
-        breakLength: 40,
-        compact: true,
-        sorted: false,
-        getters: false,
-        numericSeparator: true,
-    };
-
-    console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
-
     for (const input of testCases) {
         // Step 1: Character stream
         const stream = new CharacterStream(input);
@@ -128,7 +126,7 @@ const parserTest = () => {
         // Step 1: Tokenize
         const tokenizer = new Tokenizer();
         const tokens = tokenizer
-            .withLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
+            .withoutLogging() //`PARSER TEST`, inspectOptions.breakLength)
             .tokenize(stream);
 
         // Step 2: Parse
@@ -139,7 +137,7 @@ const parserTest = () => {
         const defaultAST = inspect(ast, inspectOptions);
         const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
         console.log(fourSpaceAST, '\n');
-        PrintLine({ color: 'red' });
+        PrintLine({ width: inspectOptions.breakLength, color: 'red' });
     }
 }
 /**
@@ -152,6 +150,31 @@ const parserTest = () => {
 //tokenizerCommentsTest();
 
 parserTest();
+
+
+
+/*
+
+type ColorInput = 
+    | { a: number; b: number; g: number; r: number } 
+    | [number, number, number] 
+    | [number, number, number, number] 
+    | Uint8Array<ArrayBuffer> 
+    | Uint8ClampedArray<ArrayBuffer> 
+    | Float32Array 
+    | Float64Array 
+    | string 
+    | number 
+    | { toString(): string }
+
+type ColorOutput =
+    | 'number' | 'hex' | 'ansi' | 'ansi-16' 
+    | 'ansi-16m' | 'ansi-256' | 'css' 
+    | 'HEX' | 'hsl' | 'lab' | 'rgb' | 'rgba'
+
+    Valid inputs for color
+
+*/
 
 
 
@@ -556,7 +579,7 @@ import {
     Style 
 } from './types/Logging.types';
 
-const MAX_WIDTH: number = 80;
+const MAX_WIDTH: number = 100;
 const TAB_WIDTH: number = 4;
 const SPACE: string = ' ';
 const FIGLET_FONT = 'Standard';
@@ -757,7 +780,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
 
     const boxChars = (BoxStyles as any)[boxType];
 
-    // --- 2. Prepare Separate Styles for Box and Text ---
+    // Prepare Separate Styles for Box and Text
     const boxFinalStyles = [
         ...(color ? (Array.isArray(color) ? color : [color]) : []),
         ...(bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : []),
@@ -772,7 +795,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     ];
 
 
-    // --- 3. Calculate Content Width and Wrap Text ---
+    // Calculate Content Width and Wrap Text
     let contentWidth: number;
     let textLines: string[];
 
@@ -790,7 +813,6 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
             contentWidth = MAX_WIDTH - 4;
         }
     } else {
-        // --- Existing logic for single strings ---
         if (width === 'max') {
             contentWidth = MAX_WIDTH - 4;
         } else if (typeof width === 'number') {
@@ -801,7 +823,6 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
             contentWidth = Math.max(...textLines.map(line => line.length));
         }
 
-        // Word-wrap if width is constrained
         if (width !== 'tight') {
             const words = text.split(/\s+/);
             textLines = words.reduce((lines, word) => {
@@ -820,7 +841,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     }
 
 
-    // --- NEW: Calculate Outer Alignment Padding ---
+    // Calculate Outer Alignment Padding
     const fullBoxWidth = contentWidth + 4; // Border(1) + Space(1) + Content + Space(1) + Border(1)
     let leftPaddingAmount = 0;
 
@@ -832,7 +853,7 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
 
     const outerPadding = ' '.repeat(leftPaddingAmount);
 
-    // --- Build Box Components ---
+    // Build Box Components
     const centerAlign = (str: string, width: number): string => {
         const padding = Math.floor((width - str.length) / 2);
         return ' '.repeat(padding) + str + ' '.repeat(width - str.length - padding);
@@ -861,6 +882,11 @@ const BoxText = (text: string | string[], options: BoxTextOptions = {}): void =>
     console.log(`${pre}${fullBoxString}${post}`);
 };
 
+/**
+ * @function CenteredText
+ * @description Outputs centered text to the console.
+ * @param {string} text - The text to center and print.
+ */
 const CenteredText = (text: string): void => {
     console.log(CenterText(text));
 }
@@ -896,12 +922,12 @@ export {
 import { type Token, TokenType } from './types/Tokenizer.types.ts';
 import { NodeType } from './types/Parser.types.ts';
 import type {
-    Statement, Expression, VariableDeclarationKind, BaseNode,
-    SourcePosition, Program, ExpressionStatement, VariableDeclaration,
-    Identifier, StringLiteral, NumericLiteral, HexLiteral, PercentLiteral,
-    DimensionLiteral, BinaryExpression, UnaryExpression, CallExpression,
-    GroupExpression, SeriesExpression, AssignmentExpression, DimensionKind,
-    ColorFunctionKind,
+    Statement, Expression, VariableDeclarationKind, Program, 
+    ExpressionStatement, VariableDeclaration, Identifier, 
+    StringLiteral, NumericLiteral, HexLiteral, PercentLiteral,
+    DimensionLiteral, BinaryExpression, UnaryExpression, 
+    CallExpression, GroupExpression, SeriesExpression, 
+    AssignmentExpression, DimensionKind, ColorFunctionKind,
 } from './types/Parser.types.ts';
 
 /**
@@ -1248,8 +1274,8 @@ export class Parser {
                     type: NodeType.GroupExpression,
                     expression: expr,
                     position: {
-                        start: startToken.position.start, // Position of '('
-                        end: endToken.position.end      // Position of ')'
+                        start: startToken.position.start,
+                        end: endToken.position.end
                     },
                 } as GroupExpression;
             }
@@ -1679,8 +1705,9 @@ class Tokenizer {
         });
     }
 
-    public withLogging(message?: string): this {
+    public withLogging(message?: string, width?:number): this {
         this.shouldLog = true;
+        if (width) this.inspectOptions.breakLength = width;
         if (message) this.message = message;
         return this;
     }
@@ -1694,6 +1721,7 @@ class Tokenizer {
     private logHeader(stream: CharacterStream): void {
         if (!this.shouldLog) return;
         PrintLine({
+            width: this.inspectOptions.breakLength,
             preNewLine: false,
             postNewLine: true,
             color: 'red',
@@ -1702,11 +1730,11 @@ class Tokenizer {
         });
         console.log(CenterText(styleText('yellow', 'SOURCE:\n')));
         BoxText(stream.get(), {
-            width: 50,
+            width: 'tight',
             boxType: BoxType.double,
             textColor: 'yellow',
         });
-        PrintLine({ preNewLine: true, postNewLine: true });
+        PrintLine({ width: this.inspectOptions.breakLength, preNewLine: true, postNewLine: true });
     }
 
     private logResults(tokens: Token[]): void {
@@ -1718,7 +1746,7 @@ class Tokenizer {
             console.log(`${Spacer(3)}${inspect(token, this.inspectOptions)}`);
         }
 
-        PrintLine({ preNewLine: true, postNewLine: false, color: 'red' });
+        PrintLine({ width: this.inspectOptions.breakLength, preNewLine: true, postNewLine: false, color: 'red' });
         this.shouldLog = false;
         this.message = '';
     }
@@ -2434,9 +2462,10 @@ class CharacterStream implements Iterable<Character> {
      * Enables logging for the next full iteration of the stream.
      * @param {string} [message] - An optional message for the log header.
      */
-    public withLogging(message?: string): this {
+    public withLogging(message?: string, width?: number): this {
         this.shouldLog = true;
         if (message) this.logMessage = message;
+        if (width) this.inspectOptions.breakLength = width;
         return this;
     }
 
@@ -2452,7 +2481,7 @@ class CharacterStream implements Iterable<Character> {
         if (!this.shouldLog) return;
 
         // Output Title Line
-        PrintLine({ postNewLine: true, color: 'red', textColor: 'magenta', text: this.logMessage });
+        PrintLine({ width: this.inspectOptions.breakLength, postNewLine: true, color: 'red', textColor: 'magenta', text: this.logMessage });
 
         // Output Source Title
         CenteredText(styleText('yellow', 'SOURCE:\n'));
@@ -2461,7 +2490,7 @@ class CharacterStream implements Iterable<Character> {
         BoxText(this.get(), { width: 50, boxType: BoxType.double, textColor: 'yellow' });
 
         // Output Divider between Source and Result
-        PrintLine({ preNewLine: true, postNewLine: true });
+        PrintLine({ width: this.inspectOptions.breakLength, preNewLine: true, postNewLine: true });
 
         // Output Result Title
         console.log(styleText('yellow', 'RESULT (CHARACTERS):'));
@@ -2474,7 +2503,7 @@ class CharacterStream implements Iterable<Character> {
 
     private logFooter(): void {
         // Output Ending Divider after all results
-        PrintLine({ preNewLine: true, color: 'red' });
+        PrintLine({ width: this.inspectOptions.breakLength, preNewLine: true, color: 'red' });
     }
 
 } // End class CharacterStream
