@@ -5,9 +5,9 @@ import { TokenType, type Token, type CreateTokenFn } from './types/Tokenizer.typ
 import { styleText, inspect, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
 import { CharacterStream, type Position, type Character } from './Character/CharacterStream.ts';
-import { PrintLine, Spacer, CenterText, BoxText } from './PrintLine.ts';
+import { PrintLine, Spacer, CenterText, BoxText } from './Logging.ts';
 import { State } from './types/Context.types.ts';
-import { BoxStyle } from './types/PrintLine.types.ts';
+import { BoxType } from './types/Logging.types.ts';
 
 class Tokenizer {
     private inspectOptions: InspectOptions = {
@@ -277,7 +277,7 @@ class Tokenizer {
         console.log(CenterText(styleText('yellow', 'SOURCE:\n')));
         BoxText(stream.get(), {
             width: 50,
-            boxStyle: BoxStyle.Double,
+            boxType: BoxType.double,
             textColor: 'yellow',
         });
         PrintLine({ preNewLine: true, postNewLine: true });

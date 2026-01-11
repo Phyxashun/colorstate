@@ -12,15 +12,11 @@ import type { Token } from './src/types/Tokenizer.types.ts';
 import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
 import { CharacterStream } from './src/Character/CharacterStream.ts';
+import { PrintLine } from './src/Logging.ts';
 
 /**
  * @TODO Add character, token, and state support for quotes
  */
-
-const line = (newLine: boolean = true, width: number = 80): void => {
-    if (newLine) console.log(`${'─'.repeat(width)}\n`);
-    if (!newLine) console.log(`${'─'.repeat(width)}`);
-}
 
 // TEST CASES
 // Commented out cases are not working
@@ -116,7 +112,7 @@ const parserTest = () => {
         showProxy: false,
         maxArrayLength: null,
         maxStringLength: null,
-        breakLength: 80,
+        breakLength: 40,
         compact: true,
         sorted: false,
         getters: false,
@@ -126,27 +122,24 @@ const parserTest = () => {
     console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
 
     for (const input of testCases) {
-        line();
-
         // Step 1: Character stream
         const stream = new CharacterStream(input);
 
         // Step 1: Tokenize
         const tokenizer = new Tokenizer();
         const tokens = tokenizer
-            .withoutLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
+            .withLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
             .tokenize(stream);
 
         // Step 2: Parse
         const parser = new Parser(tokens);
         const ast = parser.parse();
-
         // Step 3: Console log the AST
         console.log('\nAST:\n');
         const defaultAST = inspect(ast, inspectOptions);
         const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
         console.log(fourSpaceAST, '\n');
-        line();
+        PrintLine({ color: 'red' });
     }
 }
 /**
@@ -195,8 +188,8 @@ import { styleText } from 'node:util';
 import fs from 'node:fs';
 import { globSync } from 'glob';
 import path from 'node:path';
-import { PrintLine, CenteredFiglet, Spacer, CenteredText, BoxText } from './src/PrintLine';
-import { BoxStyle, LineType } from './src/types/PrintLine.types';
+import { PrintLine, CenteredFiglet, Spacer, CenteredText, BoxText } from './src/Logging';
+import { BoxType, LineType } from './src/types/Logging.types';
 
 /**
  * Constants
@@ -338,10 +331,10 @@ const ui = {
      * @returns {void}
      */
     displayHeader: (): void => {
-        PrintLine({ preNewLine: true, line: LineType.Bold });
+        PrintLine({ preNewLine: true, lineType: LineType.boldBlock });
         console.log(styleText(['yellowBright', 'bold'], CenteredFiglet(`Consolidate!!!`)));
         CenteredText(styleText(['magentaBright', 'bold'], '*** PROJECT FILE CONSOLIDATOR SCRIPT ***'));
-        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
+        PrintLine({ preNewLine: true, postNewLine: true, lineType: LineType.boldBlock });
     },
 
     /**
@@ -368,7 +361,7 @@ const ui = {
     logComplete: (): void => {
         console.log();
         CenteredText(styleText(['yellow', 'bold'], 'Consolidation complete!!!'));
-        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
+        PrintLine({ preNewLine: true, postNewLine: true, lineType: LineType.boldBlock });
     },
 
     /**
@@ -379,12 +372,12 @@ const ui = {
     logFinalSummary: (fileCount: number, jobCount: number): void => {
         BoxText(
             `✓ Successfully consolidated ${fileCount} files across ${jobCount} jobs!`, { 
-                boxStyle: BoxStyle.Double,
+                boxType: BoxType.double,
                 color: 'green',
                 textColor: ['green', 'bold'] 
             }
         );
-        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
+        PrintLine({ preNewLine: true, postNewLine: true, lineType: LineType.boldBlock });
     },
 }
 
@@ -534,6 +527,359 @@ consolidate();
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: Consolidate.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Logging.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// src/PrintLine.ts
+
+import { styleText } from 'node:util';
+import figlet from 'figlet';
+import standard from "figlet/fonts/Standard";
+import {    
+    type PrintLineOptions,
+    LineType, 
+    type BoxTextOptions, 
+    BoxType, 
+    BoxStyles,
+    Width, 
+    Align, 
+    Color,
+    Themes,
+    Style 
+} from './types/Logging.types';
+
+const MAX_WIDTH: number = 80;
+const TAB_WIDTH: number = 4;
+const SPACE: string = ' ';
+const FIGLET_FONT = 'Standard';
+figlet.parseFont(FIGLET_FONT, standard);
+
+/**
+ * @function Spacer
+ * @description Creates a string of repeated characters, useful for padding.
+ * @param {number} [width=TAB_WIDTH] - Number of characters to repeat.
+ * @param {string} [char=SPACE] - The character to repeat.
+ * @returns {string} A string of repeated characters.
+ */
+const Spacer = (width: number = TAB_WIDTH, char: string = SPACE): string => char.repeat(width);
+
+/**
+ * @function CenterText
+ * @description Centers a line of text within a given width by adding padding.
+ * @param {string} text - The text to center.
+ * @param {number} [width=MAX_WIDTH] - The total width to center within.
+ * @returns {string} The centered text string.
+ * @requires spacer - Function that return a string for spacing.
+ */
+const CenterText = (text: string, width: number = MAX_WIDTH): string => {
+    // Remove any existing styling for accurate length calculation
+    const unstyledText = text.replace(/\x1b\[[0-9;]*m/g, '');
+    const padding = Math.max(0, Math.floor((width - unstyledText.length) / 2));
+    return `${Spacer(padding)}${text}`;
+};
+
+/**
+ * @function CenteredFiglet
+ * @description Generates and centers multi-line FIGlet (ASCII) text.
+ * @param {string} text - The text to convert to ASCII art.
+ * @param {number} [width=MAX_WIDTH] - The total width to center the art within.
+ * @returns {string} The centered, multi-line ASCII art as a single string.
+ * @requires centerText
+ */
+const CenteredFiglet = (text: string, width: number = MAX_WIDTH): string => {
+    const rawFiglet = figlet.textSync(text, {
+        font: FIGLET_FONT,
+        width: width,
+        whitespaceBreak: true
+    });
+
+    return rawFiglet.split('\n')
+        .map(line => CenterText(line, width))
+        .join('\n');
+}
+
+/**
+ * @function PrintLine
+ * @description Outputs a styled horizontal line to the console.
+ * @param {PrintLineOptions} [options={}] - Configuration options for the line.
+ * @returns {string}
+ */
+const PrintLine = (options: PrintLineOptions = {}): string => {
+    /**
+     * @description Default options object for the printLine function.
+     */
+    const defaultOptions: PrintLineOptions = {
+        preNewLine: false,
+        postNewLine: false,
+        width: MAX_WIDTH,
+        lineType: LineType.double,
+        color: [Color.gray, Style.bold],
+        textAlign: Align.center,
+    } as const;
+
+    const themeOptions = options.theme ? (Themes as any)[options.theme] : {};
+    const mergedOptions = {
+        ...defaultOptions,
+        ...themeOptions,
+        ...options
+    };
+    const {
+        width,
+        preNewLine,
+        postNewLine,
+        lineType,
+        color,
+        bgColor,
+        gradient,
+        styles,
+        text,
+        textColor,
+        textAlign,
+    } = mergedOptions;
+
+    const colorStyles = color ? (Array.isArray(color) ? color : [color]) : [];
+    const bgColorStyles = bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : [];
+    const otherStyles = styles || [];
+    const lineStyles = [...colorStyles, ...bgColorStyles, ...otherStyles];
+    const textStyles = textColor ? (Array.isArray(textColor) ? textColor : [textColor]) : lineStyles;
+    const pre = preNewLine ? '\n' : '';
+    const post = postNewLine ? '\n' : '';
+    let finalOutput: string;
+
+    if (gradient) {
+        const [startColor, endColor] = gradient;
+        const halfWidth = Math.floor(width! / 2);
+
+        const startSegment = styleText([startColor], lineType!.repeat(halfWidth));
+        const endSegment = styleText([endColor], lineType!.repeat(width! - halfWidth));
+
+        const styledDivider = startSegment + endSegment;
+
+        const result = `${pre}${styledDivider}${post}`;
+        console.log(result);
+        return result;
+    }
+
+
+    if (!text) {
+        // Simple case: No text, just style the whole line as before.
+        finalOutput = styleText(lineStyles, lineType!.repeat(width!));
+    } else {
+        // Advanced case: Text exists, so build the line in pieces.
+        const paddedText = ` ${text} `; // Add padding
+
+        // Style the text separately
+        const styledText = styleText(textStyles, paddedText);
+
+        const lineCharCount = width! - paddedText.length;
+        if (lineCharCount < 0) {
+            // If the text is too long, just print the styled text.
+            finalOutput = styledText;
+        } else {
+            // Otherwise, calculate and style the line segments.
+            switch (textAlign) {
+                case 'left': {
+                    const rightLine = styleText(lineStyles, lineType!.repeat(lineCharCount));
+                    finalOutput = styledText + rightLine;
+                    break;
+                }
+                case 'right': {
+                    const leftLine = styleText(lineStyles, lineType!.repeat(lineCharCount));
+                    finalOutput = leftLine + styledText;
+                    break;
+                }
+                case 'center':
+                default: {
+                    const leftCount = Math.floor(lineCharCount / 2);
+                    const rightCount = lineCharCount - leftCount;
+                    const leftLine = styleText(lineStyles, lineType!.repeat(leftCount));
+                    const rightLine = styleText(lineStyles, lineType!.repeat(rightCount));
+                    finalOutput = leftLine + styledText + rightLine;
+                    break;
+                }
+            }
+        }
+    }
+
+    // 5. Log the final constructed string
+    const result = `${pre}${finalOutput}${post}`;
+    console.log(result);
+    return result;
+};
+
+/**
+ * @function BoxText
+ * @description Draws a styled ASCII box around a given text string and prints it to the console.
+ * @param {string | string[]} text - The text to be enclosed in the box.
+ * @param {BoxTextOptions} [options={}] - Configuration options for the box.
+ * @returns {string}
+ */
+const BoxText = (text: string | string[], options: BoxTextOptions = {}): void => {
+    /**
+     * @description Default options object for the printLine function.
+     */
+    const defaultOptions: BoxTextOptions = {
+        width: Width.tight,
+        preNewLine: false,
+        postNewLine: false,
+        boxType: BoxType.single,
+        boxAlign: Align.center,
+        color: [Color.gray, Style.bold],
+        textColor: Color.white,       
+    } as const;
+
+    const themeOptions = options.theme ? (Themes as any)[options.theme] : {};
+    const mergedOptions = {
+        ...defaultOptions,
+        ...themeOptions,
+        ...options
+    };
+    const {
+        width,
+        preNewLine,
+        postNewLine,
+        boxType,
+        boxAlign,
+        color,
+        bgColor,
+        textColor,
+        textBgColor,
+        styles,
+    } = mergedOptions;
+
+    const boxChars = (BoxStyles as any)[boxType];
+
+    // --- 2. Prepare Separate Styles for Box and Text ---
+    const boxFinalStyles = [
+        ...(color ? (Array.isArray(color) ? color : [color]) : []),
+        ...(bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : []),
+        ...(styles || []),
+    ];
+
+    // If text styles aren't provided, they default to the box styles
+    const textFinalStyles = [
+        ...(textColor ? (Array.isArray(textColor) ? textColor : [textColor]) : boxFinalStyles),
+        ...(textBgColor ? (Array.isArray(textBgColor) ? textBgColor : [textBgColor]) : []),
+        ...(styles || []),
+    ];
+
+
+    // --- 3. Calculate Content Width and Wrap Text ---
+    let contentWidth: number;
+    let textLines: string[];
+
+    // Add this helper inside BoxText, right after the options destructuring
+    const stripAnsi = (str: string): string => str.replace(/\x1b\[[0-9;]*m/g, '');
+
+    if (Array.isArray(text)) {
+        textLines = text;
+        contentWidth = Math.max(...textLines.map(line => stripAnsi(line).length));
+
+        // If a fixed width is requested, we use it instead of the longest line
+        if (typeof width === 'number') {
+            contentWidth = width - 4;
+        } else if (width === 'max') {
+            contentWidth = MAX_WIDTH - 4;
+        }
+    } else {
+        // --- Existing logic for single strings ---
+        if (width === 'max') {
+            contentWidth = MAX_WIDTH - 4;
+        } else if (typeof width === 'number') {
+            if (width <= 4) throw new Error('Custom width must be greater than 4.');
+            contentWidth = width - 4;
+        } else {
+            textLines = text.split('\n');
+            contentWidth = Math.max(...textLines.map(line => line.length));
+        }
+
+        // Word-wrap if width is constrained
+        if (width !== 'tight') {
+            const words = text.split(/\s+/);
+            textLines = words.reduce((lines, word) => {
+                if (lines.length === 0) return [word];
+                let lastLine = lines[lines.length - 1]!;
+                if ((lastLine.length + word.length + 1) > contentWidth) {
+                    lines.push(word);
+                } else {
+                    lines[lines.length - 1] = lastLine + ' ' + word;
+                }
+                return lines;
+            }, [] as string[]);
+        } else {
+            textLines = text.split('\n');
+        }
+    }
+
+
+    // --- NEW: Calculate Outer Alignment Padding ---
+    const fullBoxWidth = contentWidth + 4; // Border(1) + Space(1) + Content + Space(1) + Border(1)
+    let leftPaddingAmount = 0;
+
+    if (boxAlign === 'center') {
+        leftPaddingAmount = Math.max(0, Math.floor((MAX_WIDTH - fullBoxWidth) / 2));
+    } else if (boxAlign === 'right') {
+        leftPaddingAmount = Math.max(0, MAX_WIDTH - fullBoxWidth);
+    }
+
+    const outerPadding = ' '.repeat(leftPaddingAmount);
+
+    // --- Build Box Components ---
+    const centerAlign = (str: string, width: number): string => {
+        const padding = Math.floor((width - str.length) / 2);
+        return ' '.repeat(padding) + str + ' '.repeat(width - str.length - padding);
+    };
+
+    const styledTop = styleText(boxFinalStyles, boxChars.tl + boxChars.t.repeat(contentWidth + 2) + boxChars.tr);
+    const styledBottom = styleText(boxFinalStyles, boxChars.bl + boxChars.b.repeat(contentWidth + 2) + boxChars.br);
+    const styledLeftBorder = styleText(boxFinalStyles, boxChars.l + ' ');
+    const styledRightBorder = styleText(boxFinalStyles, ' ' + boxChars.r);
+
+    // Assemble lines with outer padding
+    const styledContentLines = textLines!.map(line => {
+        const centeredText = centerAlign(line, contentWidth);
+        const styledText = styleText(textFinalStyles, centeredText);
+        return outerPadding + styledLeftBorder + styledText + styledRightBorder;
+    });
+
+    const fullBoxString = [
+        outerPadding + styledTop,
+        ...styledContentLines,
+        outerPadding + styledBottom
+    ].join('\n');
+
+    const pre = preNewLine ? '\n' : '';
+    const post = postNewLine ? '\n' : '';
+    console.log(`${pre}${fullBoxString}${post}`);
+};
+
+const CenteredText = (text: string): void => {
+    console.log(CenterText(text));
+}
+
+export {
+    Themes,
+    Spacer,
+    CenterText,
+    CenteredText,
+    CenteredFiglet,
+    PrintLine,
+    BoxText,
+}
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/Logging.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 //████████████████████████████████████████████████████████████████████████████████████████████████████
@@ -1085,9 +1431,9 @@ import { TokenType, type Token, type CreateTokenFn } from './types/Tokenizer.typ
 import { styleText, inspect, type InspectOptions } from 'node:util';
 import { Context } from './Context.ts';
 import { CharacterStream, type Position, type Character } from './Character/CharacterStream.ts';
-import { PrintLine, Spacer, CenterText, BoxText } from './PrintLine.ts';
+import { PrintLine, Spacer, CenterText, BoxText } from './Logging.ts';
 import { State } from './types/Context.types.ts';
-import { BoxStyle } from './types/PrintLine.types.ts';
+import { BoxType } from './types/Logging.types.ts';
 
 class Tokenizer {
     private inspectOptions: InspectOptions = {
@@ -1357,7 +1703,7 @@ class Tokenizer {
         console.log(CenterText(styleText('yellow', 'SOURCE:\n')));
         BoxText(stream.get(), {
             width: 50,
-            boxStyle: BoxStyle.Double,
+            boxType: BoxType.double,
             textColor: 'yellow',
         });
         PrintLine({ preNewLine: true, postNewLine: true });
@@ -1688,330 +2034,6 @@ export {
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/PrintLine.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-
-
-// src/PrintLine.ts
-
-import { styleText } from 'node:util';
-import figlet from 'figlet';
-import standard from "figlet/fonts/Standard";
-import { BoxStyle, BoxStyles, LineType, Themes, type PrintLineOptions, type BoxTextOptions } from './types/PrintLine.types';
-
-const MAX_WIDTH: number = 80;
-const TAB_WIDTH: number = 4;
-const SPACE: string = ' ';
-const FIGLET_FONT = 'Standard';
-figlet.parseFont(FIGLET_FONT, standard);
-
-/**
- * @function Spacer
- * @description Creates a string of repeated characters, useful for padding.
- * @param {number} [width=TAB_WIDTH] - Number of characters to repeat.
- * @param {string} [char=SPACE] - The character to repeat.
- * @returns {string} A string of repeated characters.
- */
-const Spacer = (width: number = TAB_WIDTH, char: string = SPACE): string => char.repeat(width);
-
-/**
- * @function CenterText
- * @description Centers a line of text within a given width by adding padding.
- * @param {string} text - The text to center.
- * @param {number} [width=MAX_WIDTH] - The total width to center within.
- * @returns {string} The centered text string.
- * @requires spacer - Function that return a string for spacing.
- */
-const CenterText = (text: string, width: number = MAX_WIDTH): string => {
-    // Remove any existing styling for accurate length calculation
-    const unstyledText = text.replace(/\x1b\[[0-9;]*m/g, '');
-    const padding = Math.max(0, Math.floor((width - unstyledText.length) / 2));
-    return `${Spacer(padding)}${text}`;
-};
-
-/**
- * @function CenteredFiglet
- * @description Generates and centers multi-line FIGlet (ASCII) text.
- * @param {string} text - The text to convert to ASCII art.
- * @param {number} [width=MAX_WIDTH] - The total width to center the art within.
- * @returns {string} The centered, multi-line ASCII art as a single string.
- * @requires centerText
- */
-const CenteredFiglet = (text: string, width: number = MAX_WIDTH): string => {
-    const rawFiglet = figlet.textSync(text, {
-        font: FIGLET_FONT,
-        width: width,
-        whitespaceBreak: true
-    });
-
-    return rawFiglet.split('\n')
-        .map(line => CenterText(line, width))
-        .join('\n');
-}
-
-/**
- * @function PrintLine
- * @description Outputs a styled horizontal line to the console.
- * @param {PrintLineOptions} [options={}] - Configuration options for the line.
- * @returns {string}
- */
-const PrintLine = (options: PrintLineOptions = {}): string => {
-    /**
-     * @description Default options object for the printLine function.
-     */
-    const defaultOptions: PrintLineOptions = {
-        preNewLine: false,      // No preceding new line
-        postNewLine: false,     // No successive new line
-        width: MAX_WIDTH,       // Use global const MAX_WIDTH = 80
-        line: LineType.Double,  // Use global line enum
-        color: ['gray', 'bold'] // styleText formatting         
-    } as const;
-
-    const themeOptions = options.theme ? (Themes as any)[options.theme] : {};
-    const mergedOptions = {
-        ...defaultOptions,
-        ...themeOptions,
-        ...options
-    };
-    const {
-        preNewLine,
-        postNewLine,
-        width,
-        line,
-        color,
-        bgColor,
-        gradient,
-        styles,
-        text,
-        textAlign = 'center',
-        textColor
-    } = mergedOptions;
-
-    const colorStyles = color ? (Array.isArray(color) ? color : [color]) : [];
-    const bgColorStyles = bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : [];
-    const otherStyles = styles || [];
-    const lineStyles = [...colorStyles, ...bgColorStyles, ...otherStyles];
-    const textStyles = textColor ? (Array.isArray(textColor) ? textColor : [textColor]) : lineStyles;
-    const newLine = '\n';
-    const pre = preNewLine ? newLine : '';
-    const post = postNewLine ? newLine : '';
-    let finalOutput: string;
-
-    if (gradient) {
-        const [startColor, endColor] = gradient;
-        const halfWidth = Math.floor(width! / 2);
-
-        const startSegment = styleText([startColor], line!.repeat(halfWidth));
-        const endSegment = styleText([endColor], line!.repeat(width! - halfWidth));
-
-        const styledDivider = startSegment + endSegment;
-
-        const result = `${pre}${styledDivider}${post}`;
-        console.log(result);
-        return result;
-    }
-
-
-    if (!text) {
-        // Simple case: No text, just style the whole line as before.
-        finalOutput = styleText(lineStyles, line!.repeat(width!));
-    } else {
-        // Advanced case: Text exists, so build the line in pieces.
-        const paddedText = ` ${text} `; // Add padding
-
-        // Style the text separately
-        const styledText = styleText(textStyles, paddedText);
-
-        const lineCharCount = width! - paddedText.length;
-        if (lineCharCount < 0) {
-            // If the text is too long, just print the styled text.
-            finalOutput = styledText;
-        } else {
-            // Otherwise, calculate and style the line segments.
-            switch (textAlign) {
-                case 'left': {
-                    const rightLine = styleText(lineStyles, line!.repeat(lineCharCount));
-                    finalOutput = styledText + rightLine;
-                    break;
-                }
-                case 'right': {
-                    const leftLine = styleText(lineStyles, line!.repeat(lineCharCount));
-                    finalOutput = leftLine + styledText;
-                    break;
-                }
-                case 'center':
-                default: {
-                    const leftCount = Math.floor(lineCharCount / 2);
-                    const rightCount = lineCharCount - leftCount;
-                    const leftLine = styleText(lineStyles, line!.repeat(leftCount));
-                    const rightLine = styleText(lineStyles, line!.repeat(rightCount));
-                    finalOutput = leftLine + styledText + rightLine;
-                    break;
-                }
-            }
-        }
-    }
-
-    // 5. Log the final constructed string
-    const result = `${pre}${finalOutput}${post}`;
-    console.log(result);
-    return result;
-};
-
-/**
- * @function BoxText
- * @description Draws a styled ASCII box around a given text string and prints it to the console.
- * @param {string | string[]} text - The text to be enclosed in the box.
- * @param {BoxTextOptions} [options={}] - Configuration options for the box.
- * @returns {string}
- */
-const BoxText = (text: string | string[], options: BoxTextOptions = {}): void => {
-    // --- 1. Set Defaults and Merge Options ---
-    const {
-        preNewLine = false,
-        postNewLine = false,
-        width = 'tight',
-        boxStyle = 'single',
-        boxAlign = 'center',
-        color = ['gray', 'bold'],
-        bgColor,
-        styles,
-        textColor = 'white',
-        textBgColor,
-    } = options;
-
-    const boxChars = BoxStyles[boxStyle];
-
-    // --- 2. Prepare Separate Styles for Box and Text ---
-    const boxFinalStyles = [
-        ...(color ? (Array.isArray(color) ? color : [color]) : []),
-        ...(bgColor ? (Array.isArray(bgColor) ? bgColor : [bgColor]) : []),
-        ...(styles || []),
-    ];
-
-    // If text styles aren't provided, they default to the box styles
-    const textFinalStyles = [
-        ...(textColor ? (Array.isArray(textColor) ? textColor : [textColor]) : boxFinalStyles),
-        ...(textBgColor ? (Array.isArray(textBgColor) ? textBgColor : [textBgColor]) : []),
-        ...(styles || []),
-    ];
-
-
-    // --- 3. Calculate Content Width and Wrap Text ---
-    let contentWidth: number;
-    let textLines: string[];
-
-    // Add this helper inside BoxText, right after the options destructuring
-    const stripAnsi = (str: string): string => str.replace(/\x1b\[[0-9;]*m/g, '');
-
-    if (Array.isArray(text)) {
-        textLines = text;
-        contentWidth = Math.max(...textLines.map(line => stripAnsi(line).length));
-
-        // If a fixed width is requested, we use it instead of the longest line
-        if (typeof width === 'number') {
-            contentWidth = width - 4;
-        } else if (width === 'max') {
-            contentWidth = MAX_WIDTH - 4;
-        }
-    } else {
-        // --- Existing logic for single strings ---
-        if (width === 'max') {
-            contentWidth = MAX_WIDTH - 4;
-        } else if (typeof width === 'number') {
-            if (width <= 4) throw new Error('Custom width must be greater than 4.');
-            contentWidth = width - 4;
-        } else {
-            textLines = text.split('\n');
-            contentWidth = Math.max(...textLines.map(line => line.length));
-        }
-
-        // Word-wrap if width is constrained
-        if (width !== 'tight') {
-            const words = text.split(/\s+/);
-            textLines = words.reduce((lines, word) => {
-                if (lines.length === 0) return [word];
-                let lastLine = lines[lines.length - 1]!;
-                if ((lastLine.length + word.length + 1) > contentWidth) {
-                    lines.push(word);
-                } else {
-                    lines[lines.length - 1] = lastLine + ' ' + word;
-                }
-                return lines;
-            }, [] as string[]);
-        } else {
-            textLines = text.split('\n');
-        }
-    }
-
-
-    // --- NEW: Calculate Outer Alignment Padding ---
-    const fullBoxWidth = contentWidth + 4; // Border(1) + Space(1) + Content + Space(1) + Border(1)
-    let leftPaddingAmount = 0;
-
-    if (boxAlign === 'center') {
-        leftPaddingAmount = Math.max(0, Math.floor((MAX_WIDTH - fullBoxWidth) / 2));
-    } else if (boxAlign === 'right') {
-        leftPaddingAmount = Math.max(0, MAX_WIDTH - fullBoxWidth);
-    }
-
-    const outerPadding = ' '.repeat(leftPaddingAmount);
-
-    // --- Build Box Components ---
-    const centerAlign = (str: string, width: number): string => {
-        const padding = Math.floor((width - str.length) / 2);
-        return ' '.repeat(padding) + str + ' '.repeat(width - str.length - padding);
-    };
-
-    const styledTop = styleText(boxFinalStyles, boxChars.tl + boxChars.t.repeat(contentWidth + 2) + boxChars.tr);
-    const styledBottom = styleText(boxFinalStyles, boxChars.bl + boxChars.b.repeat(contentWidth + 2) + boxChars.br);
-    const styledLeftBorder = styleText(boxFinalStyles, boxChars.l + ' ');
-    const styledRightBorder = styleText(boxFinalStyles, ' ' + boxChars.r);
-
-    // Assemble lines with outer padding
-    const styledContentLines = textLines!.map(line => {
-        const centeredText = centerAlign(line, contentWidth);
-        const styledText = styleText(textFinalStyles, centeredText);
-        return outerPadding + styledLeftBorder + styledText + styledRightBorder;
-    });
-
-    const fullBoxString = [
-        outerPadding + styledTop,
-        ...styledContentLines,
-        outerPadding + styledBottom
-    ].join('\n');
-
-    const pre = preNewLine ? '\n' : '';
-    const post = postNewLine ? '\n' : '';
-    console.log(`${pre}${fullBoxString}${post}`);
-};
-
-const CenteredText = (text: string): void => {
-    console.log(CenterText(text));
-}
-
-export {
-    Themes,
-    Spacer,
-    CenterText,
-    CenteredText,
-    CenteredFiglet,
-    PrintLine,
-    BoxText,
-}
-
-
-
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/PrintLine.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Character/CharacterStream.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
@@ -2021,9 +2043,8 @@ import { CharType, type Position, type Character } from './utils/CharType.ts';
 import { CharSpec } from './utils/CharSpec.ts';
 import { CharClassify } from './utils/CharClassify.ts'
 import { inspect, styleText, type InspectOptions } from 'node:util';
-import { PrintLine, CenteredText, BoxText, Spacer } from '../PrintLine.ts';
-import type { TypeReferenceDirectiveResolutionCache } from 'typescript';
-import { BoxStyle } from '../types/PrintLine.types.ts';
+import { PrintLine, CenteredText, BoxText, Spacer } from '../Logging.ts';
+import { BoxType } from '../types/Logging.types.ts';
 
 /**
  * Provides a stateful, iterable stream of `Character` objects from a source string.
@@ -2437,7 +2458,7 @@ class CharacterStream implements Iterable<Character> {
         CenteredText(styleText('yellow', 'SOURCE:\n'));
 
         // Output Source String
-        BoxText(this.get(), { width: 50, boxStyle: BoxStyle.Double, textColor: 'yellow' });
+        BoxText(this.get(), { width: 50, boxType: BoxType.double, textColor: 'yellow' });
 
         // Output Divider between Source and Result
         PrintLine({ preNewLine: true, postNewLine: true });
@@ -2850,78 +2871,392 @@ export type CharValue =
     | 'Unicode';
 
 // Σ (Sigma) - the set of allowed characters
-export const CharType = {
+export enum CharType {
     // CharacterStream Control
-    EOF: 'EOF',
-    Error: 'Error',
-    Other: 'Other',
+    EOF = 'EOF',
+    Error = 'Error',
+    Other = 'Other',
 
     // Whitespace & Formatting
-    Whitespace: 'Whitespace',
-    NewLine: 'NewLine',
+    Whitespace = 'Whitespace',
+    NewLine = 'NewLine',
 
     // Primary Literals
-    Letter: 'Letter',
-    Number: 'Number',
-    Hex: 'Hex',
+    Letter = 'Letter',
+    Number = 'Number',
+    Hex = 'Hex',
 
     // Quotes & Strings
-    SingleQuote: 'SingleQuote',
-    DoubleQuote: 'DoubleQuote',
-    Backtick: 'Backtick',
+    SingleQuote = 'SingleQuote',
+    DoubleQuote = 'DoubleQuote',
+    Backtick = 'Backtick',
 
     // Brackets & Enclosures
-    LParen: 'LParen',
-    RParen: 'RParen',
-    LBracket: 'LBracket',
-    RBracket: 'RBracket',
-    LBrace: 'LBrace',
-    RBrace: 'RBrace',
-
+    LParen = 'LParen',
+    RParen = 'RParen',
+    LBracket = 'LBracket',
+    RBracket = 'RBracket',
+    LBrace = 'LBrace',
+    RBrace = 'RBrace',  
+    
     // Common Operators & Mathematical
-    Plus: 'Plus',
-    Minus: 'Minus',
-    Star: 'Star',
-    Slash: 'Slash',
-    BackSlash: 'BackSlash',
-    EqualSign: 'EqualSign',
-    Percent: 'Percent',
-    Caret: 'Caret',
-    Tilde: 'Tilde',
-    Pipe: 'Pipe',
-    LessThan: 'LessThan',
-    GreaterThan: 'GreaterThan',
+    Plus = 'Plus',
+    Minus = 'Minus',
+    Star = 'Star',
+    Slash = 'Slash',
+    BackSlash = 'BackSlash',
+    EqualSign = 'EqualSign',
+    Percent = 'Percent',
+    Caret = 'Caret',
+    Tilde = 'Tilde',
+    Pipe = 'Pipe',
+    LessThan = 'LessThan',
+    GreaterThan = 'GreaterThan',
 
     // Punctuation & Delimiters
-    Dot: 'Dot',
-    Comma: 'Comma',
-    Colon: 'Colon',
-    SemiColon: 'SemiColon',
-    Exclamation: 'Exclamation',
-    Question: 'Question',
-    Punctuation: 'Punctuation',
-
+    Dot = 'Dot',
+    Comma = 'Comma',
+    Colon = 'Colon',
+    SemiColon = 'SemiColon',
+    Exclamation = 'Exclamation',
+    Question = 'Question',
+    Punctuation = 'Punctuation',
+    
     // Special Symbols & Identifiers
-    Hash: 'Hash',
-    At: 'At',
-    Ampersand: 'Ampersand',
-    Dollar: 'Dollar',
-    Underscore: 'Underscore',
-    Currency: 'Currency',
-    Symbol: 'Symbol',
+    Hash = 'Hash',
+    At = 'At',
+    Ampersand = 'Ampersand',
+    Dollar = 'Dollar',
+    Underscore = 'Underscore',
+    Currency = 'Currency',
+    Symbol = 'Symbol',
 
     // International / Multi-byte
-    Emoji: 'Emoji',
-    Unicode: 'Unicode',
-} as const satisfies Record<string, CharValue>;
-
-export type CharType = (typeof CharType)[CharValue];
+    Emoji = 'Emoji',
+    Unicode = 'Unicode',
+};
 
 
 
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/Character/utils/CharType.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/types/Logging.types.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// src/types/PrintLine.types.ts
+
+/** 
+ * @type AlignType
+ * @description Type defining text alignment options.
+ */
+export type AlignType = 'left' | 'center' | 'right';
+
+/** 
+ * @enum Align
+ * @description Enum for different text alignments.
+ */
+export enum Align {
+    left =   'left',
+    center = 'center',
+    right =  'right',
+}
+
+/** 
+ * @type StyleType
+ * @description Type defining available text styles.
+ */
+export type StyleType =
+    | "bold" | "reset" | "dim" | "italic" | "underline" 
+    | "blink" | "inverse" | "hidden" | "strikethrough" | "doubleunderline"
+;
+
+/** 
+ * @enum Style
+ * @description Enum for different text styles.
+ */
+export enum Style {
+    bold =          'bold',
+    reset =         'reset',
+    dim =           'dim',
+    italic =        'italic',
+    underline =     'underline',
+    blink =         'blink',
+    inverse =       'inverse',
+    hidden =        'hidden',
+    strikethrough = 'strikethrough',
+    doubleunderline = 'doubleunderline',
+}
+
+/** 
+ * @type ColorType
+ * @description Type defining available text colors.
+ */
+export type ColorType =
+    | "green" | "red" | "yellow" | "cyan" | "black" | "blue" 
+    | "magenta" | "white" | "gray" | "redBright" | "greenBright" | "yellowBright" 
+    | "blueBright" | "magentaBright" | "cyanBright" | "whiteBright"
+; 
+
+/** 
+ * @enum Color
+ * @description Enum for different text colors.
+ */
+export enum Color {
+    green =         'green',
+    red =           'red',
+    yellow =        'yellow',
+    cyan =          'cyan',
+    black =         'black',
+    blue =          'blue',
+    magenta =       'magenta',
+    white =         'white',
+    gray =          'gray',
+    redBright =     'redBright',
+    greenBright =   'greenBright',
+    yellowBright =  'yellowBright',
+    blueBright =    'blueBright',
+    magentaBright = 'magentaBright',
+    cyanBright =    'cyanBright',
+    whiteBright =   'whiteBright',
+}
+
+/** 
+ * @type BackgroundColorType
+ * @description Type defining available background colors.
+ */
+export type BackgroundColorType =
+    | "bgGreen" | "bgRed" | "bgYellow" | "bgCyan" | "bgBlack" | "bgBlue" | "bgMagenta" 
+    | "bgWhite" | "bgGray" | "bgRedBright" | "bgGreenBright" | "bgYellowBright" 
+    | "bgBlueBright" | "bgMagentaBright" | "bgCyanBright" | "bgWhiteBright"
+;
+
+/** 
+ * @enum BackgroundColor
+ * @description Enum for different background colors.
+ */
+export enum BackgroundColor {
+    bgGreen =         'bgGreen',
+    bgRed =           'bgRed',
+    bgYellow =        'bgYellow',
+    bgCyan =          'bgCyan',
+    bgBlack =         'bgBlack',
+    bgBlue =          'bgBlue',
+    bgMagenta =       'bgMagenta',
+    bgWhite =         'bgWhite',
+    bgGray =          'bgGray',
+    bgRedBright =     'bgRedBright',
+    bgGreenBright =   'bgGreenBright',
+    bgYellowBright =  'bgYellowBright',
+    bgBlueBright =    'bgBlueBright',
+    bgMagentaBright = 'bgMagentaBright',
+    bgCyanBright =    'bgCyanBright',
+    bgWhiteBright =   'bgWhiteBright',
+}
+
+/** 
+ * @type InspectColor
+ * @description Type defining available inspect colors.
+ */
+type InspectColor = StyleType | ColorType | BackgroundColorType; // From 'node:util'
+
+/**
+ * @enum LineType
+ * @description Enum for different line types.
+ */
+export enum LineType {
+    default =          '─',
+    dashed =           '-',
+    underscore =       '_',
+    doubleUnderscore = '‗',
+    equals =           '=',
+    double =           '═',
+    diaeresis =        '¨',
+    macron =           '¯',
+    section =          '§',
+    interpunct =       '·',
+    lightBlock =       '░',
+    mediumBlock =      '▒',
+    heavyBlock =       '▓',
+    boldBlock =        '█',
+    boldSquare =       '■',
+    boldBottom =       '▄',
+    boldTop =          '▀',
+};
+
+/**
+ * @enum BoxStyle
+ * @description Enum for different box styles.
+ */
+export enum BoxType {
+    single,
+    double,
+    light,
+    medium,
+    heavy,
+    bold,
+    half,
+    star,
+    circle,
+    square,
+    hash
+}
+
+/**
+ * @type BoxPartKeys
+ * @description Type defining the keys for box parts.
+ */
+export enum BoxPart { tl = 'tl', t = 't', tr = 'tr', l = 'l', r = 'r', bl = 'bl', b = 'b', br = 'br' }
+
+/**
+ * @type BoxParts
+ * @description Type defining the structure for box parts.
+ */
+export type BoxParts = Record<BoxPart, string>;
+
+/**
+ * @constant BoxStyles
+ * @description Predefined box styles with their corresponding characters.
+ */
+export const BoxStyles = {
+    [BoxType.single]: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
+    [BoxType.double]: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' },
+    [BoxType.light]:  { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
+    [BoxType.medium]: { tl: '▒', t: '▒', tr: '▒', l: '▒', r: '▒', bl: '▒', b: '▒', br: '▒' },
+    [BoxType.heavy]:  { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
+    [BoxType.bold]:   { tl: "█", t: "█", tr: "█", l: "█", r: "█", bl: "█", b: "█", br: "█" },
+    [BoxType.half]:   { tl: '▄', t: '▄', tr: '▄', l: '█', r: '█', bl: '▀', b: '▀', br: '▀' },
+    [BoxType.star]:   { tl: '*', t: '*', tr: '*', l: '*', r: '*', bl: '*', b: '*', br: '*' },
+    [BoxType.circle]: { tl: '●', t: '●', tr: '●', l: '●', r: '●', bl: '●', b: '●', br: '●' },
+    [BoxType.square]: { tl: '■', t: '■', tr: '■', l: '■', r: '■', bl: '■', b: '■', br: '■' },
+    [BoxType.hash]:   { tl: '#', t: '#', tr: '#', l: '#', r: '#', bl: '#', b: '#', br: '#' },
+} as const;
+
+/** 
+ * @interface Theme
+ * @description Defines the structure for a theme object.
+ * @property {InspectColor | InspectColor[]} color - The color(s) associated with the theme.
+ * @property {LineType} line - The line type associated with the theme.
+ * @property {(StyleType)[]} [styles] - Optional styles associated with the theme.
+ */
+export interface Theme {
+    color: InspectColor | InspectColor[];
+    line: LineType;
+    styles?: (StyleType)[];
+}
+
+/**
+ * @constant THEMES
+ * @description Predefined themes for PrintLine.
+ */
+export const Themes: Record<string, Theme> = {
+    Success: 
+        { color: 'green',   line: LineType.default,     styles: ['bold']    },
+    Error: 
+        { color: 'red',     line: LineType.boldBlock                             },
+    Warning: 
+        { color: 'yellow',  line: LineType.dashed                           },
+    Info: 
+        { color: 'cyan',    line: LineType.default                          },
+} as const;
+
+/** 
+ * @interface PrintLineOptions
+ * @description Defines the structure for a PrintLine options object.
+ * @property {number} width - The width of the line.
+ * @property {boolean} preNewLine - If true, adds a newline before the line.
+ * @property {boolean} postNewLine - If true, adds a newline after the line.
+ * @property {LineType} lineType - The style of the line.
+ * @property {AlignType} textAlign - The alignment of the text.
+ * @property {keyof typeof THEMES} theme - Apply a predefined theme.
+ * @property {InspectColor | InspectColor[]} color - The color of the line.
+ * @property {InspectColor | InspectColor[]} bgColor - The background color of the line.
+ * @property {StyleType | StyleType[]} styles - The styles applied to the line.
+ * @property {string} text - The text to display on the line.
+ */
+export interface PrintLineOptions {
+    // Alignment options
+    width?: number;
+    preNewLine?: boolean;
+    postNewLine?: boolean;
+    
+    // Line options
+    lineType?: LineType;
+    theme?: keyof typeof Themes;
+    color?: InspectColor | InspectColor[];
+    bgColor?: InspectColor | InspectColor[];
+    gradient?: [InspectColor, InspectColor];
+    styles?: StyleType | StyleType[];
+
+    // Text options
+    text?: string;
+    textAlign?: AlignType;
+    textColor?: InspectColor | InspectColor[];
+}
+
+/** 
+ * @type BoxWidth
+ * @description Type defining box width options.
+ * 'tight' - Width adjusts to fit the text content.
+ * 'max'   - Width spans the maximum allowed width.
+ * number  - Specific numeric width.
+ */
+type BoxWidth = 'tight' | 'max' | number;
+
+export enum Width {
+    default = 80,
+    tight = 'tight',
+    max =   'max',
+}
+
+/** 
+ * @interface BoxTextOptions
+ * @description Defines the structure for a BoxText options object.
+ * @property {BoxWidth} width - The width of the box.
+ * @property {boolean} preNewLine - If true, adds a newline before the box.
+ * @property {boolean} postNewLine - If true, adds a newline after the box.
+ * @property {BoxType} boxType - The style of the box.
+ * @property {AlignType} boxAlign - The alignment of the box.
+ * @property {keyof typeof THEMES} theme - Apply a predefined theme.
+ * @property {InspectColor | InspectColor[]} color - The default foreground color of the box.
+ * @property {InspectColor | InspectColor[]} bgColor - The default backgound color of the box.
+ * @property {StyleType | StyleType[]} styles - The styles of the box.
+ * @property {InspectColor | InspectColor[]} textColor - The text color inside the box.
+ * @property {InspectColor | InspectColor[]} textBgColor - The text background color inside the box.
+ */
+export interface BoxTextOptions {
+    // Alignment options
+    width?: BoxWidth;
+    preNewLine?: boolean;
+    postNewLine?: boolean;
+
+    // Box options
+    boxType?: BoxType;
+    boxAlign?: AlignType;
+    theme?: keyof typeof Themes;
+    color?: InspectColor | InspectColor[];
+    bgColor?: InspectColor | InspectColor[];
+    styles?: StyleType | StyleType[];
+
+    // Text options
+    textColor?: InspectColor | InspectColor[];
+    textBgColor?: InspectColor | InspectColor[];
+}
+
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/types/Logging.types.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 //████████████████████████████████████████████████████████████████████████████████████████████████████
@@ -2935,6 +3270,7 @@ export type CharType = (typeof CharType)[CharValue];
 
 // src/types/Context.types.ts
 
+import { CharType } from '../Character/utils/CharType.ts';
 import { TokenType } from './Tokenizer.types.ts';
 
 export enum State {
@@ -3502,162 +3838,6 @@ export {
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/types/Parser.types.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-//████████████████████████████████████████████████████████████████████████████████████████████████████
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/types/PrintLine.types.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-
-
-
-// src/types/PrintLine.types.ts
-
-import type { InspectColor } from "node:util";
-
-/**
- * @enum LineType
- * @description Enum for different line types.
- */
-export enum LineType {
-    Default =           '─',
-    Square =            '■',
-    Bold =              '█',
-    Dashed =            '-',
-    Underscore =        '_',
-    DoubleUnderscore =  '‗',
-    Equals =            '=',
-    Double =            '═',
-    BoldBottom =        '▄',
-    BoldTop =           '▀',
-    Diaeresis =         '¨',
-    Macron =            '¯',
-    Section =           '§',
-    Interpunct =        '·',
-    LightBlock =        '░',
-    MediumBlock =       '▒',
-    HeavyBlock =        '▓',
-};
-
-/**
- * @type BoxPartKeys
- * @description Type defining the keys for box parts.
- */
-export type BoxPartKeys = 'tl' | 't' | 'tr' | 'l' | 'r' | 'bl' | 'b' | 'br';
-
-/**
- * @type BoxParts
- * @description Type defining the structure for box parts.
- */
-export type BoxParts = Record<BoxPartKeys, string>;
-
-/**
- * @enum BoxStyle
- * @description Enum for different box styles.
- */
-export enum BoxStyle {
-    Single = 'single',
-    Double = 'double',
-    Light =  'light',
-    Medium = 'medium',
-    Heavy =  'heavy',
-    Bold =   'bold',
-    Half =   'half',
-}
-
-/**
- * @constant BoxStyles
- * @description Predefined box styles with their corresponding characters.
- */
-export const BoxStyles: Record<BoxStyle, BoxParts> = {
-    single: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' },
-    double: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' },
-    light:  { tl: '░', t: '░', tr: '░', l: '░', r: '░', bl: '░', b: '░', br: '░' },
-    medium: { tl: '▒', t: '▒', tr: '▒', l: '▒', r: '▒', bl: '▒', b: '▒', br: '▒' },
-    heavy:  { tl: '▓', t: '▓', tr: '▓', l: '▓', r: '▓', bl: '▓', b: '▓', br: '▓' },
-    bold:   { tl: '█', t: '█', tr: '█', l: '█', r: '█', bl: '█', b: '█', br: '█' },
-    half:   { tl: '▄', t: '▄', tr: '▄', l: '█', r: '█', bl: '▀', b: '▀', br: '▀' },
-} as const;
-
-/**
- * @constant THEMES
- * @description Predefined themes for PrintLine.
- */
-export const Themes = {
-    success: { color: 'green', line: LineType.Default, styles: ['bold'] },
-    error: { color: 'red', line: LineType.Bold },
-    warning: { color: 'yellow', line: LineType.Dashed },
-    info: { color: 'cyan', line: LineType.Default },
-} as const;
-
-/**
- * @interface PrintLineOptions
- * @description Defines the structure for a PrintLine options object.
- * @property {boolean} preNewLine - If true, adds a newline before the divider.
- * @property {boolean} postNewLine - If true, adds a newline after the divider.
- * @property {number} width - The width of the line.
- * @property {string | LineType} line - The character to use for the line.
- * @property {keyof typeof THEMES} theme - Apply a predefined theme.
- * @property {InspectColor | InspectColor[]} color - The default foreground color.
- * @property {InspectColor | InspectColor[]} bgColor - The default backgound color.
- * @property {[InspectColor, InspectColor]} gradient - Create a line of up to two colors.
- * @property {'bold' | 'italic' | 'underline' | 'inverse'} styles - The styles of the line.
- * @property {string} text - Text to include in the the line.
- * @property {'left' | 'center' | 'right'} textAlign - The text alignment in the line.
- * @property {InspectColor | InspectColor[]} textColor - The text color in the line.
- */
-export interface PrintLineOptions {
-    preNewLine?: boolean;
-    postNewLine?: boolean;
-    width?: number;
-    line?: LineType;
-    theme?: keyof typeof Themes;
-    color?: InspectColor | InspectColor[];
-    bgColor?: InspectColor | InspectColor[];
-    gradient?: [InspectColor, InspectColor];
-    styles?: ('bold' | 'italic' | 'underline' | 'inverse')[];
-    text?: string;
-    textAlign?: 'left' | 'center' | 'right';
-    textColor?: InspectColor | InspectColor[];
-}
-
-/**
- * @interface BoxTextOptions
- * @description Defines the structure for a BoxText options object.
- * @property {boolean} preNewLine - If true, adds a newline before the divider.
- * @property {boolean} postNewLine - If true, adds a newline after the divider.
- * @property {'tight' | 'max' | number} width - The width of the box.
- * @property {BoxStyle} boxStyle - The type of the lines used to create the box.
- * @property {'left' | 'center' | 'right'} width - The width of the line.
- * @property {InspectColor | InspectColor[]} color - The default foreground color.
- * @property {InspectColor | InspectColor[]} bgColor - The default backgound color.
- * @property {'bold' | 'italic' | 'underline'} styles - Additional styling for the box.
- * @property {InspectColor | InspectColor[]} textColor - The default text color.
- * @property {InspectColor | InspectColor[]} textBgColor - The default text background color.
- */
-export interface BoxTextOptions {
-    preNewLine?: boolean;
-    postNewLine?: boolean;
-    width?: 'tight' | 'max' | number;
-    boxStyle?: BoxStyle;
-    boxAlign?: 'left' | 'center' | 'right';
-    color?: InspectColor | InspectColor[];
-    bgColor?: InspectColor | InspectColor[];
-    styles?: ('bold' | 'italic' | 'underline')[];
-
-    // New! Text-specific styling
-    textColor?: InspectColor | InspectColor[];
-    textBgColor?: InspectColor | InspectColor[];
-}
-
-
-
-
-
-
-//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/types/PrintLine.types.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 //████████████████████████████████████████████████████████████████████████████████████████████████████

@@ -3,7 +3,18 @@
 import { styleText } from 'node:util';
 import figlet from 'figlet';
 import standard from "figlet/fonts/Standard";
-import { BoxStyle, BoxStyles, LineType, Themes, type PrintLineOptions, type BoxTextOptions } from './types/PrintLine.types';
+import {    
+    type PrintLineOptions,
+    LineType, 
+    type BoxTextOptions, 
+    BoxType, 
+    BoxStyles,
+    Width, 
+    Align, 
+    Color,
+    Themes,
+    Style 
+} from './types/Logging.types';
 
 const MAX_WIDTH: number = 80;
 const TAB_WIDTH: number = 4;
@@ -66,11 +77,12 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
      * @description Default options object for the printLine function.
      */
     const defaultOptions: PrintLineOptions = {
-        preNewLine: false,      // No preceding new line
-        postNewLine: false,     // No successive new line
-        width: MAX_WIDTH,       // Use global const MAX_WIDTH = 80
-        line: LineType.Double,  // Use global line enum
-        color: ['gray', 'bold'] // styleText formatting         
+        preNewLine: false,
+        postNewLine: false,
+        width: MAX_WIDTH,
+        lineType: LineType.double,
+        color: [Color.gray, Style.bold],
+        textAlign: Align.center,
     } as const;
 
     const themeOptions = options.theme ? (Themes as any)[options.theme] : {};
@@ -80,17 +92,17 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
         ...options
     };
     const {
+        width,
         preNewLine,
         postNewLine,
-        width,
-        line,
+        lineType,
         color,
         bgColor,
         gradient,
         styles,
         text,
-        textAlign = 'center',
-        textColor
+        textColor,
+        textAlign,
     } = mergedOptions;
 
     const colorStyles = color ? (Array.isArray(color) ? color : [color]) : [];
@@ -98,17 +110,16 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
     const otherStyles = styles || [];
     const lineStyles = [...colorStyles, ...bgColorStyles, ...otherStyles];
     const textStyles = textColor ? (Array.isArray(textColor) ? textColor : [textColor]) : lineStyles;
-    const newLine = '\n';
-    const pre = preNewLine ? newLine : '';
-    const post = postNewLine ? newLine : '';
+    const pre = preNewLine ? '\n' : '';
+    const post = postNewLine ? '\n' : '';
     let finalOutput: string;
 
     if (gradient) {
         const [startColor, endColor] = gradient;
         const halfWidth = Math.floor(width! / 2);
 
-        const startSegment = styleText([startColor], line!.repeat(halfWidth));
-        const endSegment = styleText([endColor], line!.repeat(width! - halfWidth));
+        const startSegment = styleText([startColor], lineType!.repeat(halfWidth));
+        const endSegment = styleText([endColor], lineType!.repeat(width! - halfWidth));
 
         const styledDivider = startSegment + endSegment;
 
@@ -120,7 +131,7 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
 
     if (!text) {
         // Simple case: No text, just style the whole line as before.
-        finalOutput = styleText(lineStyles, line!.repeat(width!));
+        finalOutput = styleText(lineStyles, lineType!.repeat(width!));
     } else {
         // Advanced case: Text exists, so build the line in pieces.
         const paddedText = ` ${text} `; // Add padding
@@ -136,12 +147,12 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
             // Otherwise, calculate and style the line segments.
             switch (textAlign) {
                 case 'left': {
-                    const rightLine = styleText(lineStyles, line!.repeat(lineCharCount));
+                    const rightLine = styleText(lineStyles, lineType!.repeat(lineCharCount));
                     finalOutput = styledText + rightLine;
                     break;
                 }
                 case 'right': {
-                    const leftLine = styleText(lineStyles, line!.repeat(lineCharCount));
+                    const leftLine = styleText(lineStyles, lineType!.repeat(lineCharCount));
                     finalOutput = leftLine + styledText;
                     break;
                 }
@@ -149,8 +160,8 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
                 default: {
                     const leftCount = Math.floor(lineCharCount / 2);
                     const rightCount = lineCharCount - leftCount;
-                    const leftLine = styleText(lineStyles, line!.repeat(leftCount));
-                    const rightLine = styleText(lineStyles, line!.repeat(rightCount));
+                    const leftLine = styleText(lineStyles, lineType!.repeat(leftCount));
+                    const rightLine = styleText(lineStyles, lineType!.repeat(rightCount));
                     finalOutput = leftLine + styledText + rightLine;
                     break;
                 }
@@ -172,21 +183,39 @@ const PrintLine = (options: PrintLineOptions = {}): string => {
  * @returns {string}
  */
 const BoxText = (text: string | string[], options: BoxTextOptions = {}): void => {
-    // --- 1. Set Defaults and Merge Options ---
-    const {
-        preNewLine = false,
-        postNewLine = false,
-        width = 'tight',
-        boxStyle = 'single',
-        boxAlign = 'center',
-        color = ['gray', 'bold'],
-        bgColor,
-        styles,
-        textColor = 'white',
-        textBgColor,
-    } = options;
+    /**
+     * @description Default options object for the printLine function.
+     */
+    const defaultOptions: BoxTextOptions = {
+        width: Width.tight,
+        preNewLine: false,
+        postNewLine: false,
+        boxType: BoxType.single,
+        boxAlign: Align.center,
+        color: [Color.gray, Style.bold],
+        textColor: Color.white,       
+    } as const;
 
-    const boxChars = BoxStyles[boxStyle];
+    const themeOptions = options.theme ? (Themes as any)[options.theme] : {};
+    const mergedOptions = {
+        ...defaultOptions,
+        ...themeOptions,
+        ...options
+    };
+    const {
+        width,
+        preNewLine,
+        postNewLine,
+        boxType,
+        boxAlign,
+        color,
+        bgColor,
+        textColor,
+        textBgColor,
+        styles,
+    } = mergedOptions;
+
+    const boxChars = (BoxStyles as any)[boxType];
 
     // --- 2. Prepare Separate Styles for Box and Text ---
     const boxFinalStyles = [

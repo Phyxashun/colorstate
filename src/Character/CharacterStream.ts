@@ -2,9 +2,8 @@ import { CharType, type Position, type Character } from './utils/CharType.ts';
 import { CharSpec } from './utils/CharSpec.ts';
 import { CharClassify } from './utils/CharClassify.ts'
 import { inspect, styleText, type InspectOptions } from 'node:util';
-import { PrintLine, CenteredText, BoxText, Spacer } from '../PrintLine.ts';
-import type { TypeReferenceDirectiveResolutionCache } from 'typescript';
-import { BoxStyle } from '../types/PrintLine.types.ts';
+import { PrintLine, CenteredText, BoxText, Spacer } from '../Logging.ts';
+import { BoxType } from '../types/Logging.types.ts';
 
 /**
  * Provides a stateful, iterable stream of `Character` objects from a source string.
@@ -418,7 +417,7 @@ class CharacterStream implements Iterable<Character> {
         CenteredText(styleText('yellow', 'SOURCE:\n'));
 
         // Output Source String
-        BoxText(this.get(), { width: 50, boxStyle: BoxStyle.Double, textColor: 'yellow' });
+        BoxText(this.get(), { width: 50, boxType: BoxType.double, textColor: 'yellow' });
 
         // Output Divider between Source and Result
         PrintLine({ preNewLine: true, postNewLine: true });

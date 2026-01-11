@@ -5,15 +5,11 @@ import type { Token } from './src/types/Tokenizer.types.ts';
 import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
 import { CharacterStream } from './src/Character/CharacterStream.ts';
+import { PrintLine } from './src/Logging.ts';
 
 /**
  * @TODO Add character, token, and state support for quotes
  */
-
-const line = (newLine: boolean = true, width: number = 80): void => {
-    if (newLine) console.log(`${'─'.repeat(width)}\n`);
-    if (!newLine) console.log(`${'─'.repeat(width)}`);
-}
 
 // TEST CASES
 // Commented out cases are not working
@@ -109,7 +105,7 @@ const parserTest = () => {
         showProxy: false,
         maxArrayLength: null,
         maxStringLength: null,
-        breakLength: 80,
+        breakLength: 40,
         compact: true,
         sorted: false,
         getters: false,
@@ -119,27 +115,24 @@ const parserTest = () => {
     console.log('\n=== TOKENIZATION & PARSING DEMO ===\n');
 
     for (const input of testCases) {
-        line();
-
         // Step 1: Character stream
         const stream = new CharacterStream(input);
 
         // Step 1: Tokenize
         const tokenizer = new Tokenizer();
         const tokens = tokenizer
-            .withoutLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
+            .withLogging() //(`PARSER TEST:\n\nINPUT:\n\t'${input}'\n${'─'.repeat(80)}`)
             .tokenize(stream);
 
         // Step 2: Parse
         const parser = new Parser(tokens);
         const ast = parser.parse();
-
         // Step 3: Console log the AST
         console.log('\nAST:\n');
         const defaultAST = inspect(ast, inspectOptions);
         const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
         console.log(fourSpaceAST, '\n');
-        line();
+        PrintLine({ color: 'red' });
     }
 }
 /**

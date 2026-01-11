@@ -1,5 +1,6 @@
 // src/types/Context.types.ts
 
+import { CharType } from '../Character/utils/CharType.ts';
 import { TokenType } from './Tokenizer.types.ts';
 
 export enum State {

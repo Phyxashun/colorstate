@@ -18,8 +18,8 @@ import { styleText } from 'node:util';
 import fs from 'node:fs';
 import { globSync } from 'glob';
 import path from 'node:path';
-import { PrintLine, CenteredFiglet, Spacer, CenteredText, BoxText } from './src/PrintLine';
-import { BoxStyle, LineType } from './src/types/PrintLine.types';
+import { PrintLine, CenteredFiglet, Spacer, CenteredText, BoxText } from './src/Logging';
+import { BoxType, LineType } from './src/types/Logging.types';
 
 /**
  * Constants
@@ -161,10 +161,10 @@ const ui = {
      * @returns {void}
      */
     displayHeader: (): void => {
-        PrintLine({ preNewLine: true, line: LineType.Bold });
+        PrintLine({ preNewLine: true, lineType: LineType.boldBlock });
         console.log(styleText(['yellowBright', 'bold'], CenteredFiglet(`Consolidate!!!`)));
         CenteredText(styleText(['magentaBright', 'bold'], '*** PROJECT FILE CONSOLIDATOR SCRIPT ***'));
-        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
+        PrintLine({ preNewLine: true, postNewLine: true, lineType: LineType.boldBlock });
     },
 
     /**
@@ -191,7 +191,7 @@ const ui = {
     logComplete: (): void => {
         console.log();
         CenteredText(styleText(['yellow', 'bold'], 'Consolidation complete!!!'));
-        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
+        PrintLine({ preNewLine: true, postNewLine: true, lineType: LineType.boldBlock });
     },
 
     /**
@@ -202,12 +202,12 @@ const ui = {
     logFinalSummary: (fileCount: number, jobCount: number): void => {
         BoxText(
             `✓ Successfully consolidated ${fileCount} files across ${jobCount} jobs!`, { 
-                boxStyle: BoxStyle.Double,
+                boxType: BoxType.double,
                 color: 'green',
                 textColor: ['green', 'bold'] 
             }
         );
-        PrintLine({ preNewLine: true, postNewLine: true, line: LineType.Bold });
+        PrintLine({ preNewLine: true, postNewLine: true, lineType: LineType.boldBlock });
     },
 }
 
