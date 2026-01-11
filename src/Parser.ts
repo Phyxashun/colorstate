@@ -4,7 +4,7 @@ import { type Token, TokenType } from './types/Tokenizer.types.ts';
 import { NodeType } from './types/Parser.types.ts';
 import type {
     Statement, Expression, VariableDeclarationKind, BaseNode,
-    SourceLocation, Program, ExpressionStatement, VariableDeclaration,
+    SourcePosition, Program, ExpressionStatement, VariableDeclaration,
     Identifier, StringLiteral, NumericLiteral, HexLiteral, PercentLiteral,
     DimensionLiteral, BinaryExpression, UnaryExpression, CallExpression,
     GroupExpression, SeriesExpression, AssignmentExpression, DimensionKind,
@@ -51,7 +51,7 @@ export class Parser {
         return {
             type: NodeType.Program,
             body: statements,
-            location: { start, end }, // <-- Add location
+            position: { start, end },
         };
     }
 
@@ -113,7 +113,7 @@ export class Parser {
             kind,
             identifier: { type: NodeType.Identifier, name },
             initializer,
-            location: { start, end },
+            position: { start, end },
         };
     }
 
@@ -128,7 +128,7 @@ export class Parser {
         return {
             type: NodeType.ExpressionStatement,
             expression: expr,
-            location: { start, end },
+            position: { start, end },
         };
     }
 
@@ -153,9 +153,9 @@ export class Parser {
                     type: NodeType.AssignmentExpression,
                     left: expr,
                     right: right,
-                    location: {
-                        start: expr.location.start,
-                        end: right.location.end
+                    position: {
+                        start: expr.position.start,
+                        end: right.position.end
                     }
                 } as AssignmentExpression;
             }
@@ -184,13 +184,13 @@ export class Parser {
                 throw new Error("Series expression cannot be empty");
             } else {
 
-                const start = expressions[0]!.location.start;
-                const end = expressions[expressions.length - 1]!.location.end;
+                const start = expressions[0]!.position.start;
+                const end = expressions[expressions.length - 1]!.position.end;
 
                 expr = {
                     type: NodeType.SeriesExpression,
                     expressions: expressions,
-                    location: { start, end }
+                    position: { start, end }
                 } as SeriesExpression;
             }
         }
@@ -199,7 +199,7 @@ export class Parser {
     }
 
     private addition(): Expression {
-        // Parse the left-hand side first. It contains the starting location.
+        // Parse the left-hand side first. It contains the starting position.
         let expr = this.multiplication();
 
         while (
@@ -216,9 +216,9 @@ export class Parser {
                 operator,
                 left: expr,
                 right,
-                location: {
-                    start: expr.location.start, // Start of the original left expression
-                    end: right.location.end      // End of the new right expression
+                position: {
+                    start: expr.position.start, // Start of the original left expression
+                    end: right.position.end      // End of the new right expression
                 }
             } as BinaryExpression;
         }
@@ -240,9 +240,9 @@ export class Parser {
                 operator,
                 left: expr,
                 right,
-                location: {
-                    start: expr.location.start,
-                    end: right.location.end
+                position: {
+                    start: expr.position.start,
+                    end: right.position.end
                 }
             } as BinaryExpression;
         }
@@ -262,9 +262,9 @@ export class Parser {
                 type: NodeType.UnaryExpression,
                 operator,
                 argument,
-                location: {
+                position: {
                     start: operatorToken.position.start,
-                    end: argument.location.end
+                    end: argument.position.end
                 }
             } as UnaryExpression;
         }
@@ -301,8 +301,8 @@ export class Parser {
                 type: NodeType.CallExpression,
                 callee: expr as Identifier,
                 arguments: args,
-                location: {
-                    start: expr.location.start,
+                position: {
+                    start: expr.position.start,
                     end: this.previous().position.end,
                 },
             } as CallExpression;
@@ -339,7 +339,7 @@ export class Parser {
                 return {
                     type: NodeType.Identifier,
                     name: token.value,
-                    location: { 
+                    position: { 
                         start: token.position.start, 
                         end: token.position.end 
                     },
@@ -354,7 +354,7 @@ export class Parser {
                 return {
                     type: NodeType.GroupExpression,
                     expression: expr,
-                    location: {
+                    position: {
                         start: startToken.position.start, // Position of '('
                         end: endToken.position.end      // Position of ')'
                     },
@@ -367,7 +367,7 @@ export class Parser {
     }
 
     private createLiteralNode(token: Token): Expression {
-        const location = {
+        const position = {
             start: token.position.start,
             end: token.position.end
         };
@@ -378,7 +378,7 @@ export class Parser {
                     type: NodeType.StringLiteral,
                     value: token.value,
                     raw: `"${token.value}"`,
-                    location,
+                    position,
                 } as StringLiteral;
             }
 
@@ -387,7 +387,7 @@ export class Parser {
                     type: NodeType.NumericLiteral,
                     value: parseFloat(token.value),
                     raw: token.value,
-                    location,
+                    position,
                 } as NumericLiteral;
             }
 
@@ -397,7 +397,7 @@ export class Parser {
                     type: NodeType.PercentLiteral,
                     value: parseFloat(numStr),
                     raw: token.value,
-                    location,
+                    position,
                 } as PercentLiteral;
             }
 
@@ -412,7 +412,7 @@ export class Parser {
                         value: parseFloat(match[1]),
                         unit: match[2],
                         raw: token.value,
-                        location,
+                        position,
                     } as DimensionLiteral;
                 } else {
                     throw this.error(token, `Invalid dimension format for '${token.value}'`);
@@ -424,7 +424,7 @@ export class Parser {
                     type: NodeType.HexLiteral,
                     value: token.value,
                     raw: token.value,
-                    location,
+                    position,
                 } as HexLiteral;
             }
 

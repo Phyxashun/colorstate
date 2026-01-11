@@ -110,7 +110,7 @@ const parserTest = () => {
         maxArrayLength: null,
         maxStringLength: null,
         breakLength: 80,
-        compact: false,
+        compact: true,
         sorted: false,
         getters: false,
         numericSeparator: true,

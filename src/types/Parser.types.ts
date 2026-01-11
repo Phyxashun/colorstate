@@ -16,7 +16,7 @@ type Position = {
 /**
  * Source code location metadata
  */
-type SourceLocation = {
+type SourcePosition = {
     /** Starting position */
     start: Position;
     /** Ending position */
@@ -60,7 +60,7 @@ type BaseNode = {
     /** Type of the AST node */
     type: NodeType;
     /** Source location information */
-    location: SourceLocation;
+    position: SourcePosition;
 }
 
 /**
@@ -240,7 +240,7 @@ export {
 
     // Interfaces
     type BaseNode,
-    type SourceLocation,
+    type SourcePosition,
     type Program,
     type ExpressionStatement,
     type VariableDeclaration,
