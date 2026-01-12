@@ -639,6 +639,7 @@ The ```currentColor``` keyword represents the value of an element's color proper
 
 HTML Canvas Deep Dive [https://joshondesign.com/p/books/canvasdeepdive/title.html]
 Parsing & Abstract Syntax Trees [https://compiler-in-typescript.mohitkarekar.com/parsing-semantics/parsing-1/]
+TypeScript Cookbook [https://typescript-cookbook.com/]
 
 ***
 
