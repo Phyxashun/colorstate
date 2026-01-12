@@ -422,6 +422,166 @@ const p2 = pairs2(1, "1");
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/14. Refactor AST Types.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+This is a significant undertaking. CSS Color Level 4 and 5 introduced **Relative Color Syntax** (`from <color>`), **Color Spaces**, and **Color Interpolation**, which move colors from simple literals to complex expressions.
+
+To support this grammar, your `NodeType` enum and interfaces need to become much more granular. Below is a refactored type system designed to handle the complexity of the formal grammar you provided while remaining compatible with your existing `BaseNode` structure.
+
+### 1. Expanded Node Types
+
+First, we need to add the specific color nodes to your `NodeType` enum.
+
+```typescript
+enum NodeType {
+    // ... your existing types (Program, BinaryExpression, etc.)
+    
+    // Color Specifics
+    ColorFunction = 'ColorFunction',         // rgb, hsl, lab, etc.
+    ColorMix = 'ColorMix',                   // color-mix()
+    ColorContrast = 'ColorContrast',         // contrast-color()
+    ColorLightDark = 'ColorLightDark',       // light-dark()
+    ColorDeviceCmyk = 'ColorDeviceCmyk',     // device-cmyk()
+    ColorSpaceParams = 'ColorSpaceParams',   // Used inside color()
+    
+    // Literals/Keywords
+    ColorKeyword = 'ColorKeyword',           // transparent, currentColor, named colors
+    SystemColor = 'SystemColor',             // ButtonFace, Canvas, etc.
+    Hue = 'Hue',                             // <angle> | <number>
+    NoneLiteral = 'NoneLiteral',             // the 'none' keyword
+}
+
+```
+
+---
+
+### 2. Component Types
+
+Since many modern color functions share the same structure (especially the `from <color>` relative syntax), we should define reusable components.
+
+```typescript
+type ColorSpace = 
+    | 'srgb' | 'srgb-linear' | 'display-p3' | 'display-p3-linear' 
+    | 'a98-rgb' | 'prophoto-rgb' | 'rec2020' | 'lab' | 'oklab' | 'xyz' 
+    | 'xyz-d50' | 'xyz-d65' | 'hsl' | 'hwb' | 'lch' | 'oklch';
+
+type HueInterpolation = 'shorter' | 'longer' | 'increasing' | 'decreasing';
+
+interface ColorInterpolationMethod extends BaseNode {
+    type: NodeType.ColorSpaceParams; // or a specific interpolation type
+    space: ColorSpace;
+    hueMethod?: HueInterpolation;
+}
+
+```
+
+---
+
+### 3. The Core Color Nodes
+
+Here is the refactored structure to handle the formal grammar. Note the `originColor` property; this is crucial for the modern **Relative Color Syntax** (`rgb(from var(--main) ...)`).
+
+```typescript
+/**
+ * Handles rgb(), hsl(), lab(), oklch(), color(), etc.
+ */
+interface ColorFunctionNode extends BaseNode {
+    type: NodeType.ColorFunction;
+    callee: string; // 'rgb', 'hsl', 'oklch', 'color'
+    originColor?: Expression; // The <color> after 'from' (Relative Color Syntax)
+    channels: (Expression | 'none')[]; 
+    alpha?: Expression | 'none';
+    isModern: boolean; // true if space-separated, false if comma-separated
+    colorSpace?: ColorSpace; // Specifically for the color() function
+}
+
+/**
+ * Handles color-mix(in srgb, red 50%, blue)
+ */
+interface ColorMixNode extends BaseNode {
+    type: NodeType.ColorMix;
+    interpolation: ColorInterpolationMethod;
+    components: Array<{
+        color: Expression;
+        percentage?: PercentLiteral | 'none';
+    }>;
+}
+
+/**
+ * Handles light-dark(<color>, <color>)
+ */
+interface ColorLightDarkNode extends BaseNode {
+    type: NodeType.ColorLightDark;
+    light: Expression;
+    dark: Expression;
+}
+
+/**
+ * Handles system colors and named colors (red, blue, ButtonFace)
+ */
+interface ColorKeywordNode extends BaseNode {
+    type: NodeType.ColorKeyword | NodeType.SystemColor;
+    name: string;
+    isSystem: boolean;
+}
+
+```
+
+---
+
+### 4. Integration with your `Expression` type
+
+You should now group these into a `ColorExpression` union and include it in your main `Expression` type.
+
+```typescript
+type ColorExpression =
+    | ColorFunctionNode
+    | ColorMixNode
+    | ColorLightDarkNode
+    | ColorKeywordNode
+    | HexLiteral; // Hex stays as its own literal type
+
+// Update your existing Expression type
+type Expression =
+    | ColorExpression
+    | Identifier
+    | NumericLiteral
+    | StringLiteral
+    | DimensionLiteral
+    | BinaryExpression
+    // ... rest of your types
+
+```
+
+---
+
+### Strategy for the Parser Refactor
+
+When you begin refactoring the `Parser.ts` logic to handle these:
+
+1. **The `from` keyword:** In your `call()` or a new `colorFunction()` method, check if the first token after the `(` is an identifier with the value `"from"`. If so, the next expression is your `originColor`.
+2. **Slash for Alpha:** Modern syntax uses `/` to separate channels from alpha (e.g., `rgb(255 0 0 / 0.5)`). You will need to add `TokenType.SLASH` to your `match()` logic inside the color parser.
+3. **The `none` keyword:** Modern CSS colors allow `none` as a component. You’ll need to handle this in your `primary()` or a dedicated `colorComponent()` method.
+
+### How the `inspect` helper helps here
+
+Because these color nodes are highly nested (especially `color-mix` and relative colors), the `omitPosition` helper we built earlier will be vital. A `color-mix` node without stripping positions would easily take up 40+ lines in your console; with the helper, it will be a clean, readable 5-10 lines.
+
+Would you like me to draft a specialized `parseColorFunction` method for your `Parser.ts` that specifically handles the "modern vs legacy" and "relative color" logic?
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/14. Refactor AST Types.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/13. Notes on MDN Color.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
@@ -477,7 +637,10 @@ The ```currentColor``` keyword represents the value of an element's color proper
     130 more, from AliceBlue to YellowGreen
     ```
 
-**
+HTML Canvas Deep Dive [https://joshondesign.com/p/books/canvasdeepdive/title.html]
+Parsing & Abstract Syntax Trees [https://compiler-in-typescript.mohitkarekar.com/parsing-semantics/parsing-1/]
+
+***
 
 ## Formal Grammar, with my modifications
 
