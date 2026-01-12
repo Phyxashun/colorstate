@@ -1,9 +1,9 @@
 // src/tests/Tokenizer.test.ts
 
 import { describe, it, expect, vi } from 'vitest';
-import CharacterStream from '../src/Character';
-import { Tokenizer, type Token } from '../src/Tokenizer';
-import { State, TokenType } from '../src/types/Types.ts';
+import {CharacterStream} from '../src/Character/CharacterStream.ts';
+import { Tokenizer } from '../src/Tokenizer';
+import { type Token, TokenType } from '../src/types/Tokenizer.types.ts';
 
 describe('Tokenizer', () => {
     // Helper function to streamline testing

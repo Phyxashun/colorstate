@@ -106,6 +106,7 @@
         }
     ],
     "cSpell.words": [
+        "aliceblue",
         "backgound",
         "Casefold",
         "Casefolded",
@@ -114,11 +115,14 @@
         "CHARCLASSIFY",
         "CHARREGEX",
         "CHARSYMBOL",
+        "cmyk",
+        "colorspace",
         "colorstate",
         "CREATETOKEN",
         "dotenv",
         "dquote",
         "eslintcache",
+        "haml",
         "HEXVALUE",
         "ictcp",
         "Interpunct",
@@ -135,8 +139,14 @@
         "nowatch",
         "oklab",
         "oklch",
+        "prophoto",
+        "rebeccapurple",
         "retokenized",
+        "rgba",
         "RPAREN",
+        "RRGGBB",
+        "RRGGBBAA",
+        "srgb",
         "STATEPROCESS",
         "STATETOKEN",
         "statment",
@@ -144,7 +154,8 @@
         "Titlecase",
         "Titlecased",
         "TOKENMAP",
-        "Uppercased"
+        "Uppercased",
+        "wcag"
     ],
     "editor.fontFamily": "'Hack Nerd Font', monospace",
     "editor.fontLigatures": true,
@@ -415,7 +426,7 @@ export default defineConfig({
     test: {
         reporters: ['default', 'html'],
         coverage: {
-            provider: 'istanbul',
+            provider: 'v8',
             enabled: true,
             clean: true,
             reportsDirectory: './coverage',

@@ -3,27 +3,63 @@
 import { type Token, TokenType } from './types/Tokenizer.types.ts';
 import { NodeType } from './types/Parser.types.ts';
 import type {
-    Statement, Expression, VariableDeclarationKind, Program, 
-    ExpressionStatement, VariableDeclaration, Identifier, 
+    Statement, Expression, VariableDeclarationKind, Program,
+    ExpressionStatement, VariableDeclaration, Identifier,
     StringLiteral, NumericLiteral, HexLiteral, PercentLiteral,
-    DimensionLiteral, BinaryExpression, UnaryExpression, 
-    CallExpression, GroupExpression, SeriesExpression, 
+    DimensionLiteral, BinaryExpression, UnaryExpression,
+    CallExpression, GroupExpression, SeriesExpression,
     AssignmentExpression, DimensionKind, ColorFunctionKind,
+    SequenceExpression,
 } from './types/Parser.types.ts';
+import { inspect, type InspectOptions } from 'node:util';
+
+const inspectOptions: InspectOptions = {
+    showHidden: false,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
 
 /**
- * Recursive descent parser
- * Grammar:
- * Program         → Statement*
- * Statement       → Expression
- * Expression      → Addition
- * Addition        → Multiplication ( ("+" | "-") Multiplication )*
- * Multiplication  → Unary ( ("*" | "/") Unary )*
- * Unary           → ("+" | "-") Unary | Call
- * Call            → Primary ( "(" Arguments? ")" )?
- * Arguments       → Expression ( "," Expression )*
- * Primary         → NUMBER | PERCENT | HEXVALUE | IDENTIFIER | "(" Expression ")"
+ * @function omitPosition
+ * @description Removes the position property from a node  
+ * @param obj 
+ * @returns an object without the position property
  */
+function omitPosition<T>(obj: T): Omit<T, 'position'> {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(omitPosition) as any;
+
+    const result: any = {};
+    for (const key in obj) {
+        if (key === 'position') continue;
+        result[key] = omitPosition(obj[key]);
+    }
+    return result;
+}
+
+/**
+ * A helper to log the AST without the noise of source mapping
+ */
+export function inspectAST(node: any, options: InspectOptions = {}): string {
+    const cleanNode = omitPosition(node);
+    
+    return inspect(cleanNode, {
+        depth: null,
+        colors: true,
+        compact: false,
+        ...options
+    });
+}
+
 export class Parser {
     private tokens: Token[];
     private currentIndex: number = 0;
@@ -33,6 +69,10 @@ export class Parser {
             t.type !== TokenType.WHITESPACE &&
             t.type !== TokenType.NEWLINE
         );
+    }
+
+    public debug(program: Program) {
+        console.log(inspectAST(program, inspectOptions));
     }
 
     public parse(): Program {
@@ -48,11 +88,13 @@ export class Parser {
         // If the file is empty, this will be the same as the start.
         const end = this.tokens.length > 0 ? this.previous().position.end : start;
 
-        return {
+        const result = {
             type: NodeType.Program,
             body: statements,
-            position: { start, end },
-        };
+            position: { start, end }
+        } as Program;
+
+        return result;
     }
 
     private declaration(): Statement {
@@ -169,33 +211,59 @@ export class Parser {
     }
 
     private series(): Expression {
-        let expr = this.addition();
+        // 1. Get the first sequence
+        let first = this.sequence();
 
-        if (this.match(TokenType.COMMA)) {
-            const expressions = [expr];
-
-            while (this.check(TokenType.COMMA)) {
-                this.consume(TokenType.COMMA, "Expected comma in series.");
-                expressions.push(this.addition());
-            }
-
-            // Guard against empty array (should never happen, but TypeScript doesn't know that)
-            if (expressions.length === 0) {
-                throw new Error("Series expression cannot be empty");
-            } else {
-
-                const start = expressions[0]!.position.start;
-                const end = expressions[expressions.length - 1]!.position.end;
-
-                expr = {
-                    type: NodeType.SeriesExpression,
-                    expressions: expressions,
-                    position: { start, end }
-                } as SeriesExpression;
-            }
+        if (!this.check(TokenType.COMMA)) {
+            return first;
         }
 
-        return expr;
+        const expressions: Expression[] = [first];
+        while (this.match(TokenType.COMMA)) {
+            expressions.push(this.sequence());
+        }
+
+        return {
+            type: NodeType.SeriesExpression,
+            expressions: expressions,
+            position: {
+                start: expressions[0]!.position.start,
+                end: expressions[expressions.length - 1]!.position.end
+            }
+        } as SeriesExpression;
+    }
+
+    private sequence(): Expression {
+        let first = this.addition();
+
+        // If the next token can't start a sequence, return the single expression
+        if (!this.canStartExpression() ||
+            this.check(TokenType.COMMA) ||
+            this.check(TokenType.EQUALS) ||
+            this.check(TokenType.SEMICOLON) ||
+            this.check(TokenType.RPAREN)) {
+            return first;
+        }
+
+        const elements: Expression[] = [first];
+
+        // Collect all space-separated additions
+        while (this.canStartExpression() &&
+            !this.check(TokenType.COMMA) &&
+            !this.check(TokenType.EQUALS) &&
+            !this.check(TokenType.SEMICOLON) &&
+            !this.check(TokenType.RPAREN)) {
+            elements.push(this.addition());
+        }
+
+        return {
+            type: NodeType.SequenceExpression,
+            expressions: elements,
+            position: {
+                start: (elements[0] as any).position.start,
+                end: (elements[elements.length - 1] as any).position.end
+            }
+        } as SequenceExpression;
     }
 
     private addition(): Expression {
@@ -282,17 +350,15 @@ export class Parser {
         ) {
             const args: Expression[] = [];
 
-            // Parse arguments WITHOUT going through series
-            while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
-                // Skip comma if present
-                if (this.check(TokenType.COMMA)) {
-                    this.advance();
-                    continue;
-                }
+            // Check if there are any arguments at all
+            if (!this.check(TokenType.RPAREN)) {
+                // Parse the first argument
+                args.push(this.assignment());  // ✅ Use assignment() instead of expression()
 
-                // Use addition() instead of expression() to skip series handling
-                const arg = this.addition();
-                if (arg) args.push(arg);
+                // Parse remaining arguments separated by commas
+                while (this.match(TokenType.COMMA)) {
+                    args.push(this.assignment());  // ✅ Use assignment() instead of expression()
+                }
             }
 
             this.consume(TokenType.RPAREN, "Expected ')' after arguments");
@@ -308,7 +374,7 @@ export class Parser {
             } as CallExpression;
         }
 
-        return expr as Expression;
+        return expr;
     }
 
     private primary(): Expression {
@@ -339,9 +405,9 @@ export class Parser {
                 return {
                     type: NodeType.Identifier,
                     name: token.value,
-                    position: { 
-                        start: token.position.start, 
-                        end: token.position.end 
+                    position: {
+                        start: token.position.start,
+                        end: token.position.end
                     },
                 } as Identifier;
             }
@@ -349,6 +415,13 @@ export class Parser {
             case TokenType.LPAREN: {
                 const startToken = this.peek();
                 this.advance();
+
+                // Handle empty parentheses - not valid, throw error
+                if (this.check(TokenType.RPAREN)) {
+                    this.consume(TokenType.RPAREN, "Expected expression before ')'");
+                    //throw this.error(this.peek(), "Empty parentheses are not allowed");
+                }
+
                 const expr = this.expression();
                 const endToken = this.consume(TokenType.RPAREN, "Expected ')' after expression");
                 return {
@@ -495,6 +568,20 @@ export class Parser {
             value === 'jzczhz' ||
             value === 'alpha' ||
             value === 'color';
+    }
+
+    private canStartExpression(): boolean {
+        if (this.isAtEnd()) return false;
+        const type = this.peek().type;
+        return (
+            type === TokenType.NUMBER ||
+            type === TokenType.IDENTIFIER ||
+            type === TokenType.STRING ||
+            type === TokenType.HEXVALUE ||
+            type === TokenType.LPAREN ||
+            type === TokenType.PERCENT ||
+            type === TokenType.DIMENSION
+        );
     }
 
     private peek(): Token {

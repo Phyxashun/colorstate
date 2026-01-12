@@ -6,7 +6,7 @@ export default defineConfig({
     test: {
         reporters: ['default', 'html'],
         coverage: {
-            provider: 'istanbul',
+            provider: 'v8',
             enabled: true,
             clean: true,
             reportsDirectory: './coverage',

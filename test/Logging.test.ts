@@ -1,13 +1,14 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import * as util from 'node:util';
 
-import PrintLine, {
+import type { LineType } from '../src/types/Logging.types.ts';
+import {
+    PrintLine,
     Spacer,
     CenterText,
     CenteredFiglet,
     BoxText,
-    LineType
-} from '../src/PrintLine.ts';
+} from '../src/Logging.ts';
 
 // Mock styleText to return a predictable prefix so we can verify it was called
 vi.mock('node:util', async (importOriginal) => {

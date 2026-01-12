@@ -2,8 +2,9 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Context } from '../src/Context.ts';
-import { CharType, type Character } from '../src/Character.ts';
-import { State, TokenType } from '../src/types/Types.ts';
+import { CharType, type Character } from '../src/Character/CharacterStream.ts';
+import { State } from '../src/types/Context.types.ts';
+import { TokenType } from '../src/types/Tokenizer.types.ts';
 
 describe('Context State Machine', () => {
     let ctx: Context;

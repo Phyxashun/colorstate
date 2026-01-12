@@ -317,3 +317,51 @@ MIT
 This project was created using `bun init` in bun v1.3.4. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
 
 Built as an educational project to demonstrate DFA tokenization, state machine design patterns, and TypeScript best practices.
+
+## Getting Rid of any and unknown
+
+```ts
+function identity<T>(t: T): T {
+  return t;
+}
+
+
+let a = identity("Hello!"); // a is string
+//  ^?
+let b = identity(2000);     // b is number
+//  ^?
+let c = identity({ a: 2 }); // c is { a: number }
+//  ^?
+
+
+const a1 = identity("Hello!"); // a1 is "Hello!"
+//    ^?
+const b1 = identity(2000);     // b1 is 2000
+//    ^?
+const c1 = identity({ a: 2 }); // c1 is { a: number }
+//    ^?
+
+
+const a2 = identity<string>("Hello!");   // a2 is string
+//    ^?
+const b2 = identity<number>(2000);       // b2 is number
+//    ^?
+const c2 = identity<{ a: 2 }>({ a: 2 }); // c2 is { a: 2 }
+//    ^?
+
+function pairs<T, U>(a: T, b: U): [T, U] {
+  return [a, b];
+}
+
+
+const p1 = pairs(1, "1"); // [number, string]
+//    ^?
+
+
+function pairs2<T>(a: T, b: T): [T, T] {
+  return [a, b];
+}
+
+
+const p2 = pairs2(1, "1");
+```

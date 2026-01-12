@@ -363,11 +363,245 @@ This project was created using `bun init` in bun v1.3.4. [Bun](https://bun.com) 
 
 Built as an educational project to demonstrate DFA tokenization, state machine design patterns, and TypeScript best practices.
 
+## Getting Rid of any and unknown
+
+```ts
+function identity<T>(t: T): T {
+  return t;
+}
+
+
+let a = identity("Hello!"); // a is string
+//  ^?
+let b = identity(2000);     // b is number
+//  ^?
+let c = identity({ a: 2 }); // c is { a: number }
+//  ^?
+
+
+const a1 = identity("Hello!"); // a1 is "Hello!"
+//    ^?
+const b1 = identity(2000);     // b1 is 2000
+//    ^?
+const c1 = identity({ a: 2 }); // c1 is { a: number }
+//    ^?
+
+
+const a2 = identity<string>("Hello!");   // a2 is string
+//    ^?
+const b2 = identity<number>(2000);       // b2 is number
+//    ^?
+const c2 = identity<{ a: 2 }>({ a: 2 }); // c2 is { a: 2 }
+//    ^?
+
+function pairs<T, U>(a: T, b: U): [T, U] {
+  return [a, b];
+}
+
+
+const p1 = pairs(1, "1"); // [number, string]
+//    ^?
+
+
+function pairs2<T>(a: T, b: T): [T, T] {
+  return [a, b];
+}
+
+
+const p2 = pairs2(1, "1");
+```
+
 
 
 
 
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: README.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/13. Notes on MDN Color.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+# CSS COLORS
+
+color is a string representing a CSS ```<color>```, a gradient object, or a pattern object. We'll look at gradient and pattern objects later. By default, the stroke and fill color are set to black (CSS color value #000000).
+
+The ```transparent``` keyword represents a fully transparent color. This makes the background behind the colored item completely visible. Technically, ```transparent``` is a shortcut for ```rgb(0 0 0 / 0%)```.
+
+The ```currentColor``` keyword represents the value of an element's color property. This lets you use the color value on properties that do not receive it by default. If ```currentColor``` is used as the value of the color property, it instead takes its value from the inherited value of the color property.
+
+## CSS colors can be specified by the following methods
+
+* hexadecimal colors, specified as #RRGGBB, where RR denotes the red, GG is the green and BB the blue component of the color and each of these six letters stands for a hexadecimal value, i.e. one of 0, ..., 9, A, ..., F. For example
+
+    ```css
+    #0000FF has no (= 00) red, no green, and full (= FF) blue components, in other words, this is pure blue.
+    ```
+
+* RGB colors work the same way that hexadecimal colors do, but their syntax is different, namely rgb(R,G,B), where R, G and B also values for the red, green and blue components, respectively. But here, the values are either decimal integers between 0 and 255 (including), or percentage values between 0% and 100%. For example,
+
+    ```css
+    rgb(0,0,255) is the color with no red, no green and full blue components. So this is pure blue, again.
+    ```
+
+    ```css
+    rgb(0%,0%,100%) is also the pure blue.
+    ```
+
+* RGBA colors are specified by the form rgba(R,G,B,A), where the R, G, B part is the same as in RGB colors. The alpha parameter A specifies the opacity and is a value between 0.0 (fully transparent) and 1.0 (fully opaque). For example,
+
+    ```css
+    rgba(100%,0%,0%,0.5) is a purely red color, which is half transparent.
+    ```
+
+* HSL colors has the form hsl(H,S,L), specifying the hue, saturation and lightness for a cylindrical-coordinate representation of colors. Hue H is a degree on the color wheel, from 0 to 360, where 0 (or 360) is red, 120 is green, and 240 is blue. Saturation S is a percentage value from 0% to 100%, where 0% means a shade of gray and 100% is the full color. Lightness L is also a percentage, 0% is black and 100% is white. For example
+
+    ```css
+    hsl(120,65%,75%)
+    ```
+
+* HSLA colors has the form hsla(H,S,L,A), where H, S and L are the same as in HSL colors and the alpha parameter A defines the opacity, from 0.0 (for fully transparent) to 1.0 (fully opaque).
+
+* Predefined or cross-browser color names are colors in HTML and CSS specified by their name, such as BlueViolet or DarkBlue. There are
+
+    ```css
+    17 standard colors: aqua, black, blue, fuchsia, gray, green, lime, maroon, navy, olive, orange, purple, red, silver, teal, white and yellow.
+    ```
+
+    ```css
+    130 more, from AliceBlue to YellowGreen
+    ```
+
+**
+
+## Formal Grammar, with my modifications
+
+```markdown
+<color> = <color-base> | <currentColor> | <light-dark>      
+
+<color-base> = <hex-color> | <color-function> | <named-color> | <color-mix> | transparent       
+
+currentColor = the current system color
+
+<light-dark> = light-dark( <color> , <color> )  
+
+<hex-color> =   #RGB        |   // The three-value syntax
+                #RGBA       |   // The four-value syntax
+                #RRGGBB     |   // The six-value syntax
+                #RRGGBBAA   |   // The eight-value syntax
+
+<color-function> = <rgb> | <rgba> | <hsl> | <hsla> |
+    <hwb> | <lab> | <lch> | <oklab> | <oklch> |
+    <ictcp> | <jzazbz> | <jzczhz> | <alpha> | <color>   
+
+<named-color> = ...all CSS official named colors      
+
+<color-mix> = color-mix( <color-interpolation-method>? , [ <color> && <percentage [0,100]>? ]# )  
+
+<rgb> = <legacy-rgb-syntax>   |   <modern-rgb-syntax>  
+<rgba> = <legacy-rgba-syntax> |   <modern-rgba-syntax>  
+<hsl> = <legacy-hsl-syntax>   |   <modern-hsl-syntax>  
+<hsla> = <legacy-hsla-syntax>  |  <modern-hsla-syntax>  
+<hwb> = hwb( [ from <color> ]? [ <hue> | none ] [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ / [ <alpha-value> | none ] ]? )  
+<lab> = lab( [ from <color> ]? [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ / [ <alpha-value> | none ] ]? )  
+<lch> = lch( [ from <color> ]? [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ <hue> | none ] [ / [ <alpha-value> | none ] ]? )  
+<oklab> = oklab( [ from <color> ]? [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ / [ <alpha-value> | none ] ]? )  
+<oklch> = oklch( [ from <color> ]? [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ <hue> | none ] [ / [ <alpha-value> | none ] ]? )  
+<ictcp> = ictcp( [ from <color> ]? [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ / [ <alpha-value> | none ] ]? )  
+<jzazbz> = jzazbz( [ from <color> ]? [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ / [ <alpha-value> | none ] ]? )  
+<jzczhz> = jzczhz( [ from <color> ]? [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ <hue> | none ] [ / [ <alpha-value> | none ] ]? )  
+<alpha> = alpha( [ from <color> ] [ / [ <alpha-value> | none ] ]? )  
+<color> = color( [ from <color> ]? <colorspace-params> [ / [ <alpha-value> | none ] ]? )  
+
+<color-interpolation-method> = in [ <rectangular-color-space> | <polar-color-space> <hue-interpolation-method>? | <custom-color-space> ]   
+
+<alpha-value> = <number> | <percentage>  
+
+<legacy-rgb-syntax> = rgb( <percentage>#{3} , <alpha-value>? ) | rgb( <number>#{3} , <alpha-value>? )      
+<modern-rgb-syntax> = rgb( [ from <color> ]? [ <number> | <percentage> | none ]{3} [ / [ <alpha-value> | none ] ]? )  
+<legacy-rgba-syntax> = rgba( <percentage>#{3} , <alpha-value>? ) | rgba( <number>#{3} , <alpha-value>? )      
+<modern-rgba-syntax> = rgba( [ from <color> ]? [ <number> | <percentage> | none ]{3} [ / [ <alpha-value> | none ] ]? )  
+<legacy-hsl-syntax> = hsl( <hue> , <percentage> , <percentage> , <alpha-value>? )  
+<modern-hsl-syntax> = hsl( [ from <color> ]? [ <hue> | none ] [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ / [ <alpha-value> | none ] ]? )  
+<legacy-hsla-syntax> = hsla( <hue> , <percentage> , <percentage> , <alpha-value>? )  
+<modern-hsla-syntax> = hsla( [ from <color> ]? [ <hue> | none ] [ <percentage> | <number> | none ] [ <percentage> | <number> | none ] [ / [ <alpha-value> | none ] ]? )  
+
+<hue> = <number> | <angle>   
+<angle> = 'deg' | 'grad' | 'rad' | 'turn'
+<colorspace-params> = <custom-params> | <predefined-rgb-params> | <xyz-params>             
+
+<rectangular-color-space> = srgb | rgb-linear | display-p3 | display-p3-linear |
+    a98-rgb | prophoto-rgb | rec2020 | lab | oklab | <xyz-space>        
+
+<polar-color-space> = hsl | hwb | lch | oklch  
+
+<hue-interpolation-method> = [ shorter | longer | increasing | decreasing ] hue  
+
+<custom-color-space> = <dashed-ident>  
+
+<custom-params> = <dashed-ident> [ <number> | <percentage> | none ]+  
+
+<predefined-rgb-params> = <predefined-rgb> [ <number> | <percentage> | none ]{3}  
+
+<xyz-params> = <xyz-space> [ <number> | <percentage> | none ]{3}  
+
+<xyz-space> = xyz | xyz-d50 | xyz-d65  
+
+<predefined-rgb> = srgb | srgb-linear | display-p3 | display-p3-linear |
+    a98-rgb | prophoto-rgb | rec2020 | rec2100-pq | rec2100-hlg |
+    rec2100-linear     
+```
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/13. Notes on MDN Color.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: 0. NOTES/12. Notes on Parser.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+# Notes on Parser
+
+```typescript
+/**
+ * Recursive descent parser
+ * Grammar:
+ * Program                  → Declaration*
+ * Declaration              → VariableDeclaration | Statement
+ * VariableDeclaration      → ("const" | "let" | "var") IDENTIFIER "=" Expression
+ * Statement                → ExpressionStatement
+ * ExpressionStatement      → Expression
+ * Expression               → Assignment
+ * Assignment               → Series ( "=" Assignment )?
+ * Series                   → Sequence ( "," Sequence )*
+ * Sequence                 → Addition( Addition )*
+ * Addition                 → Multiplication ( ("+" | "-") Multiplication )*
+ * Multiplication           → Unary ( ("*" | "/") Unary )*
+ * Unary                    → ("+" | "-") Unary | Call
+ * Call                     → Primary ( "(" Arguments? ")" )?
+ * Arguments                → Expression ( "," Expression )*
+ * Primary                  → NUMBER | PERCENT | HEXVALUE | IDENTIFIER | "(" Expression ")"
+ */
+```
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: 0. NOTES/12. Notes on Parser.md ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
 //████████████████████████████████████████████████████████████████████████████████████████████████████

@@ -7,19 +7,21 @@
 
 // ./index.ts
 
-import { inspect, type InspectOptions } from 'node:util';
+import { inspect, styleText, type InspectOptions } from 'node:util';
 import type { Token } from './src/types/Tokenizer.types.ts';
 import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
 import { CharacterStream } from './src/Character/CharacterStream.ts';
-import { PrintLine } from './src/Logging.ts';
+import { BoxText, CenteredText, PrintLine } from './src/Logging.ts';
+import { VisitorGenerator } from './src/Visitor';
+import { Align, BoxType, LineType } from './src/types/Logging.types.ts';
 
 /**
  * @TODO Add character, token, and state support for quotes
  */
 
 const inspectOptions: InspectOptions = {
-    showHidden: true,
+    showHidden: false,
     depth: null,
     colors: true,
     customInspect: false,
@@ -38,11 +40,11 @@ const inspectOptions: InspectOptions = {
 const testCases: string[] = [
     // '"67 a, b, c / 1 \'word\' 2 3+(2-0)"',
     // '67 a, b, c / 1 word 2 3+(2-0)',
-    // 'rgba(100 128 255 / 0.5)',
-    // 'rgba(100grad 360 220  / 50%)',
-    // '#ff00ff00',
-    // '56%',
-    // '100deg',
+    'rgba(100 128 255 / 0.5)',
+    'rgba(100grad 360 220  / 50%)',
+    '#ff00ff00',
+    '56%',
+    '100deg',
     // '1 + 2',
     // '10 - 5 + 3',
     // '2 * 3 + 4',
@@ -56,20 +58,105 @@ const testCases: string[] = [
 
     // Big Test
 
-    `const characterStreamTest = () => {
-        line();
-        console.log('=== CHARACTERSTREAM DEMO ===');
-        line();
-        const input = 'rgb(255, 100, 75)';
-        const stream = new CharacterStream(input);
-        console.log('INPUT:');
-        console.log('RESULT OF CHARACTERSTREAM:');
-        for (const char of stream) {
-            console.log(inspect(char, compactInspectOptions));
-        }
-        console.log();
-        line();
-    }`,
+    // `const characterStreamTest = () => {
+    //     line();
+    //     console.log('=== CHARACTERSTREAM DEMO ===');
+    //     line();
+    //     const input = 'rgb(255, 100, 75)';
+    //     const stream = new CharacterStream(input);
+    //     console.log('INPUT:');
+    //     console.log('RESULT OF CHARACTERSTREAM:');
+    //     for (const char of stream) {
+    //         console.log(inspect(char, compactInspectOptions));
+    //     }
+    //     console.log();
+    //     line();
+    // }`,
+];
+
+const newTestCases: string[] = [
+    // Named colors
+    'rebeccapurple',
+    'aliceblue',
+
+    // RGB Hexadecimal
+    '#f09',
+    '#ff0099',
+
+    // RGB (Red, Green, Blue)
+    'rgb(255 0 153)',
+    'rgb(255 0 153 / 80%)',
+
+    // HSL (Hue, Saturation, Lightness)
+    'hsl(150 30% 60%)',
+    'hsl(150 30% 60% / 80%)',
+
+    // HWB (Hue, Whiteness, Blackness)
+    'hwb(12 50% 0%)',
+    'hwb(194 0% 0% / 0.5)',
+
+    // Lab (Lightness, A-axis, B-axis)
+    'lab(50% 40 59.5)',
+    'lab(50% 40 59.5 / 0.5)',
+
+    // LCH (Lightness, Chroma, Hue)
+    'lch(52.2% 72.2 50)',
+    'lch(52.2% 72.2 50 / 0.5)',
+
+    // Oklab (Lightness, A-axis, B-axis)
+    'oklab(59% 0.1 0.1)',
+    'oklab(59% 0.1 0.1 / 0.5)',
+
+    // OkLCh (Lightness, Chroma, Hue)
+    'oklch(60% 0.15 50)',
+    'oklch(60% 0.15 50 / 0.5)',
+
+    /**
+     * @TODO Future expansion
+     * @description Support relative CSS colors
+     */
+    //'rgb(from green r g b / 0.5)',
+    //'rgb(from #123456 calc(r + 40) calc(g + 40) b)',
+    //'rgb(from hwb(120deg 10% 20%) r g calc(b + 200))',
+    // HSL hue change
+    //'hsl(from red 240deg s l)',
+    //'hsl(from green h s l / 0.5)',
+    //'hsl(from #123456 h s calc(l + 20))',
+    //'hsl(from rgb(200 0 0) calc(h + 30) s calc(l + 30))',
+    // HWB alpha channel change
+    //'hwb(from green h w b / 0.5)',
+    //'hwb(from #123456 h calc(w + 30) b)',
+    //'hwb(from lch(40% 70 240deg) h w calc(b - 30))',
+    //'lab(from green l a b / 0.5)',
+    //'lab(from #123456 calc(l + 10) a b)',
+    //'lab(from hsl(180 100% 50%) calc(l - 10) a b)',
+    // LCH lightness change
+    //'lch(from blue calc(l + 20) c h)',
+    //'lch(from green l c h / 0.5)',
+    //'lch(from #123456 calc(l + 10) c h)',
+    //'lch(from hsl(180 100% 50%) calc(l - 10) c h)',
+    //'lch(from var(--color-value) l c h / calc(alpha - 0.1))',
+    //'oklab(from green l a b / 0.5)',
+    //'oklab(from #123456 calc(l + 0.1) a b / calc(alpha * 0.9))',
+    //'oklab(from hsl(180 100% 50%) calc(l - 0.1) a b)',
+    //'oklch(from green l c h / 0.5)',
+    //'oklch(from #123456 calc(l + 0.1) c h)',
+    //'oklch(from hsl(180 100% 50%) calc(l - 0.1) c h)',
+    //'oklch(from var(--color) l c h / calc(alpha - 0.1))',
+    // light-dark
+    //'light-dark(white, black)',
+    //'light-dark(rgb(255 255 255), rgb(0 0 0))',
+    // Polar color space
+    //'color-mix(in hsl, hsl(200 50 80), coral)',
+    //'color-mix(in hsl, hsl(200 50 80) 20%, coral 80%)',
+
+    // Rectangular color space
+    //'color-mix(in srgb, plum, #123456)',
+    //'color-mix(in lab, plum 60%, #123456 50%)',
+
+    // With hue interpolation method
+    //'color-mix(in lch increasing hue, hsl(200deg 50% 80%), coral)',
+    //'color-mix(in lch longer hue, hsl(200deg 50% 80%) 44%, coral 16%)',
 ];
 
 const characterStreamTest = () => {
@@ -119,7 +206,7 @@ const tokenizerCommentsTest = () => {
 }
 
 const parserTest = () => {
-    for (const input of testCases) {
+    for (const input of newTestCases) {
         // Step 1: Character stream
         const stream = new CharacterStream(input);
 
@@ -132,12 +219,21 @@ const parserTest = () => {
         // Step 2: Parse
         const parser = new Parser(tokens);
         const ast = parser.parse();
+        
         // Step 3: Console log the AST
-        console.log('\nAST:\n');
-        const defaultAST = inspect(ast, inspectOptions);
-        const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
-        console.log(fourSpaceAST, '\n');
-        PrintLine({ width: inspectOptions.breakLength, color: 'red' });
+        PrintLine({ 
+            preNewLine: true, 
+            postNewLine: true, 
+            width: inspectOptions.breakLength, 
+            color: 'cyan',
+            text: 'ABSTRACT SYNTAX TREE',
+            textColor: ['magenta', 'bold' ]
+        });
+        const styledSource = styleText('redBright', 'SOURCE:\t') + styleText(['yellow', 'bold'], `'${input}'`)
+        CenteredText(styledSource);
+        PrintLine({ preNewLine: true, postNewLine: true, lineType: LineType.dashed, color: ['gray', 'dim'] })
+        parser.debug(ast);
+        PrintLine({ preNewLine: true, width: inspectOptions.breakLength, color: 'cyan' });
     }
 }
 /**
@@ -556,6 +652,212 @@ consolidate();
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Visitor.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+import { inspect, type InspectOptions } from 'node:util';
+import { NodeType } from './types/Parser.types.ts';
+
+import type {
+    BaseNode, Statement, Expression, VariableDeclarationKind, Program,
+    ExpressionStatement, VariableDeclaration, Identifier,
+    StringLiteral, NumericLiteral, HexLiteral, PercentLiteral,
+    DimensionLiteral, BinaryExpression, UnaryExpression,
+    CallExpression, GroupExpression, SeriesExpression,
+    AssignmentExpression, DimensionKind, ColorFunctionKind,
+    SequenceExpression, SourcePosition
+} from './types/Parser.types.ts';
+
+const inspectOptions: InspectOptions = {
+    showHidden: false,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
+
+export abstract class BaseVisitor {
+    public visit(node: any): any {
+        return this.visitAnyNode(node);
+    }
+
+    protected visitProgram(node: Program) {
+        return node.body.map(stmt => this.visit(stmt));
+    }
+
+    protected visitUnknownNode(node: any) {
+        throw new Error(`No visitor for node type: ${node.type}`);
+    }
+
+    // Define default implementations for all node types...
+    protected abstract visitAnyNode(node: any): any;
+}
+
+export class VisitorGenerator extends BaseVisitor {
+    public generate(node: Program): string {
+        // We visit the program, which returns an array of objects, 
+        // then inspect that entire structure.
+        return inspect(this.visitAnyNode(node), inspectOptions);
+    }
+
+    protected visitVariableDeclaration(node: VariableDeclaration) {
+        return {
+            type: node.type,
+            kind: node.kind,
+            identifier: node.identifier,
+            initializer: node.initializer ? this.visit(node.initializer) : null
+        };
+    }
+
+    protected visitBinaryExpression(node: BinaryExpression) {
+        return {
+            type: node.type,
+            operator: node.operator,
+            left: this.visit(node.left),
+            right: this.visit(node.right)
+        };
+    }
+
+    protected visitSeriesExpression(node: SeriesExpression) {
+        return {
+            type: node.type,
+            expressions: node.expressions.map(expr => this.visit(expr))
+        };
+    }
+
+    protected visitStringLiteral(node: StringLiteral) {
+        return { type: node.type, value: node.value, raw: node.raw };
+    }
+
+    protected visitNumericLiteral(node: NumericLiteral) {
+        return { type: node.type, value: node.value, raw: node.raw };
+    }
+
+    protected visitDimensionLiteral(node: DimensionLiteral) {
+        return { type: node.type, value: node.value, unit: node.unit, raw: node.raw };
+    }
+
+    protected visitHexLiteral(node: HexLiteral) {
+        return { type: node.type, value: node.value, raw: node.raw };
+    }
+
+    protected visitPercentLiteral(node: PercentLiteral) {
+        return { type: node.type, value: node.value, raw: node.raw };
+    }
+
+    protected visitIdentifier(node: Identifier) {
+        return { type: node.type, name: node.name };
+    }
+
+    protected visitCallExpression(node: CallExpression) {
+        return {
+            type: node.type,
+            callee: this.visit(node.callee),
+            arguments: node.arguments.map(arg => this.visit(arg))
+        };
+    }
+
+    protected visitAssignmentExpression(node: AssignmentExpression) {
+        return {
+            type: node.type,
+            left: this.visit(node.left),
+            right: this.visit(node.right)
+        };
+    }
+
+    protected visitUnaryExpression(node: UnaryExpression) {
+        return {
+            type: node.type,
+            operator: node.operator,
+            argument: this.visit(node.argument)
+        };
+    }
+
+    protected visitGroupExpression(node: GroupExpression) {
+        return {
+            type: node.type,
+            expression: this.visit(node.expression)
+        };
+    }
+
+    protected visitSequenceExpression(node: SequenceExpression) {
+        return {
+            type: node.type,
+            expressions: node.expressions.map(expr => this.visit(expr))
+        };
+    }
+
+    protected visitStatement(node: Statement) {
+        return this.visit(node);
+    }
+
+    protected visitExpression(node: Expression) {
+        return this.visit(node);
+    }
+
+    protected visitAnyNode(node: any) {
+        const result: any = { ...node }; // Copy all properties (value, raw, unit, etc.)
+
+        // Recursively visit any property that looks like a node or an array of nodes
+        for (const key in result) {
+            if (result[key] && typeof result[key] === 'object') {
+                if (Array.isArray(result[key])) {
+                    result[key] = result[key].map((item: any) =>
+                        item.type ? this.visit(item) : item
+                    );
+                } else if (result[key].type) {
+                    result[key] = this.visit(result[key]);
+                }
+            }
+        }
+        return result;
+    }
+}
+
+export class BinaryExpressionNode implements BinaryExpression {
+    public type: NodeType.BinaryExpression = NodeType.BinaryExpression;
+
+    constructor(
+        public operator: '+' | '-' | '*' | '/' | '%',
+        public left: Expression,
+        public right: Expression,
+        public position: SourcePosition
+    ) { }
+
+    // The [inspect.custom] method controls how this object prints
+    [inspect.custom](depth: number, options: any, inspectFn: typeof inspect) {
+        if (depth < 0) return options.stylize('[BinaryExpression]', 'special');
+
+        const newOptions = { ...options, depth: options.depth === null ? null : options.depth - 1 };
+
+        // Return a formatted string or a "proxy" object to be inspected
+        return `${options.stylize('BinaryExpression', 'special')} {
+    operator: ${options.stylize(`'${this.operator}'`, 'string')},
+    left: ${inspectFn(this.left, newOptions)},
+    right: ${inspectFn(this.right, newOptions)}
+}`;
+    }
+}
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/Visitor.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/Logging.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
@@ -922,27 +1224,63 @@ export {
 import { type Token, TokenType } from './types/Tokenizer.types.ts';
 import { NodeType } from './types/Parser.types.ts';
 import type {
-    Statement, Expression, VariableDeclarationKind, Program, 
-    ExpressionStatement, VariableDeclaration, Identifier, 
+    Statement, Expression, VariableDeclarationKind, Program,
+    ExpressionStatement, VariableDeclaration, Identifier,
     StringLiteral, NumericLiteral, HexLiteral, PercentLiteral,
-    DimensionLiteral, BinaryExpression, UnaryExpression, 
-    CallExpression, GroupExpression, SeriesExpression, 
+    DimensionLiteral, BinaryExpression, UnaryExpression,
+    CallExpression, GroupExpression, SeriesExpression,
     AssignmentExpression, DimensionKind, ColorFunctionKind,
+    SequenceExpression,
 } from './types/Parser.types.ts';
+import { inspect, type InspectOptions } from 'node:util';
+
+const inspectOptions: InspectOptions = {
+    showHidden: false,
+    depth: null,
+    colors: true,
+    customInspect: false,
+    showProxy: false,
+    maxArrayLength: null,
+    maxStringLength: null,
+    breakLength: 100,
+    compact: true,
+    sorted: false,
+    getters: false,
+    numericSeparator: true,
+};
 
 /**
- * Recursive descent parser
- * Grammar:
- * Program         → Statement*
- * Statement       → Expression
- * Expression      → Addition
- * Addition        → Multiplication ( ("+" | "-") Multiplication )*
- * Multiplication  → Unary ( ("*" | "/") Unary )*
- * Unary           → ("+" | "-") Unary | Call
- * Call            → Primary ( "(" Arguments? ")" )?
- * Arguments       → Expression ( "," Expression )*
- * Primary         → NUMBER | PERCENT | HEXVALUE | IDENTIFIER | "(" Expression ")"
+ * @function omitPosition
+ * @description Removes the position property from a node  
+ * @param obj 
+ * @returns an object without the position property
  */
+function omitPosition<T>(obj: T): Omit<T, 'position'> {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(omitPosition) as any;
+
+    const result: any = {};
+    for (const key in obj) {
+        if (key === 'position') continue;
+        result[key] = omitPosition(obj[key]);
+    }
+    return result;
+}
+
+/**
+ * A helper to log the AST without the noise of source mapping
+ */
+export function inspectAST(node: any, options: InspectOptions = {}): string {
+    const cleanNode = omitPosition(node);
+    
+    return inspect(cleanNode, {
+        depth: null,
+        colors: true,
+        compact: false,
+        ...options
+    });
+}
+
 export class Parser {
     private tokens: Token[];
     private currentIndex: number = 0;
@@ -952,6 +1290,10 @@ export class Parser {
             t.type !== TokenType.WHITESPACE &&
             t.type !== TokenType.NEWLINE
         );
+    }
+
+    public debug(program: Program) {
+        console.log(inspectAST(program, inspectOptions));
     }
 
     public parse(): Program {
@@ -967,11 +1309,13 @@ export class Parser {
         // If the file is empty, this will be the same as the start.
         const end = this.tokens.length > 0 ? this.previous().position.end : start;
 
-        return {
+        const result = {
             type: NodeType.Program,
             body: statements,
-            position: { start, end },
-        };
+            position: { start, end }
+        } as Program;
+
+        return result;
     }
 
     private declaration(): Statement {
@@ -1088,33 +1432,59 @@ export class Parser {
     }
 
     private series(): Expression {
-        let expr = this.addition();
+        // 1. Get the first sequence
+        let first = this.sequence();
 
-        if (this.match(TokenType.COMMA)) {
-            const expressions = [expr];
-
-            while (this.check(TokenType.COMMA)) {
-                this.consume(TokenType.COMMA, "Expected comma in series.");
-                expressions.push(this.addition());
-            }
-
-            // Guard against empty array (should never happen, but TypeScript doesn't know that)
-            if (expressions.length === 0) {
-                throw new Error("Series expression cannot be empty");
-            } else {
-
-                const start = expressions[0]!.position.start;
-                const end = expressions[expressions.length - 1]!.position.end;
-
-                expr = {
-                    type: NodeType.SeriesExpression,
-                    expressions: expressions,
-                    position: { start, end }
-                } as SeriesExpression;
-            }
+        if (!this.check(TokenType.COMMA)) {
+            return first;
         }
 
-        return expr;
+        const expressions: Expression[] = [first];
+        while (this.match(TokenType.COMMA)) {
+            expressions.push(this.sequence());
+        }
+
+        return {
+            type: NodeType.SeriesExpression,
+            expressions: expressions,
+            position: {
+                start: expressions[0]!.position.start,
+                end: expressions[expressions.length - 1]!.position.end
+            }
+        } as SeriesExpression;
+    }
+
+    private sequence(): Expression {
+        let first = this.addition();
+
+        // If the next token can't start a sequence, return the single expression
+        if (!this.canStartExpression() ||
+            this.check(TokenType.COMMA) ||
+            this.check(TokenType.EQUALS) ||
+            this.check(TokenType.SEMICOLON) ||
+            this.check(TokenType.RPAREN)) {
+            return first;
+        }
+
+        const elements: Expression[] = [first];
+
+        // Collect all space-separated additions
+        while (this.canStartExpression() &&
+            !this.check(TokenType.COMMA) &&
+            !this.check(TokenType.EQUALS) &&
+            !this.check(TokenType.SEMICOLON) &&
+            !this.check(TokenType.RPAREN)) {
+            elements.push(this.addition());
+        }
+
+        return {
+            type: NodeType.SequenceExpression,
+            expressions: elements,
+            position: {
+                start: (elements[0] as any).position.start,
+                end: (elements[elements.length - 1] as any).position.end
+            }
+        } as SequenceExpression;
     }
 
     private addition(): Expression {
@@ -1201,17 +1571,15 @@ export class Parser {
         ) {
             const args: Expression[] = [];
 
-            // Parse arguments WITHOUT going through series
-            while (!this.check(TokenType.RPAREN) && !this.isAtEnd()) {
-                // Skip comma if present
-                if (this.check(TokenType.COMMA)) {
-                    this.advance();
-                    continue;
-                }
+            // Check if there are any arguments at all
+            if (!this.check(TokenType.RPAREN)) {
+                // Parse the first argument
+                args.push(this.assignment());  // ✅ Use assignment() instead of expression()
 
-                // Use addition() instead of expression() to skip series handling
-                const arg = this.addition();
-                if (arg) args.push(arg);
+                // Parse remaining arguments separated by commas
+                while (this.match(TokenType.COMMA)) {
+                    args.push(this.assignment());  // ✅ Use assignment() instead of expression()
+                }
             }
 
             this.consume(TokenType.RPAREN, "Expected ')' after arguments");
@@ -1227,7 +1595,7 @@ export class Parser {
             } as CallExpression;
         }
 
-        return expr as Expression;
+        return expr;
     }
 
     private primary(): Expression {
@@ -1258,9 +1626,9 @@ export class Parser {
                 return {
                     type: NodeType.Identifier,
                     name: token.value,
-                    position: { 
-                        start: token.position.start, 
-                        end: token.position.end 
+                    position: {
+                        start: token.position.start,
+                        end: token.position.end
                     },
                 } as Identifier;
             }
@@ -1268,6 +1636,13 @@ export class Parser {
             case TokenType.LPAREN: {
                 const startToken = this.peek();
                 this.advance();
+
+                // Handle empty parentheses - not valid, throw error
+                if (this.check(TokenType.RPAREN)) {
+                    this.consume(TokenType.RPAREN, "Expected expression before ')'");
+                    //throw this.error(this.peek(), "Empty parentheses are not allowed");
+                }
+
                 const expr = this.expression();
                 const endToken = this.consume(TokenType.RPAREN, "Expected ')' after expression");
                 return {
@@ -1414,6 +1789,20 @@ export class Parser {
             value === 'jzczhz' ||
             value === 'alpha' ||
             value === 'color';
+    }
+
+    private canStartExpression(): boolean {
+        if (this.isAtEnd()) return false;
+        const type = this.peek().type;
+        return (
+            type === TokenType.NUMBER ||
+            type === TokenType.IDENTIFIER ||
+            type === TokenType.STRING ||
+            type === TokenType.HEXVALUE ||
+            type === TokenType.LPAREN ||
+            type === TokenType.PERCENT ||
+            type === TokenType.DIMENSION
+        );
     }
 
     private peek(): Token {
@@ -2976,6 +3365,293 @@ export enum CharType {
 //████████████████████████████████████████████████████████████████████████████████████████████████████
 
 
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/types/Visitor.types.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+
+
+// src/types/Parser.types.ts
+
+
+export interface Visitor<T> {
+    visitProgram(node: Program): T;
+    visitVariableDeclaration(node: any): T; // Replace 'any' with your interface
+    visitBinaryExpression(node: any): T;
+    visitNumericLiteral(node: any): T;
+    visitIdentifier(node: any): T;
+    visitSeriesExpression(node: any): T;
+    visitCallExpression(node: any): T;
+    visitAssignmentExpression(node: any): T;
+    visitDimensionLiteral(node: any): T;
+    visitUnaryExpression(node: any): T;
+    visitGroupExpression(node: any): T;
+    visitSequenceExpression(node: any): T;
+    visitUnknownNode(node: any): T;
+    visitStatement(node: Statement): T;
+    visitExpression(node: Expression): T;
+    visit(node: any): T;
+}
+
+/**
+ * Node Types
+ */
+enum NodeType {
+    Program = 'Program',
+    Declaration = 'Declaration',
+    VariableDeclaration = 'VariableDeclaration',
+    Statement = 'Statement',
+    SequenceExpression = 'SequenceExpression',
+    Expression = 'Expression',
+    ExpressionStatement = 'ExpressionStatement',
+    Identifier = 'Identifier',
+    StringLiteral = 'StringLiteral',
+    NumericLiteral = 'NumericLiteral',
+    HexLiteral = 'HexLiteral',
+    PercentLiteral = 'PercentLiteral',
+    DimensionLiteral = 'DimensionLiteral',
+    BinaryExpression = 'BinaryExpression',
+    UnaryExpression = 'UnaryExpression',
+    CallExpression = 'CallExpression',
+    GroupExpression = 'GroupExpression',
+    SeriesExpression = 'SeriesExpression',
+    AssignmentExpression = 'AssignmentExpression',
+}
+
+
+type VariableDeclarationKind = 'const' | 'let' | 'var';
+type DimensionKind = 'deg' | 'grad' | 'rad' | 'turn';
+type ColorFunctionKind = 'rgb' | 'rgba' | 'hsl' | 'hsla' |
+    'hwb' | 'lab' | 'lch' | 'oklab' | 'oklch' | 'ictcp' |
+    'jzazbz' | 'jzczhz' | 'alpha' | 'color';
+
+/**
+ * Base interface for all AST nodes
+ */
+interface BaseNode {
+    /** Type of the AST node */
+    type: NodeType;
+}
+
+/**
+ * Program root node - contains all statements
+ */
+interface Program extends BaseNode {
+    type: NodeType.Program;
+    body: Statement[];
+}
+
+/**
+ * Base type for all statements
+ */
+type Statement = ExpressionStatement | VariableDeclaration;
+
+/**
+ * Expression wrapped as a statement
+ */
+interface ExpressionStatement extends BaseNode {
+    type: NodeType.ExpressionStatement;
+    expression: Expression;
+}
+
+/**
+ * Variable declaration node
+ * Example: const x = 5;
+ */
+interface VariableDeclaration extends BaseNode {
+    type: NodeType.VariableDeclaration;
+    /** The kind of declaration (e.g., const, let, var) */
+    kind: VariableDeclarationKind;
+    /** The identifier being x */
+    identifier: { name: string, type: NodeType };
+    /** The expression the variable is initialized to (optional) */
+    initializer?: Expression;
+}
+
+/**
+ * Assignment to an existing variable
+ * Example: myVar = 100
+ */
+interface AssignmentExpression extends BaseNode {
+    type: NodeType.AssignmentExpression;
+    left: Identifier; // The variable being assigned to
+    right: Expression; // The value being assigned
+}
+
+/**
+ * Base type for all expressions
+ */
+type Expression =
+    | Identifier
+    | StringLiteral
+    | NumericLiteral
+    | HexLiteral
+    | PercentLiteral
+    | DimensionLiteral
+    | BinaryExpression
+    | UnaryExpression
+    | CallExpression
+    | GroupExpression
+    | SeriesExpression
+    | SequenceExpression
+    | AssignmentExpression;
+
+/**
+ * Identifier node (variable names, function names)
+ * Example: red, myVar
+ */
+interface Identifier extends BaseNode {
+    type: NodeType.Identifier;
+    name: string;
+}
+
+/**
+ * String literal node
+ * Example: "hello", 'world'
+ */
+interface StringLiteral extends BaseNode {
+    type: NodeType.StringLiteral;
+    value: string;
+    raw: string;
+}
+
+/**
+ * Numeric literal node
+ * Example: 42, 3.14
+ */
+interface NumericLiteral extends BaseNode {
+    type: NodeType.NumericLiteral;
+    value: number;
+    raw: string;
+}
+
+/**
+ * Hexadecimal color literal
+ * Example: #ff0000, #abc
+ */
+interface HexLiteral extends BaseNode {
+    type: NodeType.HexLiteral;
+    value: string;
+    raw: string;
+}
+
+/**
+ * Percentage literal
+ * Example: 50%, 100%
+ */
+interface PercentLiteral extends BaseNode {
+    type: NodeType.PercentLiteral;
+    value: number;
+    raw: string;
+}
+
+interface DimensionLiteral extends BaseNode {
+    type: NodeType.DimensionLiteral;
+    value: number;
+    unit: string;
+    raw: string;
+}
+
+/**
+ * Binary operation (two operands and an operator)
+ * Example: 1 + 2, a - b
+ */
+interface BinaryExpression extends BaseNode {
+    type: NodeType.BinaryExpression;
+    operator: '+' | '-' | '*' | '/' | '%';
+    left: Expression;
+    right: Expression;
+}
+
+/**
+ * Unary operation (one operand and an operator)
+ * Example: -5, +10
+ */
+interface UnaryExpression extends BaseNode {
+    type: NodeType.UnaryExpression;
+    operator: '+' | '-';
+    argument: Expression;
+}
+
+/**
+ * Function call expression
+ * Example: rgb(255, 0, 0)
+ */
+interface CallExpression extends BaseNode {
+    type: NodeType.CallExpression;
+    callee: Identifier;
+    arguments: Expression[];
+}
+
+/**
+ * Grouped expression (parentheses)
+ * Example: (1 + 2)
+ */
+interface GroupExpression extends BaseNode {
+    type: NodeType.GroupExpression;
+    expression: Expression;
+}
+
+/**
+ * Series of expressions separated by commas
+ * Example: a, b, c
+ */
+interface SeriesExpression extends BaseNode {
+    type: NodeType.SeriesExpression;
+    expressions: Expression[];
+}
+
+/**
+ * Sequence of expressions separated by whitespace
+ * Example: a; b; c
+ */
+interface SequenceExpression extends BaseNode {
+    type: NodeType.SequenceExpression;
+    expressions: Expression[];
+}
+
+// EXPORTS
+export {
+    // Enumeration
+    NodeType,
+
+    // Types
+    type BaseNode,
+    type Statement,
+    type Expression,
+    type VariableDeclarationKind,
+    type DimensionKind,
+    type ColorFunctionKind,
+
+    // Interfaces
+    type Program,
+    type ExpressionStatement,
+    type VariableDeclaration,
+    type Identifier,
+    type StringLiteral,
+    type NumericLiteral,
+    type HexLiteral,
+    type PercentLiteral,
+    type DimensionLiteral,
+    type BinaryExpression,
+    type UnaryExpression,
+    type CallExpression,
+    type GroupExpression,
+    type SeriesExpression,
+    type SequenceExpression,
+    type AssignmentExpression,
+};
+
+
+
+
+
+//■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ End of file: src/types/Visitor.types.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+//████████████████████████████████████████████████████████████████████████████████████████████████████
+
+
 //■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ Start of file: src/types/Logging.types.ts ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 
@@ -3604,28 +4280,8 @@ const Accepting: AcceptingType = {
 
 // src/types/Parser.types.ts
 
-/**
- * Represents a specific location within the source string, tracked by index,
- * line number, and column number.
- */
-type Position = {
-    /** The zero-based index of the character in the overall string. */
-    index: number;
-    /** The one-based line number where the character appears. */
-    line: number;
-    /** The one-based column number of the character on its line. */
-    column: number;
-}
-
-/**
- * Source code location metadata
- */
-type SourcePosition = {
-    /** Starting position */
-    start: Position;
-    /** Ending position */
-    end: Position;
-}
+import { inspect } from "node:util";
+import type { Node } from "typescript";
 
 /**
  * Node Types
@@ -3635,6 +4291,7 @@ enum NodeType {
     Declaration = 'Declaration',
     VariableDeclaration = 'VariableDeclaration',
     Statement = 'Statement',
+    SequenceExpression = 'SequenceExpression',
     Expression = 'Expression',
     ExpressionStatement = 'ExpressionStatement',
     Identifier = 'Identifier',
@@ -3653,24 +4310,46 @@ enum NodeType {
 
 type VariableDeclarationKind = 'const' | 'let' | 'var';
 type DimensionKind = 'deg' | 'grad' | 'rad' | 'turn';
-type ColorFunctionKind = 'rgb' | 'rgba' | 'hsl' | 'hsla' | 
-    'hwb' | 'lab' | 'lch' | 'oklab' | 'oklch' | 'ictcp' | 
+type ColorFunctionKind = 'rgb' | 'rgba' | 'hsl' | 'hsla' |
+    'hwb' | 'lab' | 'lch' | 'oklab' | 'oklch' | 'ictcp' |
     'jzazbz' | 'jzczhz' | 'alpha' | 'color';
+
+/**
+ * @type Position
+ * @description - Position metadata.
+ * @property {number} index  - The zero-based index of the character in the overall string.
+ * @property {number} line   - The one-based line number where the character appears.
+ * @property {number} column - The one-based column number of the character on its line.
+ */
+type Position = {
+    index: number;
+    line: number;
+    column: number;
+};
+
+/**
+ * @type SourcePosition
+ * @description Source code location metadata.
+ * @property {Position} start - Starting position.
+ * @property {Position} end   - Ending position.
+ */
+type SourcePosition = {
+    start: Position;
+    end: Position;
+};
 
 /**
  * Base interface for all AST nodes
  */
-type BaseNode = {
-    /** Type of the AST node */
+type NodeBase = {
     type: NodeType;
-    /** Source location information */
-    position: SourcePosition;
-}
+    position?: SourcePosition;
+};
 
 /**
  * Program root node - contains all statements
  */
-interface Program extends BaseNode {
+type ColorNode  = NodeBase & {
     type: NodeType.Program;
     body: Statement[];
 }
@@ -3727,6 +4406,7 @@ type Expression =
     | CallExpression
     | GroupExpression
     | SeriesExpression
+    | SequenceExpression
     | AssignmentExpression;
 
 /**
@@ -3825,8 +4505,21 @@ interface GroupExpression extends BaseNode {
     expression: Expression;
 }
 
+/**
+ * Series of expressions separated by commas
+ * Example: a, b, c
+ */
 interface SeriesExpression extends BaseNode {
     type: NodeType.SeriesExpression;
+    expressions: Expression[];
+}
+
+/**
+ * Sequence of expressions separated by whitespace
+ * Example: a; b; c
+ */
+interface SequenceExpression extends BaseNode {
+    type: NodeType.SequenceExpression;
     expressions: Expression[];
 }
 
@@ -3859,6 +4552,7 @@ export {
     type CallExpression,
     type GroupExpression,
     type SeriesExpression,
+    type SequenceExpression,
     type AssignmentExpression,
 };
 

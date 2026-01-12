@@ -1,18 +1,20 @@
 // ./index.ts
 
-import { inspect, type InspectOptions } from 'node:util';
+import { inspect, styleText, type InspectOptions } from 'node:util';
 import type { Token } from './src/types/Tokenizer.types.ts';
 import { Tokenizer } from './src/Tokenizer.ts';
 import { Parser } from './src/Parser.ts';
 import { CharacterStream } from './src/Character/CharacterStream.ts';
-import { PrintLine } from './src/Logging.ts';
+import { BoxText, CenteredText, PrintLine } from './src/Logging.ts';
+import { VisitorGenerator } from './src/Visitor';
+import { Align, BoxType, LineType } from './src/types/Logging.types.ts';
 
 /**
  * @TODO Add character, token, and state support for quotes
  */
 
 const inspectOptions: InspectOptions = {
-    showHidden: true,
+    showHidden: false,
     depth: null,
     colors: true,
     customInspect: false,
@@ -31,11 +33,11 @@ const inspectOptions: InspectOptions = {
 const testCases: string[] = [
     // '"67 a, b, c / 1 \'word\' 2 3+(2-0)"',
     // '67 a, b, c / 1 word 2 3+(2-0)',
-    // 'rgba(100 128 255 / 0.5)',
-    // 'rgba(100grad 360 220  / 50%)',
-    // '#ff00ff00',
-    // '56%',
-    // '100deg',
+    'rgba(100 128 255 / 0.5)',
+    'rgba(100grad 360 220  / 50%)',
+    '#ff00ff00',
+    '56%',
+    '100deg',
     // '1 + 2',
     // '10 - 5 + 3',
     // '2 * 3 + 4',
@@ -49,20 +51,105 @@ const testCases: string[] = [
 
     // Big Test
 
-    `const characterStreamTest = () => {
-        line();
-        console.log('=== CHARACTERSTREAM DEMO ===');
-        line();
-        const input = 'rgb(255, 100, 75)';
-        const stream = new CharacterStream(input);
-        console.log('INPUT:');
-        console.log('RESULT OF CHARACTERSTREAM:');
-        for (const char of stream) {
-            console.log(inspect(char, compactInspectOptions));
-        }
-        console.log();
-        line();
-    }`,
+    // `const characterStreamTest = () => {
+    //     line();
+    //     console.log('=== CHARACTERSTREAM DEMO ===');
+    //     line();
+    //     const input = 'rgb(255, 100, 75)';
+    //     const stream = new CharacterStream(input);
+    //     console.log('INPUT:');
+    //     console.log('RESULT OF CHARACTERSTREAM:');
+    //     for (const char of stream) {
+    //         console.log(inspect(char, compactInspectOptions));
+    //     }
+    //     console.log();
+    //     line();
+    // }`,
+];
+
+const newTestCases: string[] = [
+    // Named colors
+    'rebeccapurple',
+    'aliceblue',
+
+    // RGB Hexadecimal
+    '#f09',
+    '#ff0099',
+
+    // RGB (Red, Green, Blue)
+    'rgb(255 0 153)',
+    'rgb(255 0 153 / 80%)',
+
+    // HSL (Hue, Saturation, Lightness)
+    'hsl(150 30% 60%)',
+    'hsl(150 30% 60% / 80%)',
+
+    // HWB (Hue, Whiteness, Blackness)
+    'hwb(12 50% 0%)',
+    'hwb(194 0% 0% / 0.5)',
+
+    // Lab (Lightness, A-axis, B-axis)
+    'lab(50% 40 59.5)',
+    'lab(50% 40 59.5 / 0.5)',
+
+    // LCH (Lightness, Chroma, Hue)
+    'lch(52.2% 72.2 50)',
+    'lch(52.2% 72.2 50 / 0.5)',
+
+    // Oklab (Lightness, A-axis, B-axis)
+    'oklab(59% 0.1 0.1)',
+    'oklab(59% 0.1 0.1 / 0.5)',
+
+    // OkLCh (Lightness, Chroma, Hue)
+    'oklch(60% 0.15 50)',
+    'oklch(60% 0.15 50 / 0.5)',
+
+    /**
+     * @TODO Future expansion
+     * @description Support relative CSS colors
+     */
+    //'rgb(from green r g b / 0.5)',
+    //'rgb(from #123456 calc(r + 40) calc(g + 40) b)',
+    //'rgb(from hwb(120deg 10% 20%) r g calc(b + 200))',
+    // HSL hue change
+    //'hsl(from red 240deg s l)',
+    //'hsl(from green h s l / 0.5)',
+    //'hsl(from #123456 h s calc(l + 20))',
+    //'hsl(from rgb(200 0 0) calc(h + 30) s calc(l + 30))',
+    // HWB alpha channel change
+    //'hwb(from green h w b / 0.5)',
+    //'hwb(from #123456 h calc(w + 30) b)',
+    //'hwb(from lch(40% 70 240deg) h w calc(b - 30))',
+    //'lab(from green l a b / 0.5)',
+    //'lab(from #123456 calc(l + 10) a b)',
+    //'lab(from hsl(180 100% 50%) calc(l - 10) a b)',
+    // LCH lightness change
+    //'lch(from blue calc(l + 20) c h)',
+    //'lch(from green l c h / 0.5)',
+    //'lch(from #123456 calc(l + 10) c h)',
+    //'lch(from hsl(180 100% 50%) calc(l - 10) c h)',
+    //'lch(from var(--color-value) l c h / calc(alpha - 0.1))',
+    //'oklab(from green l a b / 0.5)',
+    //'oklab(from #123456 calc(l + 0.1) a b / calc(alpha * 0.9))',
+    //'oklab(from hsl(180 100% 50%) calc(l - 0.1) a b)',
+    //'oklch(from green l c h / 0.5)',
+    //'oklch(from #123456 calc(l + 0.1) c h)',
+    //'oklch(from hsl(180 100% 50%) calc(l - 0.1) c h)',
+    //'oklch(from var(--color) l c h / calc(alpha - 0.1))',
+    // light-dark
+    //'light-dark(white, black)',
+    //'light-dark(rgb(255 255 255), rgb(0 0 0))',
+    // Polar color space
+    //'color-mix(in hsl, hsl(200 50 80), coral)',
+    //'color-mix(in hsl, hsl(200 50 80) 20%, coral 80%)',
+
+    // Rectangular color space
+    //'color-mix(in srgb, plum, #123456)',
+    //'color-mix(in lab, plum 60%, #123456 50%)',
+
+    // With hue interpolation method
+    //'color-mix(in lch increasing hue, hsl(200deg 50% 80%), coral)',
+    //'color-mix(in lch longer hue, hsl(200deg 50% 80%) 44%, coral 16%)',
 ];
 
 const characterStreamTest = () => {
@@ -112,7 +199,7 @@ const tokenizerCommentsTest = () => {
 }
 
 const parserTest = () => {
-    for (const input of testCases) {
+    for (const input of newTestCases) {
         // Step 1: Character stream
         const stream = new CharacterStream(input);
 
@@ -125,12 +212,21 @@ const parserTest = () => {
         // Step 2: Parse
         const parser = new Parser(tokens);
         const ast = parser.parse();
+        
         // Step 3: Console log the AST
-        console.log('\nAST:\n');
-        const defaultAST = inspect(ast, inspectOptions);
-        const fourSpaceAST = defaultAST.replace(/^ +/gm, match => ' '.repeat(match.length * 2));
-        console.log(fourSpaceAST, '\n');
-        PrintLine({ width: inspectOptions.breakLength, color: 'red' });
+        PrintLine({ 
+            preNewLine: true, 
+            postNewLine: true, 
+            width: inspectOptions.breakLength, 
+            color: 'cyan',
+            text: 'ABSTRACT SYNTAX TREE',
+            textColor: ['magenta', 'bold' ]
+        });
+        const styledSource = styleText('redBright', 'SOURCE:\t') + styleText(['yellow', 'bold'], `'${input}'`)
+        CenteredText(styledSource);
+        PrintLine({ preNewLine: true, postNewLine: true, lineType: LineType.dashed, color: ['gray', 'dim'] })
+        parser.debug(ast);
+        PrintLine({ preNewLine: true, width: inspectOptions.breakLength, color: 'cyan' });
     }
 }
 /**

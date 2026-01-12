@@ -1,7 +1,24 @@
 // src/types/Parser.types.ts
 
-import { inspect } from "node:util";
-import type { Node } from "typescript";
+
+export interface Visitor<T> {
+    visitProgram(node: Program): T;
+    visitVariableDeclaration(node: any): T; // Replace 'any' with your interface
+    visitBinaryExpression(node: any): T;
+    visitNumericLiteral(node: any): T;
+    visitIdentifier(node: any): T;
+    visitSeriesExpression(node: any): T;
+    visitCallExpression(node: any): T;
+    visitAssignmentExpression(node: any): T;
+    visitDimensionLiteral(node: any): T;
+    visitUnaryExpression(node: any): T;
+    visitGroupExpression(node: any): T;
+    visitSequenceExpression(node: any): T;
+    visitUnknownNode(node: any): T;
+    visitStatement(node: Statement): T;
+    visitExpression(node: Expression): T;
+    visit(node: any): T;
+}
 
 /**
  * Node Types
@@ -28,6 +45,7 @@ enum NodeType {
     AssignmentExpression = 'AssignmentExpression',
 }
 
+
 type VariableDeclarationKind = 'const' | 'let' | 'var';
 type DimensionKind = 'deg' | 'grad' | 'rad' | 'turn';
 type ColorFunctionKind = 'rgb' | 'rgba' | 'hsl' | 'hsla' |
@@ -35,41 +53,17 @@ type ColorFunctionKind = 'rgb' | 'rgba' | 'hsl' | 'hsla' |
     'jzazbz' | 'jzczhz' | 'alpha' | 'color';
 
 /**
- * @type Position
- * @description - Position metadata.
- * @property {number} index  - The zero-based index of the character in the overall string.
- * @property {number} line   - The one-based line number where the character appears.
- * @property {number} column - The one-based column number of the character on its line.
- */
-type Position = {
-    index: number;
-    line: number;
-    column: number;
-};
-
-/**
- * @type SourcePosition
- * @description Source code location metadata.
- * @property {Position} start - Starting position.
- * @property {Position} end   - Ending position.
- */
-type SourcePosition = {
-    start: Position;
-    end: Position;
-};
-
-/**
  * Base interface for all AST nodes
  */
-type NodeBase = {
+interface BaseNode {
+    /** Type of the AST node */
     type: NodeType;
-    position?: SourcePosition;
-};
+}
 
 /**
  * Program root node - contains all statements
  */
-type ColorNode  = NodeBase & {
+interface Program extends BaseNode {
     type: NodeType.Program;
     body: Statement[];
 }
@@ -249,6 +243,7 @@ export {
     NodeType,
 
     // Types
+    type BaseNode,
     type Statement,
     type Expression,
     type VariableDeclarationKind,
@@ -256,8 +251,6 @@ export {
     type ColorFunctionKind,
 
     // Interfaces
-    type BaseNode,
-    type SourcePosition,
     type Program,
     type ExpressionStatement,
     type VariableDeclaration,
